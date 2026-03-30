@@ -10,13 +10,12 @@ export default function StudioHeader() {
       }}
     >
       {/* Logo — positioned over left side */}
-      <div className="absolute left-6 top-0 flex items-center h-full">
-        <span
-          className="font-bold text-lg tracking-wide"
-          style={{ color: "#f0b100" }}
-        >
-          Play Room Gaming
-        </span>
+      <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ width: 120, height: 64 }}>
+        <img
+          src="/logo.png"
+          alt="Play Room Gaming"
+          className="w-full h-full object-contain"
+        />
       </div>
 
       {/* Betting zone labels — centered */}

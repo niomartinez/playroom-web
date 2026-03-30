@@ -6,8 +6,8 @@ export default function PlayerFooter() {
         background: "linear-gradient(to bottom, #050d1c, #101828)",
       }}
     >
-      <div className="text-sm font-bold text-[#6a7282] mb-1">
-        Play Room Gaming
+      <div className="flex justify-center mb-2">
+        <img src="/logo.png" alt="Play Room Gaming" className="object-contain" style={{ width: 100, height: 54 }} />
       </div>
       <div className="text-xs text-[#6a7282]">
         Play responsibly. This is a demo application for entertainment purposes

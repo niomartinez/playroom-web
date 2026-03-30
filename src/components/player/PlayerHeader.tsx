@@ -9,11 +9,14 @@ export default function PlayerHeader() {
     >
       {/* Left: Logo */}
       <div className="flex items-center gap-3">
-        <div>
-          <div className="text-lg font-bold text-white tracking-tight">
-            PLAY ROOM Gaming
-          </div>
-          <div className="text-sm text-[#99a1af]">Live Baccarat</div>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Play Room Gaming"
+            className="object-contain"
+            style={{ width: 120, height: 64 }}
+          />
+          <span className="text-sm text-[#99a1af]">Live Baccarat</span>
         </div>
       </div>
 
