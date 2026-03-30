@@ -32,24 +32,24 @@ export default function DerivedRoad({
         className="grid flex-1 overflow-hidden"
         style={{
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          gridTemplateRows: `repeat(${rows}, minmax(0, 20px))`,
           gap: "2px",
+          alignContent: "start",
         }}
       >
         {Array.from({ length: cols * rows }).map((_, i) => (
           <div
             key={i}
             className="flex items-center justify-center"
-            style={{ padding: 1, minWidth: 0, minHeight: 0 }}
+            style={{ minWidth: 0, minHeight: 0, aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <div
               style={{
-                width: "100%",
-                height: "100%",
+                width: 14,
+                height: 14,
                 borderRadius: "9999px",
                 border: "1px solid #392c07",
-                maxWidth: 14,
-                maxHeight: 14,
+                flexShrink: 0,
               }}
             />
           </div>

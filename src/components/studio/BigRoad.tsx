@@ -43,16 +43,15 @@ export default function BigRoad() {
           <div
             key={i}
             className="flex items-center justify-center"
-            style={{ padding: 2, minWidth: 0, minHeight: 0 }}
+            style={{ minWidth: 0, minHeight: 0 }}
           >
             <div
               style={{
-                width: "100%",
-                height: "100%",
+                width: 16,
+                height: 16,
                 borderRadius: "9999px",
                 border: "1px solid #392c07",
-                maxWidth: 16,
-                maxHeight: 16,
+                flexShrink: 0,
               }}
             />
           </div>
