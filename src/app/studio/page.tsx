@@ -1,94 +1,53 @@
-/** Studio dashboard — placeholder for the full scoreboard UI.
- *  Will be replaced with the full Figma design implementation.
- */
+import StudioHeader from "@/components/studio/StudioHeader";
+import StudioFooter from "@/components/studio/StudioFooter";
+import BeadRoad from "@/components/studio/BeadRoad";
+import BigRoad from "@/components/studio/BigRoad";
+import DerivedRoad from "@/components/studio/DerivedRoad";
+import ScorePanel from "@/components/studio/ScorePanel";
+import NextGamePanel from "@/components/studio/NextGamePanel";
+
 export default function StudioDashboard() {
   return (
-    <main className="min-h-screen p-4">
-      <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-[var(--gold)]">
-            Play Room Studio
-          </h1>
-          <span className="text-xs px-2 py-0.5 bg-green-800 text-green-200 rounded-full">
-            LIVE
-          </span>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-[var(--text-gray)]">
-          <span>Table: —</span>
-          <span>COM: —</span>
-          <form action="/api/studio/logout" method="POST">
-            <button
-              type="submit"
-              className="text-red-400 hover:text-red-300 transition"
-            >
-              Logout
-            </button>
-          </form>
-        </div>
-      </header>
+    <div
+      className="flex flex-col h-screen overflow-hidden"
+      style={{
+        background: "linear-gradient(to right, #000000, #171717, #000000)",
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      <StudioHeader />
 
-      <div className="grid grid-cols-[1fr_3fr_280px] gap-4 h-[calc(100vh-100px)]">
+      {/* Main 3-column layout */}
+      <main className="flex-1 grid min-h-0 p-6 gap-6" style={{ gridTemplateColumns: "128px 1fr 320px" }}>
         {/* Left — Bead Road */}
-        <div className="bg-[var(--bg-panel)] rounded-lg border border-[var(--gold-dim)] p-3">
-          <h2 className="text-xs font-semibold text-[var(--text-gray)] mb-2">
-            BEAD ROAD
-          </h2>
-          <div className="h-full bg-[var(--bg-panel-inner)] rounded" />
-        </div>
+        <BeadRoad />
 
-        {/* Center — Roads + Cards */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-[var(--bg-panel)] rounded-lg border border-[var(--gold-dim)] p-3 flex-1">
-            <h2 className="text-xs font-semibold text-[var(--text-gray)] mb-2">
-              BIG ROAD
-            </h2>
-            <div className="h-full bg-[var(--bg-panel-inner)] rounded" />
+        {/* Center — Big Road + Derived Roads */}
+        <div className="flex flex-col gap-4 min-h-0">
+          {/* Big Road takes ~65% of center height */}
+          <div className="flex-[2] min-h-0">
+            <BigRoad />
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[var(--bg-panel)] rounded border border-[var(--gold-dim)] p-2 h-24">
-              <span className="text-[10px] text-[var(--text-dim)]">BIG EYE</span>
-            </div>
-            <div className="bg-[var(--bg-panel)] rounded border border-[var(--gold-dim)] p-2 h-24">
-              <span className="text-[10px] text-[var(--text-dim)]">SMALL ROAD</span>
-            </div>
-            <div className="bg-[var(--bg-panel)] rounded border border-[var(--gold-dim)] p-2 h-24">
-              <span className="text-[10px] text-[var(--text-dim)]">COCKROACH</span>
-            </div>
+
+          {/* Derived roads row: Big Eye full width, then Small Road + Cockroach Pig */}
+          <div className="flex-1 min-h-0">
+            <DerivedRoad title="BIG EYE" cols={44} rows={6} />
+          </div>
+
+          <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+            <DerivedRoad title="SMALL ROAD" cols={22} rows={6} />
+            <DerivedRoad title="COCKROACH PIG" cols={22} rows={6} />
           </div>
         </div>
 
-        {/* Right — Score + Controls */}
-        <div className="flex flex-col gap-4">
-          <div className="bg-[var(--bg-panel)] rounded-lg border border-[var(--gold-dim)] p-4">
-            <h2 className="text-xs font-semibold text-[var(--text-gray)] mb-3">
-              SCORE
-            </h2>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <div className="text-2xl font-bold text-[var(--player-blue)]">0</div>
-                <div className="text-[10px] text-[var(--text-dim)]">Player</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-[var(--tie-green)]">0</div>
-                <div className="text-[10px] text-[var(--text-dim)]">Tie</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-[var(--banker-red)]">0</div>
-                <div className="text-[10px] text-[var(--text-dim)]">Banker</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[var(--bg-panel)] rounded-lg border border-[var(--gold-dim)] p-4 flex-1">
-            <h2 className="text-xs font-semibold text-[var(--text-gray)] mb-2">
-              CURRENT ROUND
-            </h2>
-            <p className="text-[var(--text-dim)] text-sm">
-              Waiting for Angel Eye...
-            </p>
-          </div>
+        {/* Right — Score Panel + Next Game */}
+        <div className="flex flex-col min-h-0 overflow-y-auto">
+          <ScorePanel />
+          <NextGamePanel />
         </div>
-      </div>
-    </main>
+      </main>
+
+      <StudioFooter />
+    </div>
   );
 }

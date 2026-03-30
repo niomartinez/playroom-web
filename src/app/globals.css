@@ -1,22 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  --bg-dark: #0a0a14;
-  --bg-panel: #12121e;
+  /* Figma exact colors */
+  --banker-red: #fb2c36;
+  --player-blue: #2b7fff;
+  --tie-green: #00bc7d;
+  --lucky6-yellow: #f0b100;
+  --dragon7-pink: #ff009d;
+  --panda8-cyan: #00ffe5;
+
+  /* Gold palette */
+  --gold-border: rgba(208, 135, 0, 0.3);
+  --gold-shadow-light: rgba(208, 135, 0, 0.1);
+  --gold-shadow-medium: rgba(208, 135, 0, 0.2);
+  --gold-text: #d08700;
+
+  /* Backgrounds */
+  --bg-dark: #000000;
+  --bg-panel: #171717;
   --bg-panel-inner: #1a1a2e;
-  --gold: #d4a843;
-  --gold-dim: #8b7335;
-  --gold-bright: #f5d36e;
-  --banker-red: #cc2222;
-  --player-blue: #2255cc;
-  --tie-green: #22aa22;
-  --text-white: #f5f5f5;
-  --text-gray: #aaaaaa;
-  --text-dim: #666666;
+
+  /* Text */
+  --text-white: #ffffff;
+  --text-muted: #99a1af;
+  --text-dim: #6a7282;
 }
 
 body {
-  background: var(--bg-dark);
+  background: linear-gradient(to right, #000000, #171717, #000000);
   color: var(--text-white);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
