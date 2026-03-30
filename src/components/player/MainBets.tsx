@@ -3,30 +3,27 @@
 const BETS = [
   {
     name: "PLAYER",
-    gradient: "linear-gradient(to bottom, rgb(0,101,255), rgb(0,21,86))",
+    gradient: "linear-gradient(154deg, rgb(0,101,255) 0%, rgb(0,21,86) 100%)",
     border: "rgba(43,127,255,0.5)",
     bets: 632,
     total: "$677,032",
     pct: 49,
-    barColor: "#2b7fff",
   },
   {
     name: "TIE",
-    gradient: "linear-gradient(to bottom, rgb(58,161,40), rgb(0,86,16))",
+    gradient: "linear-gradient(154deg, rgb(58,161,40) 0%, rgb(0,86,16) 100%)",
     border: "rgba(0,201,80,0.5)",
     bets: 632,
     total: "$51,623",
     pct: 4,
-    barColor: "#00c950",
   },
   {
     name: "BANKER",
-    gradient: "linear-gradient(to bottom, rgb(217,62,64), rgb(86,0,9))",
+    gradient: "linear-gradient(154deg, rgb(217,62,64) 0%, rgb(86,0,9) 100%)",
     border: "rgba(251,44,54,0.5)",
     bets: 632,
     total: "$646,509",
     pct: 47,
-    barColor: "#fb2c36",
   },
 ];
 
@@ -36,46 +33,38 @@ export default function MainBets() {
       {BETS.map((bet) => (
         <button
           key={bet.name}
-          className="relative rounded-[14px] px-5 py-5 text-left transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden"
+          className="relative rounded-[14px] px-6 py-5 text-left transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden"
           style={{
-            background: bet.gradient,
-            border: `1px solid ${bet.border}`,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            border: `1.6px solid ${bet.border}`,
+            boxShadow: "0px 20px 25px rgba(0,0,0,0.1), 0px 8px 10px rgba(0,0,0,0.1)",
           }}
         >
-          {/* Texture overlay */}
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)",
-              mixBlendMode: "color-burn",
-            }}
-          />
+          {/* Gradient + texture overlay — exact Figma pattern */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[14px]">
+            <div className="absolute inset-0 rounded-[14px]" style={{ backgroundImage: bet.gradient }} />
+            <img
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover rounded-[14px]"
+              style={{ mixBlendMode: "color-burn" }}
+              src="/texture.png"
+            />
+          </div>
 
           <div className="relative z-10">
-            <div className="text-xl font-bold text-white mb-3">{bet.name}</div>
+            <div className="text-2xl font-bold text-white text-center mb-3">{bet.name}</div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-2 text-xs text-white/70 mb-1">
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-              </svg>
-              <span>{bet.bets} bets</span>
-              <span className="ml-auto font-semibold text-white">{bet.total}</span>
+            <div className="flex items-center justify-between text-sm text-white mb-1">
+              <span className="font-medium">{bet.bets}</span>
+              <span className="font-semibold">{bet.total}</span>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full h-2 bg-black/30 rounded-full overflow-hidden mt-2">
+            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${bet.pct}%`,
-                  backgroundColor: bet.barColor,
-                }}
+                className="h-full bg-white rounded-full"
+                style={{ width: `${bet.pct}%` }}
               />
             </div>
-            <div className="text-right text-xs text-white/60 mt-1">{bet.pct}%</div>
+            <div className="text-right text-xs text-white/80 mt-1">{bet.pct}%</div>
           </div>
         </button>
       ))}

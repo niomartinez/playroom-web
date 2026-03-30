@@ -1,53 +1,72 @@
 export default function BaccaratTable() {
   return (
     <div
-      className="rounded-[24px] p-6 flex items-stretch gap-4"
+      className="relative rounded-[24px] p-8 flex items-stretch gap-8 overflow-hidden h-full"
       style={{
-        background: "linear-gradient(to bottom, rgb(57,164,57), rgb(10,48,9))",
         border: "4px solid rgba(208,135,0,0.4)",
-        boxShadow:
-          "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+        boxShadow: "0px 25px 50px -12px rgba(0,0,0,0.25)",
       }}
     >
-      {/* Player side */}
-      <div
-        className="flex-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-3"
-        style={{
-          background: "rgba(21,93,252,0.2)",
-          border: "1px solid rgba(43,127,255,0.5)",
-        }}
-      >
-        <div className="w-10 h-10 rounded-full bg-[#2b7fff] flex items-center justify-center text-white font-bold text-lg">
-          P
-        </div>
-        <div className="text-sm font-semibold text-white">PLAYER</div>
-        <div className="bg-[#2b7fff] rounded-[14px] px-4 py-1 text-white font-bold text-lg">
-          0
-        </div>
-        <div className="text-xs text-white/60 mt-1">Waiting for bets...</div>
+      {/* Gradient + texture overlay — exact Figma pattern */}
+      <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[24px]">
+        <div
+          className="absolute inset-0 rounded-[24px]"
+          style={{ backgroundImage: "linear-gradient(192deg, rgb(57,164,57) 29%, rgb(10,48,9) 80%)" }}
+        />
+        <img
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover rounded-[24px]"
+          style={{ mixBlendMode: "color-burn" }}
+          src="/texture.png"
+        />
       </div>
 
-      {/* VS divider */}
-      <div className="flex items-center">
-        <div className="text-[#d08700] font-bold text-sm opacity-60">VS</div>
+      {/* Player side */}
+      <div
+        className="relative z-10 flex-1 rounded-2xl p-5 flex flex-col gap-4"
+        style={{
+          background: "rgba(21,93,252,0.2)",
+          border: "1.6px solid rgba(43,127,255,0.5)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#2b7fff] border-2 border-white flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-xl">P</span>
+            </div>
+            <span className="text-2xl font-bold text-white">PLAYER</span>
+          </div>
+          <div className="bg-[#2b7fff] rounded-[14px] px-3 py-1 shadow-lg">
+            <span className="text-white font-bold text-4xl">0</span>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-white/50 text-base">Waiting for bets...</span>
+        </div>
       </div>
 
       {/* Banker side */}
       <div
-        className="flex-1 rounded-2xl p-4 flex flex-col items-center justify-center gap-3"
+        className="relative z-10 flex-1 rounded-2xl p-5 flex flex-col gap-4"
         style={{
           background: "rgba(231,0,11,0.2)",
-          border: "1px solid rgba(251,44,54,0.5)",
+          border: "1.6px solid rgba(251,44,54,0.5)",
         }}
       >
-        <div className="w-10 h-10 rounded-full bg-[#fb2c36] flex items-center justify-center text-white font-bold text-lg">
-          B
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#fb2c36] border-2 border-white flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-xl">B</span>
+            </div>
+            <span className="text-2xl font-bold text-white">BANKER</span>
+          </div>
+          <div className="bg-[#fb2c36] rounded-[14px] px-3 py-1 shadow-lg">
+            <span className="text-white font-bold text-4xl">0</span>
+          </div>
         </div>
-        <div className="text-sm font-semibold text-white">BANKER</div>
-        <div className="bg-[#fb2c36] rounded-[14px] px-4 py-1 text-white font-bold text-lg">
-          0
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-white/50 text-base">Waiting for bets...</span>
         </div>
-        <div className="text-xs text-white/60 mt-1">Waiting for bets...</div>
       </div>
     </div>
   );
