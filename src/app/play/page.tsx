@@ -5,7 +5,6 @@ import SideBets from "@/components/player/SideBets";
 import MainBets from "@/components/player/MainBets";
 import BaccaratTable from "@/components/player/BaccaratTable";
 import BalanceBar from "@/components/player/BalanceBar";
-import PlayerFooter from "@/components/player/PlayerFooter";
 import RoadmapPanel from "@/components/player/RoadmapPanel";
 
 export default function PlayPage() {
@@ -14,14 +13,14 @@ export default function PlayPage() {
       className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "5vh 53vh 13vh 14vh 15vh",
+        gridTemplateRows: "4vh 54vh 16vh 12vh 3vh 2vh",
         background: "#0a0f1a",
       }}
     >
-      {/* 5vh — Header */}
+      {/* 4vh — Header */}
       <PlayerHeader />
 
-      {/* 53vh — Video Stream with overlays */}
+      {/* 54vh — Video Stream with overlays */}
       <div className="relative min-h-0 overflow-hidden">
         <img
           src="/stream-placeholder.png"
@@ -32,7 +31,7 @@ export default function PlayPage() {
         <LiveChat />
       </div>
 
-      {/* 13vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
+      {/* 16vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
       <div
         className="min-h-0 px-[0.8vw] py-[0.3vh]"
         style={{
@@ -53,13 +52,22 @@ export default function PlayPage() {
         </div>
       </div>
 
-      {/* 14vh — Main Betting Buttons */}
+      {/* 12vh — Main Betting Buttons */}
       <div className="min-h-0 px-[0.8vw] py-[0.3vh]">
         <MainBets />
       </div>
 
-      {/* 15vh — Footer with logo */}
-      <PlayerFooter />
+      {/* 3vh — Logo */}
+      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712" }}>
+        <img src="/logo.png" alt="Play Room Gaming" className="object-contain" style={{ height: "2.5vh" }} />
+      </div>
+
+      {/* 2vh — Disclaimer */}
+      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712" }}>
+        <span className="text-[#6a7282] text-center" style={{ fontSize: "0.9vh" }}>
+          Play responsibly. This is a demo application for entertainment purposes only.
+        </span>
+      </div>
     </div>
   );
 }
