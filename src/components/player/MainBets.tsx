@@ -12,25 +12,29 @@ export default function MainBets() {
       {BETS.map((bet) => (
         <button
           key={bet.name}
-          className="relative text-left transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden h-full"
-          style={{ border: `1.6px solid ${bet.border}`, borderRadius: "0.7vw", padding: "0.6vh 0.8vw" }}
+          className="relative transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden h-full flex flex-col items-center justify-center"
+          style={{ border: `1.6px solid ${bet.border}`, borderRadius: "0.7vw" }}
         >
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
             <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "0.7vw" }} />
             <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />
           </div>
-          <div className="relative z-10 flex flex-col justify-between h-full">
-            <div className="font-bold text-white text-center" style={{ fontSize: "clamp(12px, 1.6vh, 24px)" }}>{bet.name}</div>
-            <div>
-              <div className="flex items-center justify-between text-white" style={{ fontSize: "clamp(8px, 1vh, 14px)" }}>
-                <span className="font-medium">{bet.bets}</span>
-                <span className="font-semibold">{bet.total}</span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "0.5vh", marginTop: "0.2vh" }}>
-                <div className="h-full bg-white rounded-full" style={{ width: `${bet.pct}%` }} />
-              </div>
-              <div className="text-right text-white/80" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>{bet.pct}%</div>
+
+          <div className="relative z-10 w-full flex flex-col items-center justify-center h-full" style={{ padding: "0.4vh 0.8vw" }}>
+            {/* Title centered */}
+            <div className="font-bold text-white text-center" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{bet.name}</div>
+
+            {/* Stats row */}
+            <div className="flex items-center justify-between w-full text-white" style={{ fontSize: "clamp(8px, 1vh, 14px)", marginTop: "0.3vh" }}>
+              <span className="font-medium opacity-80">{bet.bets}</span>
+              <span className="font-semibold">{bet.total}</span>
             </div>
+
+            {/* Progress bar */}
+            <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "clamp(3px, 0.4vh, 8px)", marginTop: "0.3vh" }}>
+              <div className="h-full bg-white rounded-full" style={{ width: `${bet.pct}%` }} />
+            </div>
+            <div className="text-right w-full text-white/70" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>{bet.pct}%</div>
           </div>
         </button>
       ))}

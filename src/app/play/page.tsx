@@ -21,12 +21,8 @@ export default function PlayPage() {
       <PlayerHeader />
 
       {/* 1fr — Video Stream with overlays */}
-      <div className="relative min-h-0 overflow-hidden">
-        <img
-          src="/stream-placeholder.png"
-          alt="Live stream"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+      <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
+        <span className="text-[#6a7282] text-lg select-none">Live video stream</span>
         <ChipSelector />
         <LiveChat />
       </div>
@@ -52,7 +48,7 @@ export default function PlayPage() {
           className="min-h-0 overflow-hidden"
           style={{
             display: "grid",
-            gridTemplateRows: "20% 22% 1fr",
+            gridTemplateRows: "25% 28% 1fr",
             gap: "0.4vh",
           }}
         >
