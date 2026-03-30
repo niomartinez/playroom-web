@@ -14,23 +14,27 @@ export default function PlayPage() {
       className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "5vh 60vh 18vh 8vh 9vh",
+        gridTemplateRows: "5vh 53vh 13vh 14vh 15vh",
         background: "#0a0f1a",
       }}
     >
       {/* 5vh — Header */}
       <PlayerHeader />
 
-      {/* 60vh — Video Stream with overlays */}
-      <div className="relative min-h-0 bg-black flex items-center justify-center overflow-hidden">
-        <div className="text-[#6a7282] text-lg select-none">Live video stream</div>
+      {/* 53vh — Video Stream with overlays */}
+      <div className="relative min-h-0 overflow-hidden">
+        <img
+          src="/stream-placeholder.png"
+          alt="Live stream"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         <ChipSelector />
         <LiveChat />
       </div>
 
-      {/* 18vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
+      {/* 13vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
       <div
-        className="min-h-0 px-[0.8vw] py-[0.4vh]"
+        className="min-h-0 px-[0.8vw] py-[0.3vh]"
         style={{
           display: "grid",
           gridTemplateColumns: "22% 37% 41%",
@@ -40,7 +44,7 @@ export default function PlayPage() {
         <div className="min-h-0 overflow-hidden">
           <RoadmapPanel />
         </div>
-        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.4vh" }}>
+        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.3vh" }}>
           <BalanceBar />
           <SideBets />
         </div>
@@ -49,12 +53,12 @@ export default function PlayPage() {
         </div>
       </div>
 
-      {/* 8vh — Main Betting Buttons */}
-      <div className="min-h-0 px-[0.8vw] py-[0.2vh]">
+      {/* 14vh — Main Betting Buttons */}
+      <div className="min-h-0 px-[0.8vw] py-[0.3vh]">
         <MainBets />
       </div>
 
-      {/* 9vh — Footer */}
+      {/* 15vh — Footer with logo */}
       <PlayerFooter />
     </div>
   );
