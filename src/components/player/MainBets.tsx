@@ -39,9 +39,12 @@ export default function MainBets() {
             boxShadow: "0px 20px 25px rgba(0,0,0,0.1), 0px 8px 10px rgba(0,0,0,0.1)",
           }}
         >
-          {/* Gradient + texture overlay — exact Figma pattern */}
+          {/* Gradient + texture overlay */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[14px]">
-            <div className="absolute inset-0 rounded-[14px]" style={{ backgroundImage: bet.gradient }} />
+            <div
+              className="absolute inset-0 rounded-[14px]"
+              style={{ backgroundImage: bet.gradient }}
+            />
             <img
               alt=""
               className="absolute inset-0 w-full h-full object-cover rounded-[14px]"

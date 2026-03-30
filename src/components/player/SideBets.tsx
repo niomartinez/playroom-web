@@ -39,7 +39,10 @@ export default function SideBets() {
         >
           {/* Gradient + texture */}
           <div aria-hidden="true" className="absolute inset-0 pointer-events-none rounded-[14px]">
-            <div className="absolute inset-0 rounded-[14px]" style={{ backgroundImage: bet.gradient }} />
+            <div
+              className="absolute inset-0 rounded-[14px]"
+              style={{ backgroundImage: bet.gradient }}
+            />
             <img
               alt=""
               className="absolute inset-0 w-full h-full object-cover rounded-[14px]"

@@ -1,7 +1,7 @@
 export default function PlayerHeader() {
   return (
     <header
-      className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 border-b border-[#364153]"
+      className="flex items-center justify-between px-6 py-3 border-b border-[#364153] flex-shrink-0"
       style={{
         background: "linear-gradient(to right, #101828, #1e2939)",
         boxShadow: "0px 25px 50px rgba(0,0,0,0.25)",
@@ -9,15 +9,13 @@ export default function PlayerHeader() {
     >
       {/* Left: Logo */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="Play Room Gaming"
-            className="object-contain"
-            style={{ width: 120, height: 64 }}
-          />
-          <span className="text-sm text-[#99a1af]">Live Baccarat</span>
-        </div>
+        <img
+          src="/logo.png"
+          alt="Play Room Gaming"
+          className="object-contain"
+          style={{ width: 100, height: 48 }}
+        />
+        <span className="text-sm text-[#99a1af]">Live Baccarat</span>
       </div>
 
       {/* Right: Badges */}
@@ -33,7 +31,6 @@ export default function PlayerHeader() {
 
         {/* Round badge */}
         <div className="flex items-center gap-2 bg-[#1e2939] border border-[#364153] rounded-[10px] px-4 py-2">
-          {/* Clock icon */}
           <svg
             className="w-4 h-4 text-[#99a1af]"
             fill="none"

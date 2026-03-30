@@ -10,12 +10,12 @@ import RoadmapPanel from "@/components/player/RoadmapPanel";
 
 export default function PlayPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="flex flex-col h-screen overflow-hidden bg-black">
       {/* Header */}
       <PlayerHeader />
 
-      {/* Video Stream Area — relative container for overlays */}
-      <div className="relative flex-1 bg-black flex items-center justify-center min-h-[400px]">
+      {/* Video Stream Area — relative container for overlays, takes remaining space */}
+      <div className="relative flex-1 min-h-0 bg-black flex items-center justify-center">
         {/* Video placeholder */}
         <div className="text-[#6a7282] text-lg select-none">
           Live video stream
@@ -28,33 +28,38 @@ export default function PlayPage() {
         <LiveChat />
       </div>
 
-      {/* Bottom Panel Area */}
-      <div className="bg-[#0a0f1a]">
-        {/* Row 1: Balance + Side Bets + Card Display */}
-        <div className="px-4 py-4">
-          <div className="grid grid-cols-12 gap-4">
-            {/* Left section: Roadmap + Scores */}
-            <div className="col-span-3">
-              <div className="bg-[#101828] border border-[#364153] rounded-[14px] p-4">
-                <RoadmapPanel />
-              </div>
+      {/* Bottom Panel Area — fixed proportional grid, no scrolling */}
+      <div className="flex-shrink-0 bg-[#0a0f1a]">
+        {/* Row 1: Roadmap | Balance+SideBets | BaccaratTable */}
+        <div className="px-4 pt-4 pb-3">
+          <div
+            className="min-h-0"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "25% 1fr 35%",
+              gap: "16px",
+            }}
+          >
+            {/* Left section: Roadmap */}
+            <div className="min-h-0 overflow-hidden">
+              <RoadmapPanel />
             </div>
 
             {/* Center section: Balance + Side Bets */}
-            <div className="col-span-5 flex flex-col gap-3">
+            <div className="flex flex-col gap-3 min-h-0">
               <BalanceBar />
               <SideBets />
             </div>
 
             {/* Right section: Baccarat Table */}
-            <div className="col-span-4">
+            <div className="min-h-0">
               <BaccaratTable />
             </div>
           </div>
         </div>
 
         {/* Row 2: Main Betting Buttons */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-3">
           <MainBets />
         </div>
       </div>
