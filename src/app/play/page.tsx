@@ -1,50 +1,66 @@
-/** Player-facing live baccarat UI — placeholder.
- *  Will be replaced with the full Figma design implementation.
- */
-export default function PlayerUI() {
-  return (
-    <main className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 bg-[var(--bg-panel)] border-b border-[var(--gold-dim)]">
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-bold text-[var(--gold)]">
-            Play Room Gaming
-          </span>
-          <span className="text-xs text-[var(--text-gray)]">Live Baccarat</span>
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            LIVE
-          </span>
-          <span className="text-[var(--text-gray)]">Round #—</span>
-        </div>
-      </header>
+import PlayerHeader from "@/components/player/PlayerHeader";
+import ChipSelector from "@/components/player/ChipSelector";
+import LiveChat from "@/components/player/LiveChat";
+import SideBets from "@/components/player/SideBets";
+import MainBets from "@/components/player/MainBets";
+import BaccaratTable from "@/components/player/BaccaratTable";
+import BalanceBar from "@/components/player/BalanceBar";
+import PlayerFooter from "@/components/player/PlayerFooter";
+import RoadmapPanel from "@/components/player/RoadmapPanel";
 
-      {/* Video area */}
-      <div className="flex-1 bg-black flex items-center justify-center min-h-[400px]">
-        <p className="text-[var(--text-dim)]">Live video stream</p>
+export default function PlayPage() {
+  return (
+    <div className="min-h-screen flex flex-col bg-black">
+      {/* Header */}
+      <PlayerHeader />
+
+      {/* Video Stream Area — relative container for overlays */}
+      <div className="relative flex-1 bg-black flex items-center justify-center min-h-[400px]">
+        {/* Video placeholder */}
+        <div className="text-[#6a7282] text-lg select-none">
+          Live video stream
+        </div>
+
+        {/* Left sidebar: Chip selector */}
+        <ChipSelector />
+
+        {/* Right sidebar: Live chat */}
+        <LiveChat />
       </div>
 
-      {/* Betting panel */}
-      <div className="bg-[var(--bg-panel)] border-t border-[var(--gold-dim)] p-4">
-        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-3">
-          <button className="py-6 rounded-lg bg-[var(--player-blue)] font-bold text-lg hover:opacity-90 transition">
-            PLAYER
-          </button>
-          <button className="py-6 rounded-lg bg-[var(--tie-green)] font-bold text-lg hover:opacity-90 transition">
-            TIE
-          </button>
-          <button className="py-6 rounded-lg bg-[var(--banker-red)] font-bold text-lg hover:opacity-90 transition">
-            BANKER
-          </button>
+      {/* Bottom Panel Area */}
+      <div className="bg-[#0a0f1a]">
+        {/* Row 1: Balance + Side Bets + Card Display */}
+        <div className="px-4 py-4">
+          <div className="grid grid-cols-12 gap-4">
+            {/* Left section: Roadmap + Scores */}
+            <div className="col-span-3">
+              <div className="bg-[#101828] border border-[#364153] rounded-[14px] p-4">
+                <RoadmapPanel />
+              </div>
+            </div>
+
+            {/* Center section: Balance + Side Bets */}
+            <div className="col-span-5 flex flex-col gap-3">
+              <BalanceBar />
+              <SideBets />
+            </div>
+
+            {/* Right section: Baccarat Table */}
+            <div className="col-span-4">
+              <BaccaratTable />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Main Betting Buttons */}
+        <div className="px-4 pb-4">
+          <MainBets />
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-3 text-xs text-[var(--text-dim)]">
-        Play responsibly. This is a demo application for entertainment purposes only.
-      </footer>
-    </main>
+      <PlayerFooter />
+    </div>
   );
 }
