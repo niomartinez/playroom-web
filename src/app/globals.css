@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --bg-dark: #0a0a14;
+  --bg-panel: #12121e;
+  --bg-panel-inner: #1a1a2e;
+  --gold: #d4a843;
+  --gold-dim: #8b7335;
+  --gold-bright: #f5d36e;
+  --banker-red: #cc2222;
+  --player-blue: #2255cc;
+  --tie-green: #22aa22;
+  --text-white: #f5f5f5;
+  --text-gray: #aaaaaa;
+  --text-dim: #666666;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-white);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}

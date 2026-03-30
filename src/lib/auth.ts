@@ -1,0 +1,58 @@
+/** Simple shared-credential auth for the studio UI.
+ *
+ * Studio access requires:
+ * 1. Valid username/password (shared credentials from env vars)
+ * 2. IP whitelist check (configured via STUDIO_ALLOWED_IPS env var)
+ *
+ * Sessions are stored in a signed cookie.
+ */
+
+import { cookies } from "next/headers";
+import { SignJWT, jwtVerify } from "jose";
+
+const STUDIO_USER = process.env.STUDIO_USERNAME || "admin";
+const STUDIO_PASS = process.env.STUDIO_PASSWORD || "changeme";
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.STUDIO_JWT_SECRET || "playroom-studio-secret-change-in-prod"
+);
+const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
+  .split(",")
+  .map((ip) => ip.trim())
+  .filter(Boolean);
+
+const COOKIE_NAME = "studio_session";
+
+export function isIpAllowed(ip: string | null): boolean {
+  // If no IPs configured, allow all (dev mode)
+  if (ALLOWED_IPS.length === 0) return true;
+  if (!ip) return false;
+  return ALLOWED_IPS.includes(ip);
+}
+
+export function validateCredentials(username: string, password: string): boolean {
+  return username === STUDIO_USER && password === STUDIO_PASS;
+}
+
+export async function createSession(): Promise<string> {
+  return new SignJWT({ role: "studio" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("12h")
+    .setIssuedAt()
+    .sign(JWT_SECRET);
+}
+
+export async function verifySession(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getSession(): Promise<boolean> {
+  const jar = await cookies();
+  const token = jar.get(COOKIE_NAME)?.value;
+  if (!token) return false;
+  return verifySession(token);
+}

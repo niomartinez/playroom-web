@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.STUDIO_JWT_SECRET || "playroom-studio-secret-change-in-prod"
+);
+const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
+  .split(",")
+  .map((ip) => ip.trim())
+  .filter(Boolean);
+
+export async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Only gate /studio routes (except the login page)
+  if (!pathname.startsWith("/studio")) return NextResponse.next();
+  if (pathname === "/studio/login") return NextResponse.next();
+
+  // IP whitelist check
+  if (ALLOWED_IPS.length > 0) {
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "";
+    if (!ALLOWED_IPS.includes(clientIp)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+
+  // Session check
+  const token = req.cookies.get("studio_session")?.value;
+  if (!token) {
+    return NextResponse.redirect(new URL("/studio/login", req.url));
+  }
+
+  try {
+    await jwtVerify(token, JWT_SECRET);
+    return NextResponse.next();
+  } catch {
+    return NextResponse.redirect(new URL("/studio/login", req.url));
+  }
+}
+
+export const config = {
+  matcher: ["/studio/:path*"],
+};
