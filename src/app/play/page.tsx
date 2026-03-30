@@ -13,14 +13,14 @@ export default function PlayPage() {
       className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "4vh 1fr 16vh 14vh 2.5vh 1.5vh",
+        gridTemplateRows: "4vh 1fr 30vh 3vh",
         background: "#0a0f1a",
       }}
     >
       {/* 4vh — Header */}
       <PlayerHeader />
 
-      {/* 54vh — Video Stream with overlays */}
+      {/* 1fr — Video Stream with overlays */}
       <div className="relative min-h-0 overflow-hidden">
         <img
           src="/stream-placeholder.png"
@@ -31,39 +31,37 @@ export default function PlayPage() {
         <LiveChat />
       </div>
 
-      {/* 16vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
+      {/* 30vh — Bottom: 3 columns matching Figma exactly */}
+      {/* Left: RoadMap | Center: Balance+SideBets+MainBets stacked | Right: BaccaratTable */}
       <div
-        className="min-h-0 px-[0.8vw] py-[0.3vh]"
+        className="min-h-0 overflow-hidden"
         style={{
           display: "grid",
-          gridTemplateColumns: "22% 37% 41%",
-          gap: "0.6vw",
+          gridTemplateColumns: "22% 42% 36%",
+          gap: "0.5vw",
+          padding: "0.4vh 0.5vw",
         }}
       >
+        {/* Left: Roadmap with scores + prediction */}
         <div className="min-h-0 overflow-hidden">
           <RoadmapPanel />
         </div>
-        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.3vh" }}>
+
+        {/* Center: Balance → Side Bets → Main Bets ALL stacked */}
+        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.4vh" }}>
           <BalanceBar />
           <SideBets />
+          <MainBets />
         </div>
+
+        {/* Right: Baccarat Table */}
         <div className="min-h-0 overflow-hidden">
           <BaccaratTable />
         </div>
       </div>
 
-      {/* 12vh — Main Betting Buttons */}
-      <div className="min-h-0 px-[0.8vw] py-[0.3vh]">
-        <MainBets />
-      </div>
-
-      {/* 3vh — Logo */}
-      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712" }}>
-        <img src="/logo.png" alt="Play Room Gaming" className="object-contain" style={{ height: "2.5vh" }} />
-      </div>
-
-      {/* 2vh — Disclaimer */}
-      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712" }}>
+      {/* 3vh — Footer */}
+      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712", borderTop: "0.8px solid #1e2939" }}>
         <span className="text-[#6a7282] text-center" style={{ fontSize: "0.9vh" }}>
           Play responsibly. This is a demo application for entertainment purposes only.
         </span>

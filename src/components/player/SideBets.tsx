@@ -7,24 +7,20 @@ const SIDE_BETS = [
 
 export default function SideBets() {
   return (
-    <div className="grid grid-cols-4 flex-1 min-h-0" style={{ gap: "0.5vw" }}>
+    <div className="grid grid-cols-4" style={{ gap: "0.4vw" }}>
       {SIDE_BETS.map((bet) => (
         <button
           key={bet.name}
-          className="relative text-center transition-all hover:brightness-110 active:scale-95 cursor-pointer overflow-hidden h-full flex items-center justify-center"
-          style={{
-            border: `1.6px solid ${bet.border}`,
-            boxShadow: "0px 10px 15px rgba(0,0,0,0.1), 0px 4px 6px rgba(0,0,0,0.1)",
-            borderRadius: "1vw",
-          }}
+          className="relative text-center transition-all hover:brightness-110 active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center"
+          style={{ border: `1.6px solid ${bet.border}`, borderRadius: "0.7vw", padding: "0.6vh 0.4vw" }}
         >
-          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "1vw" }}>
-            <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "1vw" }} />
-            <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "1vw" }} src="/texture.png" />
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
+            <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "0.7vw" }} />
+            <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />
           </div>
           <div className="relative z-10">
-            <div className="font-bold text-white leading-tight" style={{ fontSize: "1.3vh" }}>{bet.name}</div>
-            <div className="font-medium text-white/90" style={{ fontSize: "1.1vh", marginTop: "0.2vh" }}>{bet.odds}</div>
+            <div className="font-bold text-white leading-tight" style={{ fontSize: "clamp(9px, 1.1vh, 16px)" }}>{bet.name}</div>
+            <div className="font-medium text-white/90" style={{ fontSize: "clamp(8px, 0.9vh, 14px)" }}>{bet.odds}</div>
           </div>
         </button>
       ))}
