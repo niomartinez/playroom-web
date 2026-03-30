@@ -35,7 +35,7 @@ export default function PlayPage() {
           display: "grid",
           gridTemplateColumns: "22% 44% 32%",
           gap: "0.5vw",
-          padding: "0.4vh 0.5vw",
+          padding: "0.4vh 16px",
         }}
       >
         {/* Left: Roadmap with scores + prediction */}
