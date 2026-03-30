@@ -7,7 +7,7 @@ const SIDE_BETS = [
 
 export default function SideBets() {
   return (
-    <div className="grid grid-cols-4" style={{ gap: "0.4vw" }}>
+    <div className="grid grid-cols-4 h-full" style={{ gap: "0.4vw" }}>
       {SIDE_BETS.map((bet) => (
         <button
           key={bet.name}

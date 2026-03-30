@@ -47,8 +47,15 @@ export default function PlayPage() {
           <RoadmapPanel />
         </div>
 
-        {/* Center: Balance → Side Bets → Main Bets ALL stacked */}
-        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.4vh" }}>
+        {/* Center: Balance → Side Bets → Main Bets ALL stacked with explicit row sizes */}
+        <div
+          className="min-h-0 overflow-hidden"
+          style={{
+            display: "grid",
+            gridTemplateRows: "20% 22% 1fr",
+            gap: "0.4vh",
+          }}
+        >
           <BalanceBar />
           <SideBets />
           <MainBets />

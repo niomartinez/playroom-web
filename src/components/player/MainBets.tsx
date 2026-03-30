@@ -8,7 +8,7 @@ const BETS = [
 
 export default function MainBets() {
   return (
-    <div className="grid grid-cols-3 flex-1 min-h-0" style={{ gap: "0.4vw" }}>
+    <div className="grid grid-cols-3 h-full" style={{ gap: "0.4vw" }}>
       {BETS.map((bet) => (
         <button
           key={bet.name}
