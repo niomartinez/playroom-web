@@ -13,7 +13,7 @@ export default function PlayPage() {
       className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "4vh 1fr 30vh 3vh",
+        gridTemplateRows: "5.5vh 1fr 30vh 3vh",
         background: "#0a0f1a",
       }}
     >
