@@ -3,11 +3,11 @@ export default function BaccaratTable() {
     <div
       className="relative overflow-hidden h-full flex items-stretch"
       style={{
-        border: "4px solid rgba(208,135,0,0.4)",
+        border: "3px solid rgba(208,135,0,0.4)",
         boxShadow: "0px 25px 50px -12px rgba(0,0,0,0.25)",
         borderRadius: "1.5vw",
-        gap: "1vw",
-        padding: "1.2vw",
+        gap: "0.5vw",
+        padding: "0.8vw",
       }}
     >
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "1.5vw" }}>

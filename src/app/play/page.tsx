@@ -33,7 +33,7 @@ export default function PlayPage() {
         className="min-h-0 overflow-hidden"
         style={{
           display: "grid",
-          gridTemplateColumns: "22% 42% 36%",
+          gridTemplateColumns: "22% 44% 32%",
           gap: "0.5vw",
           padding: "0.4vh 0.5vw",
         }}
