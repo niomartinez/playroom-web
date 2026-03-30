@@ -12,40 +12,54 @@ export default function StudioDashboard() {
       className="flex flex-col h-screen overflow-hidden"
       style={{
         background: "linear-gradient(to right, #000000, #171717, #000000)",
-        fontFamily: "'Inter', sans-serif",
       }}
     >
       <StudioHeader />
 
-      {/* Main 3-column layout */}
-      <main className="flex-1 grid min-h-0 p-6 gap-6" style={{ gridTemplateColumns: "128px 1fr 320px" }}>
+      {/* Main 3-column layout — fills all remaining space, no scrolling */}
+      <main
+        className="flex-1 min-h-0 p-4 gap-4"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "8% 1fr 22%",
+          gridTemplateRows: "1fr",
+        }}
+      >
         {/* Left — Bead Road */}
         <BeadRoad />
 
         {/* Center — Big Road + Derived Roads */}
-        <div className="flex flex-col gap-4 min-h-0">
-          {/* Big Road takes ~65% of center height */}
-          <div className="flex-[2] min-h-0">
-            <BigRoad />
-          </div>
+        <div
+          className="min-h-0"
+          style={{
+            display: "grid",
+            gridTemplateRows: "3fr 1fr 1fr",
+            gap: "8px",
+          }}
+        >
+          <BigRoad />
 
-          {/* Derived roads row: Big Eye full width, then Small Road + Cockroach Pig */}
-          <div className="flex-1 min-h-0">
-            <DerivedRoad title="BIG EYE" cols={44} rows={6} />
-          </div>
+          <DerivedRoad title="BIG EYE" cols={44} rows={4} />
 
-          <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
-            <DerivedRoad title="SMALL ROAD" cols={22} rows={6} />
-            <DerivedRoad title="COCKROACH PIG" cols={22} rows={6} />
+          <div className="grid grid-cols-2 gap-2 min-h-0">
+            <DerivedRoad title="SMALL ROAD" cols={22} rows={4} />
+            <DerivedRoad title="COCKROACH PIG" cols={22} rows={4} />
           </div>
         </div>
 
-        {/* Right — Score Panel + Next Game */}
-        <div className="flex flex-col min-h-0 gap-0">
-          <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Right — Score Panel + Next Game, proportional split */}
+        <div
+          className="min-h-0"
+          style={{
+            display: "grid",
+            gridTemplateRows: "3fr 2fr",
+            gap: "8px",
+          }}
+        >
+          <div className="overflow-hidden">
             <ScorePanel />
           </div>
-          <div className="shrink-0">
+          <div className="overflow-hidden">
             <NextGamePanel />
           </div>
         </div>

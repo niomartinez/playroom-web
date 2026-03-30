@@ -4,7 +4,7 @@ const ROWS = 20;
 export default function BeadRoad() {
   return (
     <div
-      className="flex flex-col gap-3 h-full"
+      className="flex flex-col h-full overflow-hidden"
       style={{
         background: "linear-gradient(104deg, #171717 0%, #000000 100%)",
         border: "1px solid rgba(208,135,0,0.3)",
@@ -15,31 +15,26 @@ export default function BeadRoad() {
       }}
     >
       <p
-        className="font-semibold leading-4"
-        style={{ color: "#f0b100", fontSize: 12, letterSpacing: "0.6px" }}
+        className="font-semibold shrink-0 mb-2"
+        style={{ color: "#f0b100", fontSize: 12, letterSpacing: "0.6px", lineHeight: "16px" }}
       >
         BEAD ROAD
       </p>
 
       <div
-        className="grid"
+        className="grid flex-1"
         style={{
-          gridTemplateColumns: `repeat(${COLS}, 20px)`,
-          gridTemplateRows: `repeat(${ROWS}, 20px)`,
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          gridTemplateRows: `repeat(${ROWS}, 1fr)`,
           gap: "2px",
         }}
       >
         {Array.from({ length: COLS * ROWS }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-center"
-            style={{ width: 20, height: 20, padding: 2 }}
-          >
-            {/* Empty cell: dark gold circle outline */}
+          <div key={i} className="flex items-center justify-center">
             <div
               style={{
-                width: 16,
-                height: 16,
+                width: "80%",
+                aspectRatio: "1",
                 borderRadius: "9999px",
                 border: "1px solid #392c07",
               }}

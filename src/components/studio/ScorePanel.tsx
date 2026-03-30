@@ -11,12 +11,12 @@ const scoreRows = [
 ];
 
 function Indicator({ type, color }: { type: string; color: string }) {
-  if (type === "none") return <span className="inline-block w-4 h-4" />;
+  if (type === "none") return <span className="inline-block w-4 h-4 shrink-0" />;
 
   if (type === "filled") {
     return (
       <span
-        className="inline-block w-4 h-4 rounded-full"
+        className="inline-block w-4 h-4 rounded-full shrink-0"
         style={{ backgroundColor: color }}
       />
     );
@@ -25,29 +25,19 @@ function Indicator({ type, color }: { type: string; color: string }) {
   if (type === "outline") {
     return (
       <span
-        className="inline-block w-4 h-4 rounded-full"
+        className="inline-block w-4 h-4 rounded-full shrink-0"
         style={{ border: `2px solid ${color}` }}
       />
     );
   }
 
-  // pairBanker / pairPlayer: white outline circle with small colored dot
   const dotColor = type === "pairBanker" ? "#fb2c36" : "#2b7fff";
   return (
-    <span className="relative inline-block w-4 h-4">
-      <span
-        className="absolute inset-0 rounded-full"
-        style={{ border: "0.5px solid white" }}
-      />
+    <span className="relative inline-block w-4 h-4 shrink-0">
+      <span className="absolute inset-0 rounded-full" style={{ border: "0.5px solid white" }} />
       <span
         className="absolute rounded-full"
-        style={{
-          width: 6,
-          height: 6,
-          backgroundColor: dotColor,
-          top: 0,
-          left: 0,
-        }}
+        style={{ width: 6, height: 6, backgroundColor: dotColor, top: 0, left: 0 }}
       />
     </span>
   );
@@ -56,32 +46,28 @@ function Indicator({ type, color }: { type: string; color: string }) {
 export default function ScorePanel() {
   return (
     <div
-      className="rounded-[10px] flex flex-col"
+      className="rounded-[10px] flex flex-col h-full overflow-hidden"
       style={{
         background: "linear-gradient(123deg, #171717 0%, #000000 100%)",
         border: "1px solid rgba(208,135,0,0.3)",
         boxShadow:
           "0px 10px 15px rgba(208,135,0,0.1), 0px 4px 6px rgba(208,135,0,0.1)",
-        padding: "12px 21px 1px 21px",
+        padding: "8px 12px",
       }}
     >
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-[2px] flex-1 min-h-0">
         {scoreRows.map((row, idx) => (
           <div
             key={idx}
-            className="flex items-center justify-between rounded"
-            style={{
-              backgroundColor: "rgba(0,0,0,0.4)",
-              height: 48,
-              padding: "0 8px",
-            }}
+            className="flex items-center justify-between rounded flex-1 min-h-0 px-2"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           >
             <div className="flex items-center gap-2">
               <Indicator type={row.indicator} color={row.color} />
               <span
-                className="font-medium leading-5 whitespace-nowrap"
+                className="font-medium whitespace-nowrap"
                 style={{
-                  fontSize: 14,
+                  fontSize: "clamp(10px, 1.1vw, 14px)",
                   color: row.indicator === "none" ? "#f0b100" : "white",
                 }}
               >
@@ -89,8 +75,8 @@ export default function ScorePanel() {
               </span>
             </div>
             <span
-              className="font-bold leading-8"
-              style={{ fontSize: 24, color: row.color }}
+              className="font-bold"
+              style={{ fontSize: "clamp(16px, 1.8vw, 24px)", color: row.color }}
             >
               {row.count}
             </span>
@@ -98,8 +84,7 @@ export default function ScorePanel() {
         ))}
       </div>
 
-      {/* Divider */}
-      <div style={{ borderTop: "1px solid rgba(208,135,0,0.2)", marginTop: 4 }} />
+      <div className="shrink-0 mt-1" style={{ borderTop: "1px solid rgba(208,135,0,0.2)" }} />
     </div>
   );
 }
