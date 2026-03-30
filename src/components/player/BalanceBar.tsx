@@ -1,17 +1,15 @@
 export default function BalanceBar() {
   return (
     <div
-      className="flex items-center gap-[12px] px-[16.8px]"
+      className="flex items-center gap-3 px-4 py-2"
       style={{
         backgroundColor: "#101828",
         border: "0.8px solid #364153",
         borderRadius: "14px",
-        height: "81.6px",
       }}
     >
-      {/* Wallet icon */}
       <svg
-        className="w-[24px] h-[24px] text-[#99a1af] flex-shrink-0"
+        className="w-5 h-5 text-[#99a1af] flex-shrink-0"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -21,8 +19,8 @@ export default function BalanceBar() {
         <path d="M16 12a1 1 0 102 0 1 1 0 00-2 0z" />
       </svg>
       <div>
-        <div className="text-[12px] text-[#99a1af]">Balance</div>
-        <div className="font-bold text-[20px] text-white">$10,000</div>
+        <div className="text-[10px] text-[#99a1af]">Balance</div>
+        <div className="font-bold text-base text-white">$10,000</div>
       </div>
     </div>
   );

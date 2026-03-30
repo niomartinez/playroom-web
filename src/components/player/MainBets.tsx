@@ -33,7 +33,7 @@ export default function MainBets() {
       {BETS.map((bet) => (
         <button
           key={bet.name}
-          className="relative rounded-[14px] px-6 py-5 text-left transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden"
+          className="relative rounded-[14px] px-4 py-3 text-left transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden"
           style={{
             border: `1.6px solid ${bet.border}`,
             boxShadow: "0px 20px 25px rgba(0,0,0,0.1), 0px 8px 10px rgba(0,0,0,0.1)",
@@ -54,9 +54,9 @@ export default function MainBets() {
           </div>
 
           <div className="relative z-10">
-            <div className="text-2xl font-bold text-white text-center mb-3">{bet.name}</div>
+            <div className="text-lg font-bold text-white text-center mb-1">{bet.name}</div>
 
-            <div className="flex items-center justify-between text-sm text-white mb-1">
+            <div className="flex items-center justify-between text-xs text-white mb-1">
               <span className="font-medium">{bet.bets}</span>
               <span className="font-semibold">{bet.total}</span>
             </div>
