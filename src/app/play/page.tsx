@@ -11,38 +11,36 @@ import RoadmapPanel from "@/components/player/RoadmapPanel";
 export default function PlayPage() {
   return (
     <div
-      className="h-screen overflow-hidden bg-[#0a0f1a]"
+      className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "auto 1fr auto auto auto",
+        gridTemplateRows: "5vh 60vh 18vh 8vh 9vh",
+        background: "#0a0f1a",
       }}
     >
-      {/* Row 1: Header */}
+      {/* 5vh — Header */}
       <PlayerHeader />
 
-      {/* Row 2: Video Stream — takes all remaining space */}
+      {/* 60vh — Video Stream with overlays */}
       <div className="relative min-h-0 bg-black flex items-center justify-center overflow-hidden">
-        <div className="text-[#6a7282] text-lg select-none">
-          Live video stream
-        </div>
+        <div className="text-[#6a7282] text-lg select-none">Live video stream</div>
         <ChipSelector />
         <LiveChat />
       </div>
 
-      {/* Row 3: Bottom panel — Roadmap | Balance+SideBets | BaccaratTable */}
+      {/* 18vh — Bottom panel: Roadmap | Balance+SideBets | BaccaratTable */}
       <div
-        className="min-h-0 px-3 pt-3 pb-2"
+        className="min-h-0 px-[0.8vw] py-[0.4vh]"
         style={{
           display: "grid",
-          gridTemplateColumns: "25% 1fr 32%",
-          gap: "12px",
-          maxHeight: "35vh",
+          gridTemplateColumns: "22% 37% 41%",
+          gap: "0.6vw",
         }}
       >
         <div className="min-h-0 overflow-hidden">
           <RoadmapPanel />
         </div>
-        <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+        <div className="flex flex-col min-h-0 overflow-hidden" style={{ gap: "0.4vh" }}>
           <BalanceBar />
           <SideBets />
         </div>
@@ -51,12 +49,12 @@ export default function PlayPage() {
         </div>
       </div>
 
-      {/* Row 4: Main Betting Buttons */}
-      <div className="px-3 pb-2">
+      {/* 8vh — Main Betting Buttons */}
+      <div className="min-h-0 px-[0.8vw] py-[0.2vh]">
         <MainBets />
       </div>
 
-      {/* Row 5: Footer */}
+      {/* 9vh — Footer */}
       <PlayerFooter />
     </div>
   );
