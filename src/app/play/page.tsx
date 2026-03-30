@@ -64,7 +64,8 @@ export default function PlayPage() {
       </div>
 
       {/* 3vh — Footer */}
-      <div className="flex items-center justify-center" style={{ backgroundColor: "#030712", borderTop: "0.8px solid #1e2939" }}>
+      <div className="flex items-center justify-center gap-3" style={{ backgroundColor: "#030712", borderTop: "0.8px solid #1e2939" }}>
+        <img src="/logo.png" alt="Play Room Gaming" className="object-contain" style={{ height: "2vh" }} />
         <span className="text-[#6a7282] text-center" style={{ fontSize: "0.9vh" }}>
           Play responsibly. This is a demo application for entertainment purposes only.
         </span>
