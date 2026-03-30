@@ -1,45 +1,44 @@
 export default function StudioFooter() {
   return (
     <footer
-      className="flex items-center justify-between px-6 pt-[13px] pb-3 h-[45px] shrink-0"
+      className="flex items-center justify-between shrink-0"
       style={{
-        background: "linear-gradient(to right, #000000, #171717, #000000)",
+        height: 45,
+        background: "linear-gradient(to right, #000000 0%, #171717 50%, #000000 100%)",
         borderTop: "1px solid rgba(208,135,0,0.3)",
+        padding: "13px 24px 0 24px",
       }}
     >
       {/* Left section */}
-      <div className="flex items-center gap-4 text-sm font-normal" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className="flex items-center gap-6">
         {/* LIVE indicator */}
         <div className="flex items-center gap-2">
           <span
-            className="inline-block w-2 h-2 rounded-full"
-            style={{ backgroundColor: "#00bc7d" }}
+            className="inline-block rounded-full"
+            style={{ width: 8, height: 8, backgroundColor: "#00bc7d" }}
           />
-          <span style={{ color: "#99a1af" }}>LIVE</span>
+          <span className="font-normal leading-5" style={{ color: "#99a1af", fontSize: 14 }}>
+            LIVE
+          </span>
         </div>
-
-        <span style={{ color: "rgba(208,135,0,0.2)" }}>|</span>
 
         {/* Table */}
-        <div>
-          <span style={{ color: "#6a7282" }}>Table:&nbsp;</span>
-          <span className="font-bold text-white">PRG-01</span>
-        </div>
-
-        <span style={{ color: "rgba(208,135,0,0.2)" }}>|</span>
+        <p className="font-normal leading-5 whitespace-nowrap" style={{ fontSize: 14 }}>
+          <span style={{ color: "#6a7282" }}>Table: </span>
+          <span className="font-semibold text-white">PRG-01</span>
+        </p>
 
         {/* Dealer */}
-        <div>
-          <span style={{ color: "#6a7282" }}>Dealer:&nbsp;</span>
-          <span className="font-bold text-white">Sarah M.</span>
-        </div>
+        <p className="font-normal leading-5 whitespace-nowrap" style={{ fontSize: 14 }}>
+          <span style={{ color: "#6a7282" }}>Dealer: </span>
+          <span className="font-semibold text-white">Sarah M.</span>
+        </p>
       </div>
 
       {/* Right section */}
-      <div className="text-sm" style={{ fontFamily: "Inter, sans-serif" }}>
-        <span style={{ color: "#6a7282" }}>Last Updated:&nbsp;</span>
-        <span className="text-white">12:45:32</span>
-      </div>
+      <p className="font-normal leading-5 whitespace-nowrap" style={{ color: "#6a7282", fontSize: 14 }}>
+        Last Updated: <span className="text-white">12:45:32</span>
+      </p>
     </footer>
   );
 }

@@ -4,22 +4,30 @@ const ROWS = 18;
 export default function BigRoad() {
   return (
     <div
-      className="rounded-[10px] p-3 h-full flex flex-col"
+      className="flex flex-col h-full"
       style={{
-        background: "linear-gradient(123deg, #171717 0%, #000000 100%)",
+        background: "linear-gradient(104deg, #171717 0%, #000000 100%)",
         border: "1px solid rgba(208,135,0,0.3)",
+        borderRadius: 10,
         boxShadow:
           "0px 10px 15px rgba(208,135,0,0.1), 0px 4px 6px rgba(208,135,0,0.1)",
+        padding: "13px 17px",
       }}
     >
       {/* Header row */}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xs font-semibold" style={{ color: "#99a1af" }}>
+      <div className="flex items-center justify-between mb-3">
+        <p
+          className="font-semibold leading-4"
+          style={{ color: "#f0b100", fontSize: 12, letterSpacing: "0.6px" }}
+        >
           BIG ROAD
-        </h2>
-        <span className="text-xs font-medium" style={{ color: "#6a7282" }}>
+        </p>
+        <p
+          className="font-medium leading-4"
+          style={{ color: "#6a7282", fontSize: 12 }}
+        >
           Game #18
-        </span>
+        </p>
       </div>
 
       {/* Grid */}
@@ -28,20 +36,26 @@ export default function BigRoad() {
         style={{
           gridTemplateColumns: `repeat(${COLS}, 1fr)`,
           gridTemplateRows: `repeat(${ROWS}, 1fr)`,
-          gap: "1px",
+          gap: "2px",
         }}
       >
         {Array.from({ length: COLS * ROWS }).map((_, i) => (
           <div
             key={i}
             className="flex items-center justify-center"
-            style={{
-              border: "1px solid rgba(208,135,0,0.07)",
-              borderRadius: 1,
-              minWidth: 0,
-              minHeight: 0,
-            }}
-          />
+            style={{ padding: 2, minWidth: 0, minHeight: 0 }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "9999px",
+                border: "1px solid #392c07",
+                maxWidth: 16,
+                maxHeight: 16,
+              }}
+            />
+          </div>
         ))}
       </div>
     </div>

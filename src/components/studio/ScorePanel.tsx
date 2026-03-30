@@ -1,79 +1,17 @@
 const scoreRows = [
-  {
-    label: "BANKER",
-    count: 8,
-    color: "#fb2c36",
-    indicator: "outline" as const,
-    indicatorColor: "#fb2c36",
-  },
-  {
-    label: "PLAYER",
-    count: 7,
-    color: "#2b7fff",
-    indicator: "outline" as const,
-    indicatorColor: "#2b7fff",
-  },
-  {
-    label: "TIE",
-    count: 2,
-    color: "#00bc7d",
-    indicator: "filled" as const,
-    indicatorColor: "#00bc7d",
-  },
-  {
-    label: "BANKER PAIR",
-    count: 1,
-    color: "#fb2c36",
-    indicator: "dot" as const,
-    indicatorColor: "#fb2c36",
-  },
-  {
-    label: "PLAYER PAIR",
-    count: 1,
-    color: "#2b7fff",
-    indicator: "dot" as const,
-    indicatorColor: "#2b7fff",
-  },
-  {
-    label: "LUCKY 6",
-    count: 0,
-    color: "#f0b100",
-    indicator: "filled" as const,
-    indicatorColor: "#f0b100",
-  },
-  {
-    label: "DRAGON 7",
-    count: 0,
-    color: "#ff009d",
-    indicator: "filled" as const,
-    indicatorColor: "#ff009d",
-  },
-  {
-    label: "PANDA 8",
-    count: 0,
-    color: "#00ffe5",
-    indicator: "filled" as const,
-    indicatorColor: "#00ffe5",
-  },
-  {
-    label: "GAME NUMBER",
-    count: 18,
-    color: "#f0b100",
-    indicator: "none" as const,
-    indicatorColor: "transparent",
-  },
+  { label: "BANKER", count: 8, color: "#fb2c36", indicator: "outline" as const },
+  { label: "PLAYER", count: 9, color: "#2b7fff", indicator: "outline" as const },
+  { label: "TIE", count: 1, color: "#00bc7d", indicator: "filled" as const },
+  { label: "BANKER PAIR", count: 8, color: "#fb2c36", indicator: "pairBanker" as const },
+  { label: "BANKER PAIR", count: 9, color: "#2b7fff", indicator: "pairPlayer" as const },
+  { label: "LUCKY 6", count: 1, color: "#f0b100", indicator: "filled" as const },
+  { label: "DRAGON 7", count: 9, color: "#ff009d", indicator: "filled" as const },
+  { label: "PANDA 8", count: 1, color: "#00ffe5", indicator: "filled" as const },
+  { label: "GAME NUMBER", count: 1, color: "#f0b100", indicator: "none" as const },
 ];
 
-function Indicator({
-  type,
-  color,
-}: {
-  type: "outline" | "filled" | "dot" | "none";
-  color: string;
-}) {
-  if (type === "none") {
-    return <span className="w-4 h-4 inline-block" />;
-  }
+function Indicator({ type, color }: { type: string; color: string }) {
+  if (type === "none") return <span className="inline-block w-4 h-4" />;
 
   if (type === "filled") {
     return (
@@ -93,15 +31,23 @@ function Indicator({
     );
   }
 
-  // dot: white outline with small colored dot inside
+  // pairBanker / pairPlayer: white outline circle with small colored dot
+  const dotColor = type === "pairBanker" ? "#fb2c36" : "#2b7fff";
   return (
-    <span
-      className="relative inline-block w-4 h-4 rounded-full"
-      style={{ border: "2px solid #ffffff" }}
-    >
+    <span className="relative inline-block w-4 h-4">
       <span
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full"
-        style={{ backgroundColor: color }}
+        className="absolute inset-0 rounded-full"
+        style={{ border: "0.5px solid white" }}
+      />
+      <span
+        className="absolute rounded-full"
+        style={{
+          width: 6,
+          height: 6,
+          backgroundColor: dotColor,
+          top: 0,
+          left: 0,
+        }}
       />
     </span>
   );
@@ -110,30 +56,41 @@ function Indicator({
 export default function ScorePanel() {
   return (
     <div
-      className="rounded-[10px] p-4"
+      className="rounded-[10px] flex flex-col"
       style={{
         background: "linear-gradient(123deg, #171717 0%, #000000 100%)",
         border: "1px solid rgba(208,135,0,0.3)",
         boxShadow:
           "0px 10px 15px rgba(208,135,0,0.1), 0px 4px 6px rgba(208,135,0,0.1)",
+        padding: "12px 21px 1px 21px",
       }}
     >
       <div className="flex flex-col gap-0.5">
-        {scoreRows.map((row) => (
+        {scoreRows.map((row, idx) => (
           <div
-            key={row.label}
-            className="flex items-center justify-between px-3 rounded-[4px]"
-            style={{ backgroundColor: "rgba(0,0,0,0.4)", height: "48px" }}
+            key={idx}
+            className="flex items-center justify-between rounded"
+            style={{
+              backgroundColor: "rgba(0,0,0,0.4)",
+              height: 48,
+              padding: "0 8px",
+            }}
           >
-            <div className="flex items-center gap-3">
-              <Indicator type={row.indicator} color={row.indicatorColor} />
-              <span className="text-sm font-medium text-white">
+            <div className="flex items-center gap-2">
+              <Indicator type={row.indicator} color={row.color} />
+              <span
+                className="font-medium leading-5 whitespace-nowrap"
+                style={{
+                  fontSize: 14,
+                  color: row.indicator === "none" ? "#f0b100" : "white",
+                }}
+              >
                 {row.label}
               </span>
             </div>
             <span
-              className="text-2xl font-bold"
-              style={{ color: row.color }}
+              className="font-bold leading-8"
+              style={{ fontSize: 24, color: row.color }}
             >
               {row.count}
             </span>
@@ -142,10 +99,7 @@ export default function ScorePanel() {
       </div>
 
       {/* Divider */}
-      <div
-        className="mt-3"
-        style={{ borderTop: "1px solid rgba(208,135,0,0.2)" }}
-      />
+      <div style={{ borderTop: "1px solid rgba(208,135,0,0.2)", marginTop: 4 }} />
     </div>
   );
 }
