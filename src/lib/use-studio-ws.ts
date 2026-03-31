@@ -1,21 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useCallback, type SetStateAction } from "react";
+import { useEffect, useRef, type SetStateAction } from "react";
 import { WS_BASE, LOBBY_API_KEY } from "./ws-config";
 import { useStudio } from "./studio-context";
 import type { RoundStatus, CurrentRound, Roads, RoadEntry } from "./game-context";
 
-/** Max reconnection delay in ms. */
 const MAX_DELAY = 30_000;
 
 type RoundSetter = (r: SetStateAction<CurrentRound | null>) => void;
 type RoadsSetter = (r: SetStateAction<Roads>) => void;
 type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
 
-/**
- * Connects to the lobby WebSocket and keeps StudioContext in sync.
- * Reconnects automatically with exponential backoff.
- */
 export function useStudioWs() {
   const {
     setRoundStatus,
@@ -24,65 +19,58 @@ export function useStudioWs() {
     setLastUpdated,
   } = useStudio();
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryRef = useRef(0);
-  const mountedRef = useRef(true);
-
-  const updateTimestamp = useCallback(() => {
-    const now = new Date();
-    const ts = now.toLocaleTimeString("en-US", { hour12: false });
-    setLastUpdated(ts);
-  }, [setLastUpdated]);
-
-  const connect = useCallback(() => {
-    if (!mountedRef.current) return;
-
-    const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      retryRef.current = 0; // reset backoff on successful connect
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        handleStudioMessage(msg, setRoundStatus, setCurrentRound, setRoads);
-        updateTimestamp();
-      } catch {
-        // ignore malformed messages
-      }
-    };
-
-    ws.onclose = () => {
-      if (!mountedRef.current) return;
-      scheduleReconnect();
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setRoundStatus, setCurrentRound, setRoads, updateTimestamp]);
-
-  const scheduleReconnect = useCallback(() => {
-    const delay = Math.min(1000 * 2 ** retryRef.current, MAX_DELAY);
-    retryRef.current += 1;
-    setTimeout(() => {
-      if (mountedRef.current) connect();
-    }, delay);
-  }, [connect]);
+  // Use refs to avoid stale closures in WS callbacks
+  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads, setLastUpdated });
+  settersRef.current = { setRoundStatus, setCurrentRound, setRoads, setLastUpdated };
 
   useEffect(() => {
-    mountedRef.current = true;
+    let mounted = true;
+    let ws: WebSocket | null = null;
+    let retryCount = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      if (!mounted) return;
+
+      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        retryCount = 0;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          const s = settersRef.current;
+          handleStudioMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
+          const now = new Date();
+          s.setLastUpdated(now.toLocaleTimeString("en-US", { hour12: false }));
+        } catch {
+          // ignore
+        }
+      };
+
+      ws.onclose = () => {
+        if (!mounted) return;
+        const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
+        retryCount++;
+        retryTimer = setTimeout(connect, delay);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    }
+
     connect();
 
     return () => {
-      mountedRef.current = false;
-      wsRef.current?.close();
+      mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      ws?.close();
     };
-  }, [connect]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /* ------------------------------------------------------------------ */
@@ -148,7 +136,6 @@ function handleStudioMessage(
     case "RoundResult":
     case "round_result": {
       setRoundStatus("result");
-      // Backend sends: { outcome: "Banker", player: { score, cards }, banker: { score, cards } }
       const outcomeStr = (data.outcome ?? data.winner ?? "") as string;
       const winner = outcomeStr.charAt(0).toUpperCase() as "P" | "B" | "T";
       const playerObj = (data.player ?? {}) as Record<string, unknown>;
@@ -165,7 +152,6 @@ function handleStudioMessage(
         };
       });
 
-      // Update roads
       if (winner) {
         setRoads((prev) => {
           const entry: RoadEntry = {
@@ -185,49 +171,21 @@ function handleStudioMessage(
       break;
     }
 
-    case "TableOpened":
-    case "table_opened": {
-      setRoundStatus("waiting");
-      break;
-    }
-
-    case "TableClosed":
-    case "table_closed": {
-      setRoundStatus("waiting");
-      setCurrentRound(null);
-      break;
-    }
-
     case "lobby_state":
     case "LobbyState": {
-      // Full snapshot -- populate roads from history
       const history = (data.history ?? data.results ?? []) as Array<Record<string, unknown>>;
       const entries: RoadEntry[] = history.map((h) => ({
         result: ((h.winner as string)?.charAt(0).toUpperCase() ?? "T") as "P" | "B" | "T",
         playerPair: h.player_pair as boolean | undefined,
         bankerPair: h.banker_pair as boolean | undefined,
       }));
-      let pWins = 0;
-      let bWins = 0;
-      let ties = 0;
+      let pWins = 0, bWins = 0, ties = 0;
       for (const e of entries) {
         if (e.result === "P") pWins++;
         else if (e.result === "B") bWins++;
         else ties++;
       }
-      setRoads({
-        beadRoad: entries,
-        bigRoad: entries,
-        playerWins: pWins,
-        bankerWins: bWins,
-        ties,
-      });
-
-      // Set round status from snapshot
-      const status = data.round_status ?? data.roundStatus;
-      if (typeof status === "string") {
-        setRoundStatus(status as RoundStatus);
-      }
+      setRoads({ beadRoad: entries, bigRoad: entries, playerWins: pWins, bankerWins: bWins, ties });
       break;
     }
 

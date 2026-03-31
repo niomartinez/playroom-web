@@ -28,58 +28,56 @@ export function useLobbyWs() {
     setRoads,
   } = useGame();
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryRef = useRef(0);
-  const mountedRef = useRef(true);
-
-  const connect = useCallback(() => {
-    if (!mountedRef.current) return;
-
-    const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      retryRef.current = 0; // reset backoff on successful connect
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        handleMessage(msg, setRoundStatus, setCurrentRound, setRoads);
-      } catch {
-        // ignore malformed messages
-      }
-    };
-
-    ws.onclose = () => {
-      if (!mountedRef.current) return;
-      scheduleReconnect();
-    };
-
-    ws.onerror = () => {
-      ws.close();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setRoundStatus, setCurrentRound, setRoads]);
-
-  const scheduleReconnect = useCallback(() => {
-    const delay = Math.min(1000 * 2 ** retryRef.current, MAX_DELAY);
-    retryRef.current += 1;
-    setTimeout(() => {
-      if (mountedRef.current) connect();
-    }, delay);
-  }, [connect]);
+  // Use refs to avoid stale closures in WS callbacks
+  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads });
+  settersRef.current = { setRoundStatus, setCurrentRound, setRoads };
 
   useEffect(() => {
-    mountedRef.current = true;
+    let mounted = true;
+    let ws: WebSocket | null = null;
+    let retryCount = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      if (!mounted) return;
+
+      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        retryCount = 0;
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          const s = settersRef.current;
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
+        } catch {
+          // ignore
+        }
+      };
+
+      ws.onclose = () => {
+        if (!mounted) return;
+        const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
+        retryCount++;
+        retryTimer = setTimeout(connect, delay);
+      };
+
+      ws.onerror = () => {
+        ws?.close();
+      };
+    }
+
     connect();
 
     return () => {
-      mountedRef.current = false;
-      wsRef.current?.close();
+      mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+      ws?.close();
     };
-  }, [connect]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /* ------------------------------------------------------------------ */
