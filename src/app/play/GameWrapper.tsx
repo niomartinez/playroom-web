@@ -52,10 +52,25 @@ export default function GameWrapper({
   cashierUrl,
   children,
 }: GameWrapperProps) {
-  // Allow demo mode without token — show the UI with mock data
+  if (!token) {
+    return (
+      <div className="h-screen flex items-center justify-center" style={{ background: "#0a0f1a" }}>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-white mb-2">Session Required</div>
+          <div className="text-[#6a7282] mb-4">
+            No session token provided. Please launch the game from your operator lobby.
+          </div>
+          <a href="/play/demo" className="px-6 py-2 rounded-lg font-semibold text-black" style={{ backgroundColor: "#f0b100" }}>
+            Try Demo Mode
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <GameProvider
-      token={token || "demo"}
+      token={token}
       gameId={gameId}
       lang={lang}
       lobbyUrl={lobbyUrl}
