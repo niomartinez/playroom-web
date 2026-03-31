@@ -130,6 +130,7 @@ export default function EmulatorPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [bettingTime, setBettingTime] = useState(15); // seconds for betting window
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const roundRef = useRef(0);
@@ -185,7 +186,7 @@ export default function EmulatorPage() {
       const res = await fetch("/api/emulator/deal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game_id: selectedTable }),
+        body: JSON.stringify({ game_id: selectedTable, betting_time: bettingTime }),
       });
 
       if (!res.ok) {
@@ -221,7 +222,7 @@ export default function EmulatorPage() {
       setStatus("error");
       setErrorMsg(e instanceof Error ? e.message : "Unknown error");
     }
-  }, [selectedTable]);
+  }, [selectedTable, bettingTime]);
 
   /* auto-deal interval */
   useEffect(() => {
@@ -366,6 +367,25 @@ export default function EmulatorPage() {
           >
             Deal Now
           </button>
+
+          {/* Betting time selector */}
+          <div className="flex items-center gap-2 ml-4">
+            <span className="text-xs" style={{ color: "#6a7282" }}>Bet window:</span>
+            {[0, 10, 15, 20, 30].map((t) => (
+              <button
+                key={t}
+                onClick={() => setBettingTime(t)}
+                className="rounded-md px-2 py-1 text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor: bettingTime === t ? "rgba(208,135,0,0.3)" : "rgba(255,255,255,0.05)",
+                  color: bettingTime === t ? "#f0b100" : "#6a7282",
+                  border: `1px solid ${bettingTime === t ? "rgba(208,135,0,0.5)" : "transparent"}`,
+                }}
+              >
+                {t === 0 ? "None" : `${t}s`}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Right: Counter + status */}
