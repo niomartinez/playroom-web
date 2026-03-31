@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useGame } from "@/lib/game-context";
+import { useBetting } from "@/lib/use-betting";
+import { sendToParent } from "@/lib/iframe-bridge";
 
 const CHIPS = [50, 100, 250, 500, 1000, 2500, 5000];
 
 export default function ChipSelector() {
-  const [selected, setSelected] = useState<number>(100);
+  const { selectedChip, setSelectedChip, cashierUrl } = useGame();
+  const { isBettingOpen } = useBetting();
+
+  const handleDeposit = () => {
+    if (cashierUrl) {
+      window.location.href = cashierUrl;
+    } else {
+      sendToParent("openCashier");
+    }
+  };
 
   return (
     <div
@@ -15,26 +26,28 @@ export default function ChipSelector() {
       {CHIPS.map((chip) => (
         <button
           key={chip}
-          onClick={() => setSelected(chip)}
+          onClick={() => setSelectedChip(chip)}
           className="flex items-center justify-center cursor-pointer transition-all w-full"
           style={{
             height: `${100 / (CHIPS.length + 1.5) - 1}%`,
             borderRadius: "0.8vw",
             backgroundColor: "rgba(0,0,0,0.8)",
-            border: selected === chip
+            border: selectedChip === chip
               ? "2px solid rgba(255,0,128,0.9)"
               : "1px solid rgba(255,0,128,0.5)",
-            transform: selected === chip ? "scale(1.05)" : "scale(1)",
+            transform: selectedChip === chip ? "scale(1.05)" : "scale(1)",
+            opacity: isBettingOpen ? 1 : 0.5,
           }}
         >
           <span className="font-bold text-white" style={{ fontSize: "1.4vh" }}>
-            ₱{chip.toLocaleString()}
+            {chip.toLocaleString()}
           </span>
         </button>
       ))}
 
-      {/* SEND button */}
+      {/* DEPOSIT / SEND button */}
       <button
+        onClick={handleDeposit}
         className="flex items-center justify-center cursor-pointer transition-all hover:brightness-110 active:scale-[0.98] w-full"
         style={{
           height: `${100 / (CHIPS.length + 1.5) - 1}%`,

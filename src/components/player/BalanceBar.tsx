@@ -1,3 +1,7 @@
+"use client";
+
+import { useGame } from "@/lib/game-context";
+
 const CHIPS = [
   { color: "#e7000b", label: "10" },
   { color: "#2b7fff", label: "25" },
@@ -8,6 +12,15 @@ const CHIPS = [
 ];
 
 export default function BalanceBar() {
+  const { balance, selectedChip, setSelectedChip } = useGame();
+
+  const formatted = balance.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
   return (
     <div
       className="flex items-center justify-between h-full"
@@ -25,27 +38,35 @@ export default function BalanceBar() {
         </svg>
         <div>
           <div className="text-[#99a1af]" style={{ fontSize: "clamp(8px, 0.9vh, 12px)" }}>Balance</div>
-          <div className="font-bold text-white" style={{ fontSize: "clamp(12px, 1.4vh, 20px)" }}>$10,000</div>
+          <div className="font-bold text-white" style={{ fontSize: "clamp(12px, 1.4vh, 20px)" }}>{formatted}</div>
         </div>
       </div>
 
       {/* Chip icons */}
       <div className="flex items-center" style={{ gap: "0.3vw" }}>
-        {CHIPS.map((chip) => (
-          <div
-            key={chip.label}
-            className="rounded-full flex items-center justify-center font-bold text-white shadow-md"
-            style={{
-              width: "clamp(20px, 2.2vh, 36px)",
-              height: "clamp(20px, 2.2vh, 36px)",
-              backgroundColor: chip.color,
-              fontSize: "clamp(6px, 0.7vh, 10px)",
-              border: "2px solid rgba(255,255,255,0.3)",
-            }}
-          >
-            {chip.label}
-          </div>
-        ))}
+        {CHIPS.map((chip) => {
+          const value = Number(chip.label);
+          const isSelected = selectedChip === value;
+          return (
+            <button
+              key={chip.label}
+              onClick={() => setSelectedChip(value)}
+              className="rounded-full flex items-center justify-center font-bold text-white shadow-md cursor-pointer transition-transform"
+              style={{
+                width: "clamp(20px, 2.2vh, 36px)",
+                height: "clamp(20px, 2.2vh, 36px)",
+                backgroundColor: chip.color,
+                fontSize: "clamp(6px, 0.7vh, 10px)",
+                border: isSelected
+                  ? "2px solid rgba(255,255,255,0.9)"
+                  : "2px solid rgba(255,255,255,0.3)",
+                transform: isSelected ? "scale(1.15)" : "scale(1)",
+              }}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
