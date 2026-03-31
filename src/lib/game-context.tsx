@@ -58,7 +58,7 @@ export type RoundStatus =
 
 export interface CurrentRound {
   roundId: string | number;
-  roundNumber: number;
+  roundNumber: number | string;
   playerCards: string[];
   bankerCards: string[];
   playerScore: number;

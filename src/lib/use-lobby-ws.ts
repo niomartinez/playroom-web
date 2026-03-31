@@ -101,9 +101,10 @@ function handleMessage(
     case "RoundStarted":
     case "round_started": {
       setRoundStatus("betting_open");
+      const roundId = (data.roundId ?? data.round_id ?? "") as string;
       setCurrentRound({
-        roundId: (data.round_id ?? data.roundId ?? "") as string | number,
-        roundNumber: (data.round_number ?? data.roundNumber ?? 0) as number,
+        roundId,
+        roundNumber: (data.round_number ?? data.roundNumber ?? roundId) as string | number,
         playerCards: [],
         bankerCards: [],
         playerScore: 0,
@@ -147,14 +148,20 @@ function handleMessage(
     case "RoundResult":
     case "round_result": {
       setRoundStatus("result");
-      const winner = (data.winner as string)?.charAt(0).toUpperCase() as "P" | "B" | "T";
+      // Backend sends: { outcome: "Banker", player: { score, cards }, banker: { score, cards } }
+      const outcomeStr = (data.outcome ?? data.winner ?? "") as string;
+      const winner = outcomeStr.charAt(0).toUpperCase() as "P" | "B" | "T";
+      const playerObj = (data.player ?? {}) as Record<string, unknown>;
+      const bankerObj = (data.banker ?? {}) as Record<string, unknown>;
       setCurrentRound((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           winner,
-          playerScore: (data.player_score ?? data.playerScore ?? prev.playerScore) as number,
-          bankerScore: (data.banker_score ?? data.bankerScore ?? prev.bankerScore) as number,
+          playerScore: (playerObj.score ?? data.player_score ?? data.playerScore ?? prev.playerScore) as number,
+          bankerScore: (bankerObj.score ?? data.banker_score ?? data.bankerScore ?? prev.bankerScore) as number,
+          playerCards: (playerObj.cards ?? prev.playerCards) as string[],
+          bankerCards: (bankerObj.cards ?? prev.bankerCards) as string[],
         };
       });
 
