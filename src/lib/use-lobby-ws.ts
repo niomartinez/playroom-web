@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, type SetStateAction } from "react";
-import { WS_BASE } from "./ws-config";
+import { WS_BASE, LOBBY_API_KEY } from "./ws-config";
 import {
   useGame,
   type RoundStatus,
@@ -9,8 +9,6 @@ import {
   type Roads,
   type RoadEntry,
 } from "./game-context";
-
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
 /** Max reconnection delay in ms. */
 const MAX_DELAY = 30_000;
@@ -37,7 +35,7 @@ export function useLobbyWs() {
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
 
-    const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(API_KEY)}`;
+    const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
