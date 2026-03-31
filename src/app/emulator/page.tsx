@@ -152,6 +152,27 @@ export default function EmulatorPage() {
       .catch(() => {
         /* tables may not be available yet */
       });
+
+    // Load recent round history from bridge/status
+    fetch("/api/emulator/history")
+      .then((r) => r.json())
+      .then((data) => {
+        const recent = data?.recent_rounds || [];
+        const loaded: HistoryEntry[] = recent.map((r: Record<string, unknown>, i: number) => ({
+          round: recent.length - i,
+          outcome: ((r.result as string) || "").toLowerCase() as RoundResult["outcome"],
+          player_score: (r.player as number) ?? 0,
+          banker_score: (r.banker as number) ?? 0,
+          player_cards: [],
+          banker_cards: [],
+          player_pair: false,
+          banker_pair: false,
+        }));
+        setHistory(loaded);
+        roundRef.current = data?.total_rounds || loaded.length;
+        setRoundCount(roundRef.current);
+      })
+      .catch(() => {});
   }, []);
 
   /* deal one round */
