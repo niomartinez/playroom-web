@@ -117,7 +117,7 @@ export function useAngelEye(): UseAngelEyeReturn {
       setStatus("connected");
 
       // Start reading
-      readLoop();
+      readLoop().catch(() => {});
 
       // Handle unexpected disconnect
       port.addEventListener("disconnect", () => {

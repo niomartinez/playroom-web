@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useStudio } from "@/lib/studio-context";
 import { useAngelEye, type ConnectionStatus } from "@/lib/use-angel-eye";
 import type { AngelEyeEvent } from "@/lib/angel-eye-parser";
-import { API_BASE } from "@/lib/ws-config";
 
 /**
  * Studio Round Controls — the dealer's primary control panel.
@@ -52,7 +51,7 @@ export default function RoundControls() {
   // --- API helpers ---
 
   const apiCall = useCallback(async (path: string, body?: Record<string, unknown>) => {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
@@ -67,7 +66,7 @@ export default function RoundControls() {
 
     setDealing(true);
     try {
-      const data = await apiCall("/internal/round/start", {
+      const data = await apiCall("/api/studio/round-start", {
         game_id: studio.tableId,
         betting_time: studio.bettingTime,
       });
@@ -76,6 +75,14 @@ export default function RoundControls() {
       currentFightRef.current = fightId;
 
       studio.setRoundStatus("betting_open");
+      studio.setCurrentRound({
+        roundId: fightId || "",
+        roundNumber: data?.data?.external_fight_id || fightId || "",
+        playerCards: [],
+        bankerCards: [],
+        playerScore: 0,
+        bankerScore: 0,
+      });
 
       // Start countdown
       setCountdown(studio.bettingTime);
@@ -85,8 +92,7 @@ export default function RoundControls() {
           if (prev === null || prev <= 1) {
             if (timerRef.current) clearInterval(timerRef.current);
             timerRef.current = null;
-            studio.setRoundStatus("dealing");
-            return null;
+            return 0;
           }
           return prev - 1;
         });
@@ -112,6 +118,14 @@ export default function RoundControls() {
     // TODO: broadcast TableClosed via API
   }, [studio]);
 
+  // Transition to "dealing" when countdown reaches 0
+  useEffect(() => {
+    if (countdown === 0) {
+      studio.setRoundStatus("dealing");
+      setCountdown(null);
+    }
+  }, [countdown, studio]);
+
   // --- Angel Eye event handler ---
 
   useEffect(() => {
@@ -123,10 +137,12 @@ export default function RoundControls() {
         case "card_dealt":
           // Forward card to API
           if (currentFightRef.current) {
-            apiCall("/internal/round/card", {
+            apiCall("/api/studio/round-card", {
               fight_id: currentFightRef.current,
               side: event.side,
               card: event.card,
+              player_cards: event.playerCards,
+              banker_cards: event.bankerCards,
               player_score: event.playerScore,
               banker_score: event.bankerScore,
             });
@@ -153,7 +169,7 @@ export default function RoundControls() {
         case "result":
           // Forward result to API — triggers settlement
           if (currentFightRef.current) {
-            apiCall("/internal/round/result", {
+            apiCall("/api/studio/round-result", {
               fight_id: currentFightRef.current,
               game_id: studio.tableId,
               outcome: event.outcome,

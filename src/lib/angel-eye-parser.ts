@@ -258,9 +258,11 @@ export class AngelEyeParser {
         return { type: "redeal" };
 
       case CMD_ERROR:
+        this.lastSeq = null;
         return { type: "error" };
 
       case CMD_ERROR_CANCEL:
+        this.lastSeq = null;
         return { type: "error_cancel" };
 
       case CMD_DEAL_OUT:
