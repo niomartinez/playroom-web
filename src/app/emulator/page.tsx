@@ -64,13 +64,13 @@ const SUIT_COLORS: Record<string, string> = {
   S: "#ffffff",
 };
 
-type Speed = "instant" | "5s" | "15s";
+const BETTING_OPTIONS = [0, 10, 15, 20, 25, 30];
 
-const SPEED_MS: Record<Speed, number> = {
-  instant: 500,
-  "5s": 5000,
-  "15s": 15000,
-};
+/** Estimate total round time: betting + card reveals (~9s) + result display (5s) + buffer */
+function estimateRoundTime(bettingTime: number): number {
+  if (bettingTime === 0) return 1000;
+  return (bettingTime + 9 + 5 + 3) * 1000;
+}
 
 /* ---------- small components ---------- */
 
@@ -123,14 +123,13 @@ export default function EmulatorPage() {
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTable, setSelectedTable] = useState("");
   const [autoDeal, setAutoDeal] = useState(false);
-  const [speed, setSpeed] = useState<Speed>("5s");
+  const [bettingTime, setBettingTime] = useState(15);
   const [status, setStatus] = useState<"ready" | "dealing" | "error">("ready");
   const [roundCount, setRoundCount] = useState(0);
   const [lastResult, setLastResult] = useState<RoundResult | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [bettingTime, setBettingTime] = useState(15); // seconds for betting window
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const roundRef = useRef(0);
@@ -224,23 +223,34 @@ export default function EmulatorPage() {
     }
   }, [selectedTable, bettingTime]);
 
-  /* auto-deal interval */
+  /* auto-deal: wait for round to complete, then start next */
+  const dealingRef = useRef(false);
+
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    dealingRef.current = false;
 
     if (autoDeal && selectedTable) {
-      /* deal immediately, then on interval */
-      dealRound();
-      intervalRef.current = setInterval(dealRound, SPEED_MS[speed]);
+      const roundTime = estimateRoundTime(bettingTime);
+
+      const runDeal = async () => {
+        if (dealingRef.current) return; // prevent overlap
+        dealingRef.current = true;
+        await dealRound();
+        dealingRef.current = false;
+      };
+
+      runDeal();
+      intervalRef.current = setInterval(runDeal, roundTime + 3000);
     }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [autoDeal, speed, selectedTable, dealRound]);
+  }, [autoDeal, bettingTime, selectedTable, dealRound]);
 
   /* ---------- render ---------- */
   return (
@@ -327,23 +337,24 @@ export default function EmulatorPage() {
             Auto Deal {autoDeal ? "ON" : "OFF"}
           </button>
 
-          {/* Speed buttons */}
+          {/* Betting window selector */}
           <div className="flex items-center gap-1">
-            {(["instant", "5s", "15s"] as Speed[]).map((s) => (
+            <span className="text-xs mr-1" style={{ color: "#6a7282" }}>Bet window:</span>
+            {BETTING_OPTIONS.map((t) => (
               <button
-                key={s}
-                onClick={() => setSpeed(s)}
+                key={t}
+                onClick={() => setBettingTime(t)}
                 className="rounded px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{
-                  backgroundColor: speed === s ? "rgba(208,135,0,0.25)" : "rgba(255,255,255,0.05)",
-                  color: speed === s ? "#d08700" : "#99a1af",
+                  backgroundColor: bettingTime === t ? "rgba(208,135,0,0.25)" : "rgba(255,255,255,0.05)",
+                  color: bettingTime === t ? "#d08700" : "#99a1af",
                   border:
-                    speed === s
+                    bettingTime === t
                       ? "1px solid rgba(208,135,0,0.4)"
                       : "1px solid rgba(255,255,255,0.08)",
                 }}
               >
-                {s === "instant" ? "Instant" : s}
+                {t === 0 ? "Instant" : `${t}s`}
               </button>
             ))}
           </div>
@@ -367,25 +378,6 @@ export default function EmulatorPage() {
           >
             Deal Now
           </button>
-
-          {/* Betting time selector */}
-          <div className="flex items-center gap-2 ml-4">
-            <span className="text-xs" style={{ color: "#6a7282" }}>Bet window:</span>
-            {[0, 10, 15, 20, 30].map((t) => (
-              <button
-                key={t}
-                onClick={() => setBettingTime(t)}
-                className="rounded-md px-2 py-1 text-xs font-medium transition-colors"
-                style={{
-                  backgroundColor: bettingTime === t ? "rgba(208,135,0,0.3)" : "rgba(255,255,255,0.05)",
-                  color: bettingTime === t ? "#f0b100" : "#6a7282",
-                  border: `1px solid ${bettingTime === t ? "rgba(208,135,0,0.5)" : "transparent"}`,
-                }}
-              >
-                {t === 0 ? "None" : `${t}s`}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Right: Counter + status */}

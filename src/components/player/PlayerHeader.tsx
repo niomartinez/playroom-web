@@ -9,7 +9,7 @@ export default function PlayerHeader() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Start countdown when betting opens, clear when it closes
+  // Start countdown from server-sent value when betting opens
   useEffect(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -17,11 +17,14 @@ export default function PlayerHeader() {
     }
 
     if (roundStatus === "betting_open") {
-      // Start counting up from 0 — we don't know the server's betting_time
-      // But we can show "PLACE BETS" with a pulsing indicator
-      setCountdown(0);
+      // Use server-sent countdown (operator-configurable per table)
+      const initial = currentRound?.countdown ?? 15;
+      setCountdown(initial);
       timerRef.current = setInterval(() => {
-        setCountdown((prev) => (prev !== null ? prev + 1 : null));
+        setCountdown((prev) => {
+          if (prev === null || prev <= 0) return 0;
+          return prev - 1;
+        });
       }, 1000);
     } else {
       setCountdown(null);
@@ -30,7 +33,7 @@ export default function PlayerHeader() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [roundStatus]);
+  }, [roundStatus, currentRound?.countdown]);
 
   const roundLabel = currentRound?.roundNumber
     ? `Round #${currentRound.roundNumber}`

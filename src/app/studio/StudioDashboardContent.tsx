@@ -8,6 +8,7 @@ import BigRoad from "@/components/studio/BigRoad";
 import DerivedRoad from "@/components/studio/DerivedRoad";
 import ScorePanel from "@/components/studio/ScorePanel";
 import NextGamePanel from "@/components/studio/NextGamePanel";
+import RoundControls from "@/components/studio/RoundControls";
 import ManualInputDialog from "@/components/studio/ManualInputDialog";
 
 export default function StudioDashboardContent() {
@@ -53,17 +54,20 @@ export default function StudioDashboardContent() {
           </div>
         </div>
 
-        {/* Right — Score Panel + Next Game, proportional split */}
+        {/* Right — Score Panel + Round Controls + Next Game */}
         <div
           className="min-h-0"
           style={{
             display: "grid",
-            gridTemplateRows: "3fr 2fr",
+            gridTemplateRows: "2fr 3fr 1fr",
             gap: "8px",
           }}
         >
           <div className="overflow-hidden">
             <ScorePanel />
+          </div>
+          <div className="overflow-hidden">
+            <RoundControls />
           </div>
           <div className="overflow-hidden">
             <NextGamePanel />

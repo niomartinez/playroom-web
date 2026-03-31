@@ -14,6 +14,8 @@ import type { RoadEntry, Roads, RoundStatus, CurrentRound } from "./game-context
 /*  Studio-specific state                                              */
 /* ------------------------------------------------------------------ */
 
+export type TableStatus = "open" | "paused" | "closed";
+
 export interface StudioState {
   /* Table / dealer config */
   tableId: string;
@@ -21,6 +23,10 @@ export interface StudioState {
   dealerName: string;
   lang: string;
   soundEnabled: boolean;
+  bettingTime: number; // seconds for betting window
+
+  /* Table operational status */
+  tableStatus: TableStatus;
 
   /* Live state (same shapes as game-context) */
   roundStatus: RoundStatus;
@@ -34,6 +40,8 @@ export interface StudioState {
   setDealerName: (name: string) => void;
   setLang: (lang: string) => void;
   setSoundEnabled: (enabled: boolean) => void;
+  setBettingTime: (t: number) => void;
+  setTableStatus: (s: TableStatus) => void;
   setRoundStatus: (s: SetStateAction<RoundStatus>) => void;
   setCurrentRound: (r: SetStateAction<CurrentRound | null>) => void;
   setRoads: (r: SetStateAction<Roads>) => void;
@@ -76,6 +84,8 @@ export function StudioProvider({
   const [dealerName, setDealerName] = useState(initialDealerName);
   const [lang, setLang] = useState(initialLang);
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
+  const [bettingTime, setBettingTime] = useState(15);
+  const [tableStatus, setTableStatus] = useState<TableStatus>("open");
   const [roundStatus, setRoundStatus] = useState<RoundStatus>("waiting");
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
@@ -87,6 +97,8 @@ export function StudioProvider({
     dealerName,
     lang,
     soundEnabled,
+    bettingTime,
+    tableStatus,
     roundStatus,
     currentRound,
     roads,
@@ -96,6 +108,8 @@ export function StudioProvider({
     setDealerName,
     setLang,
     setSoundEnabled,
+    setBettingTime,
+    setTableStatus,
     setRoundStatus,
     setCurrentRound,
     setRoads,
