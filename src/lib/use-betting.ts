@@ -2,17 +2,12 @@
 
 import { useCallback } from "react";
 import { useGame, type BetCode, type PlacedBet } from "./game-context";
-import { clientFetch } from "./api";
 
 export interface BetResult {
   success: boolean;
   error?: string;
 }
 
-/**
- * Hook for placing bets. Returns helpers to place bets
- * and read current bet state from context.
- */
 export function useBetting() {
   const {
     token,
@@ -26,43 +21,46 @@ export function useBetting() {
   } = useGame();
 
   const isBettingOpen = roundStatus === "betting_open";
+  const isDemo = token === "demo";
 
   const placeBet = useCallback(
     async (betCode: BetCode): Promise<BetResult> => {
       if (!isBettingOpen) {
         return { success: false, error: "Betting is closed" };
       }
-      if (!token) {
-        return { success: false, error: "No session token" };
-      }
-      if (!currentRound) {
-        return { success: false, error: "No active round" };
-      }
       if (selectedChip > balance) {
         return { success: false, error: "Insufficient balance" };
       }
 
+      if (isDemo) {
+        // Demo mode: client-side only, no API call
+        const bet: PlacedBet = { betCode, amount: selectedChip };
+        addPlacedBet(bet);
+        setBalance(balance - selectedChip);
+        return { success: true };
+      }
+
+      // Real mode: call backend API
       try {
-        const res = await clientFetch("/api/bet", {
+        const res = await fetch("/api/bet", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             session_token: token,
-            fight_id: currentRound.roundId,
+            fight_id: currentRound?.roundId,
             bet_code: betCode,
-            amount: selectedChip,
+            bet_amount: selectedChip,
           }),
         });
 
-        if (res.error) {
-          return { success: false, error: res.error };
+        const data = await res.json();
+        if (data.error_code && data.error_code !== "0") {
+          return { success: false, error: data.message || "Bet failed" };
         }
 
         const bet: PlacedBet = { betCode, amount: selectedChip };
         addPlacedBet(bet);
-
-        // Optimistically deduct balance (WS will send authoritative update)
         setBalance(balance - selectedChip);
-
         return { success: true };
       } catch (err) {
         return {
@@ -71,10 +69,9 @@ export function useBetting() {
         };
       }
     },
-    [isBettingOpen, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
+    [isBettingOpen, isDemo, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
   );
 
-  /** Total amount bet this round. */
   const totalBet = placedBets.reduce((sum, b) => sum + b.amount, 0);
 
   return {

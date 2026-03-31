@@ -26,11 +26,12 @@ export function useLobbyWs() {
     setRoundStatus,
     setCurrentRound,
     setRoads,
+    clearPlacedBets,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads });
-  settersRef.current = { setRoundStatus, setCurrentRound, setRoads };
+  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads, clearPlacedBets });
+  settersRef.current = { setRoundStatus, setCurrentRound, setRoads, clearPlacedBets };
 
   useEffect(() => {
     let mounted = true;
@@ -52,7 +53,7 @@ export function useLobbyWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets);
         } catch {
           // ignore
         }
@@ -89,6 +90,7 @@ function handleMessage(
   setRoundStatus: StatusSetter,
   setCurrentRound: RoundSetter,
   setRoads: RoadsSetter,
+  clearPlacedBets?: () => void,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -97,6 +99,7 @@ function handleMessage(
     case "RoundStarted":
     case "round_started": {
       setRoundStatus("betting_open");
+      clearPlacedBets?.(); // Clear bets from previous round
       const roundId = (data.roundId ?? data.round_id ?? "") as string;
       setCurrentRound({
         roundId,

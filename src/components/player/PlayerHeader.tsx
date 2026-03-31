@@ -1,10 +1,36 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
 
 export default function PlayerHeader() {
   const { currentRound, roundStatus, lobbyUrl } = useGame();
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Start countdown when betting opens, clear when it closes
+  useEffect(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (roundStatus === "betting_open") {
+      // Start counting up from 0 — we don't know the server's betting_time
+      // But we can show "PLACE BETS" with a pulsing indicator
+      setCountdown(0);
+      timerRef.current = setInterval(() => {
+        setCountdown((prev) => (prev !== null ? prev + 1 : null));
+      }, 1000);
+    } else {
+      setCountdown(null);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [roundStatus]);
 
   const roundLabel = currentRound?.roundNumber
     ? `Round #${currentRound.roundNumber}`
@@ -19,7 +45,7 @@ export default function PlayerHeader() {
 
   const statusLabel: Record<string, string> = {
     waiting: "Waiting",
-    betting_open: "Place Bets",
+    betting_open: countdown !== null ? `PLACE BETS (${countdown}s)` : "Place Bets",
     dealing: "Dealing",
     result: "Result",
   };
@@ -48,16 +74,29 @@ export default function PlayerHeader() {
       </div>
       <div className="flex items-center gap-[0.6vw]">
         {/* Round status pill */}
-        <div className="flex items-center gap-[0.4vw] bg-[#1e2939] border border-[#364153] rounded-[0.6vw] px-[0.8vw] py-[0.4vh]">
+        <div
+          className="flex items-center gap-[0.4vw] border rounded-[0.6vw] px-[0.8vw] py-[0.4vh]"
+          style={{
+            backgroundColor: roundStatus === "betting_open" ? "rgba(5,223,114,0.15)" : "#1e2939",
+            borderColor: roundStatus === "betting_open" ? "#05df72" : "#364153",
+          }}
+        >
           <span
             className="rounded-full"
             style={{
               width: "0.8vh",
               height: "0.8vh",
               backgroundColor: statusColor[roundStatus] || "#6a7282",
+              animation: roundStatus === "betting_open" ? "pulse 1s infinite" : undefined,
             }}
           />
-          <span className="font-semibold text-white" style={{ fontSize: "1.2vh" }}>
+          <span
+            className="font-semibold"
+            style={{
+              fontSize: "1.2vh",
+              color: roundStatus === "betting_open" ? "#05df72" : "white",
+            }}
+          >
             {statusLabel[roundStatus] || "LIVE"}
           </span>
         </div>
