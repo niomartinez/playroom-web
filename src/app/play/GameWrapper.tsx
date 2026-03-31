@@ -52,22 +52,10 @@ export default function GameWrapper({
   cashierUrl,
   children,
 }: GameWrapperProps) {
-  if (!token) {
-    return (
-      <div className="h-screen flex items-center justify-center" style={{ background: "#0a0f1a" }}>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-white mb-2">Session Required</div>
-          <div className="text-[#6a7282]">
-            No session token provided. Please launch the game from your operator lobby.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Allow demo mode without token — show the UI with mock data
   return (
     <GameProvider
-      token={token}
+      token={token || "demo"}
       gameId={gameId}
       lang={lang}
       lobbyUrl={lobbyUrl}

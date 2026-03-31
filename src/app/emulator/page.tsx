@@ -141,9 +141,11 @@ export default function EmulatorPage() {
       .then((data) => {
         const list: Table[] = Array.isArray(data)
           ? data
-          : Array.isArray(data?.tables)
-            ? data.tables
-            : [];
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.tables)
+              ? data.tables
+              : [];
         setTables(list);
         if (list.length > 0) setSelectedTable(list[0].id);
       })
@@ -170,7 +172,19 @@ export default function EmulatorPage() {
         throw new Error(err.error || err.detail || `HTTP ${res.status}`);
       }
 
-      const data: RoundResult = await res.json();
+      const json = await res.json();
+      const raw = json.data || json;
+      // Normalize outcome to lowercase and cards to string format
+      const data: RoundResult = {
+        ...raw,
+        outcome: (raw.outcome || "").toLowerCase() as RoundResult["outcome"],
+        player_cards: (raw.player_cards || []).map((c: string | Card) =>
+          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+        ),
+        banker_cards: (raw.banker_cards || []).map((c: string | Card) =>
+          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+        ),
+      };
       roundRef.current += 1;
       const round = roundRef.current;
 

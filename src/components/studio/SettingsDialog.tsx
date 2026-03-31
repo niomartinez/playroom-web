@@ -28,6 +28,21 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [soundEnabled, setSoundEnabled] = useState(studio.soundEnabled);
   const [loading, setLoading] = useState(false);
 
+  /* ---- Extended settings (Galaxy Club parity) ---- */
+  const ls = typeof window !== "undefined" ? localStorage : null;
+  const [pairTieMin, setPairTieMin] = useState(ls?.getItem("pairTieMin") || "20");
+  const [pairTieMax, setPairTieMax] = useState(ls?.getItem("pairTieMax") || "1000");
+  const [lucky6Min, setLucky6Min] = useState(ls?.getItem("lucky6Min") || "300");
+  const [lucky6Max, setLucky6Max] = useState(ls?.getItem("lucky6Max") || "1000");
+  const [dragon7PandaMin, setDragon7PandaMin] = useState(ls?.getItem("dragon7PandaMin") || "300");
+  const [dragon7PandaMax, setDragon7PandaMax] = useState(ls?.getItem("dragon7PandaMax") || "1000");
+  const [gameMode, setGameMode] = useState(ls?.getItem("gameMode") || "Lucky6|Dragon7|Panda8");
+  const [showGameResult, setShowGameResult] = useState(ls?.getItem("showGameResult") !== "off");
+  const [displayRoadName, setDisplayRoadName] = useState(ls?.getItem("displayRoadName") !== "off");
+  const [displayPairBigRoad, setDisplayPairBigRoad] = useState(ls?.getItem("displayPairBigRoad") !== "off");
+  const [displayPairBeadRoad, setDisplayPairBeadRoad] = useState(ls?.getItem("displayPairBeadRoad") !== "off");
+  const [promptMessage, setPromptMessage] = useState(ls?.getItem("promptMessage") || "");
+
   /* ---- New table form ---- */
   const [showNewTable, setShowNewTable] = useState(false);
   const [newTableName, setNewTableName] = useState("");
@@ -40,7 +55,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setLoading(true);
     try {
       const data = await clientFetch("/api/emulator/tables");
-      const list = Array.isArray(data) ? data : data.tables ?? [];
+      const list = Array.isArray(data) ? data : data.data ?? data.tables ?? [];
       setTables(list);
     } catch {
       // silently fail; user sees empty list
@@ -101,6 +116,18 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     localStorage.setItem("dealerName", dealerName);
     localStorage.setItem("studioLang", lang);
     localStorage.setItem("studioSound", soundEnabled ? "on" : "off");
+    localStorage.setItem("pairTieMin", pairTieMin);
+    localStorage.setItem("pairTieMax", pairTieMax);
+    localStorage.setItem("lucky6Min", lucky6Min);
+    localStorage.setItem("lucky6Max", lucky6Max);
+    localStorage.setItem("dragon7PandaMin", dragon7PandaMin);
+    localStorage.setItem("dragon7PandaMax", dragon7PandaMax);
+    localStorage.setItem("gameMode", gameMode);
+    localStorage.setItem("showGameResult", showGameResult ? "on" : "off");
+    localStorage.setItem("displayRoadName", displayRoadName ? "on" : "off");
+    localStorage.setItem("displayPairBigRoad", displayPairBigRoad ? "on" : "off");
+    localStorage.setItem("displayPairBeadRoad", displayPairBeadRoad ? "on" : "off");
+    localStorage.setItem("promptMessage", promptMessage);
 
     // Update studio context
     studio.setTableId(selectedTableId);
@@ -324,6 +351,55 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 }}
               />
             </button>
+          </div>
+
+          {/* ── Bet Limits per Type ── */}
+          <div>
+            <label className="block text-xs font-medium text-[#99a1af] mb-2">Bet Limits by Type</label>
+            <div className="space-y-2">
+              {[
+                { label: "Pair / Tie", min: pairTieMin, max: pairTieMax, setMin: setPairTieMin, setMax: setPairTieMax },
+                { label: "Lucky 6", min: lucky6Min, max: lucky6Max, setMin: setLucky6Min, setMax: setLucky6Max },
+                { label: "Dragon7 / Panda8", min: dragon7PandaMin, max: dragon7PandaMax, setMin: setDragon7PandaMin, setMax: setDragon7PandaMax },
+              ].map((row) => (
+                <div key={row.label} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center">
+                  <span className="text-xs text-[#6a7282]">{row.label}</span>
+                  <input type="number" value={row.min} onChange={(e) => row.setMin(e.target.value)} placeholder="Min" className="rounded px-2 py-1 text-xs text-white outline-none" style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.15)" }} />
+                  <input type="number" value={row.max} onChange={(e) => row.setMax(e.target.value)} placeholder="Max" className="rounded px-2 py-1 text-xs text-white outline-none" style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.15)" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Game Mode */}
+          <div>
+            <label className="block text-xs font-medium text-[#99a1af] mb-1">Game Mode</label>
+            <select value={gameMode} onChange={(e) => setGameMode(e.target.value)} className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.2)" }}>
+              <option value="Lucky6|Dragon7|Panda8">Lucky6 | Dragon7 | Panda8</option>
+              <option value="Lucky6|Dragon7">Lucky6 | Dragon7</option>
+              <option value="Standard">Standard (no side bets)</option>
+            </select>
+          </div>
+
+          {/* Display Toggles */}
+          {[
+            { label: "Game Result Show", value: showGameResult, set: setShowGameResult },
+            { label: "Display Road Name", value: displayRoadName, set: setDisplayRoadName },
+            { label: "Display Pair in BigRoad", value: displayPairBigRoad, set: setDisplayPairBigRoad },
+            { label: "Display Pair in BeadRoad", value: displayPairBeadRoad, set: setDisplayPairBeadRoad },
+          ].map((toggle) => (
+            <div key={toggle.label} className="flex items-center justify-between">
+              <label className="text-xs font-medium text-[#99a1af]">{toggle.label}</label>
+              <button onClick={() => toggle.set(!toggle.value)} className="relative rounded-full transition-colors" style={{ width: 44, height: 24, backgroundColor: toggle.value ? "rgba(208,135,0,0.5)" : "rgba(255,255,255,0.1)" }}>
+                <span className="absolute top-0.5 rounded-full transition-transform bg-white" style={{ width: 20, height: 20, left: toggle.value ? 22 : 2 }} />
+              </button>
+            </div>
+          ))}
+
+          {/* Prompt / Message */}
+          <div>
+            <label className="block text-xs font-medium text-[#99a1af] mb-1">Prompt Message</label>
+            <textarea value={promptMessage} onChange={(e) => setPromptMessage(e.target.value)} placeholder="e.g. WMC2025.VIP" rows={2} className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.2)" }} />
           </div>
         </div>
 
