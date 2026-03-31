@@ -12,8 +12,10 @@ const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Only gate /studio routes (except the login page)
-  if (!pathname.startsWith("/studio")) return NextResponse.next();
+  // Gate /studio and /emulator routes (except the login page)
+  const isProtected =
+    pathname.startsWith("/studio") || pathname.startsWith("/emulator");
+  if (!isProtected) return NextResponse.next();
   if (pathname === "/studio/login") return NextResponse.next();
 
   // IP whitelist check
@@ -42,5 +44,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*"],
+  matcher: ["/studio/:path*", "/emulator/:path*"],
 };
