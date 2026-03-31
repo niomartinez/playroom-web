@@ -6,3 +6,4 @@ export const WS_BASE =
     ?.replace("https://", "wss://")
     .replace("http://", "ws://") ||
   "ws://localhost:8001";
+// force rebuild 1774964671
