@@ -1,14 +1,6 @@
-const scoreRows = [
-  { label: "BANKER", count: 8, color: "#fb2c36", indicator: "outline" as const },
-  { label: "PLAYER", count: 9, color: "#2b7fff", indicator: "outline" as const },
-  { label: "TIE", count: 1, color: "#00bc7d", indicator: "filled" as const },
-  { label: "BANKER PAIR", count: 8, color: "#fb2c36", indicator: "pairBanker" as const },
-  { label: "BANKER PAIR", count: 9, color: "#2b7fff", indicator: "pairPlayer" as const },
-  { label: "LUCKY 6", count: 1, color: "#f0b100", indicator: "filled" as const },
-  { label: "DRAGON 7", count: 9, color: "#ff009d", indicator: "filled" as const },
-  { label: "PANDA 8", count: 1, color: "#00ffe5", indicator: "filled" as const },
-  { label: "GAME NUMBER", count: 1, color: "#f0b100", indicator: "none" as const },
-];
+"use client";
+
+import { useStudio } from "@/lib/studio-context";
 
 function Indicator({ type, color }: { type: string; color: string }) {
   if (type === "none") return <span className="inline-block w-4 h-4 shrink-0" />;
@@ -44,6 +36,30 @@ function Indicator({ type, color }: { type: string; color: string }) {
 }
 
 export default function ScorePanel() {
+  const { roads } = useStudio();
+
+  const totalGames = roads.beadRoad.length;
+
+  // Count pairs from road entries
+  let bankerPairCount = 0;
+  let playerPairCount = 0;
+  for (const entry of roads.beadRoad) {
+    if (entry.bankerPair) bankerPairCount++;
+    if (entry.playerPair) playerPairCount++;
+  }
+
+  const scoreRows = [
+    { label: "BANKER", count: roads.bankerWins, color: "#fb2c36", indicator: "outline" as const },
+    { label: "PLAYER", count: roads.playerWins, color: "#2b7fff", indicator: "outline" as const },
+    { label: "TIE", count: roads.ties, color: "#00bc7d", indicator: "filled" as const },
+    { label: "BANKER PAIR", count: bankerPairCount, color: "#fb2c36", indicator: "pairBanker" as const },
+    { label: "PLAYER PAIR", count: playerPairCount, color: "#2b7fff", indicator: "pairPlayer" as const },
+    { label: "LUCKY 6", count: 0, color: "#f0b100", indicator: "filled" as const },
+    { label: "DRAGON 7", count: 0, color: "#ff009d", indicator: "filled" as const },
+    { label: "PANDA 8", count: 0, color: "#00ffe5", indicator: "filled" as const },
+    { label: "GAME NUMBER", count: totalGames, color: "#f0b100", indicator: "none" as const },
+  ];
+
   return (
     <div
       className="rounded-[10px] flex flex-col h-full overflow-hidden"

@@ -1,4 +1,10 @@
+"use client";
+
+import { useStudio } from "@/lib/studio-context";
+
 export default function StudioFooter() {
+  const { tableName, dealerName, lastUpdated } = useStudio();
+
   return (
     <footer
       className="flex items-center justify-between shrink-0"
@@ -25,19 +31,19 @@ export default function StudioFooter() {
         {/* Table */}
         <p className="font-normal leading-5 whitespace-nowrap" style={{ fontSize: 14 }}>
           <span style={{ color: "#6a7282" }}>Table: </span>
-          <span className="font-semibold text-white">PRG-01</span>
+          <span className="font-semibold text-white">{tableName || "PRG-01"}</span>
         </p>
 
         {/* Dealer */}
         <p className="font-normal leading-5 whitespace-nowrap" style={{ fontSize: 14 }}>
           <span style={{ color: "#6a7282" }}>Dealer: </span>
-          <span className="font-semibold text-white">Sarah M.</span>
+          <span className="font-semibold text-white">{dealerName || "---"}</span>
         </p>
       </div>
 
       {/* Right section */}
       <p className="font-normal leading-5 whitespace-nowrap" style={{ color: "#6a7282", fontSize: 14 }}>
-        Last Updated: <span className="text-white">12:45:32</span>
+        Last Updated: <span className="text-white">{lastUpdated}</span>
       </p>
     </footer>
   );

@@ -1,7 +1,26 @@
+"use client";
+
+import { useStudio } from "@/lib/studio-context";
+
 const COLS = 5;
 const ROWS = 20;
 
+const RESULT_COLORS: Record<string, string> = {
+  B: "#fb2c36",
+  P: "#2b7fff",
+  T: "#00bc7d",
+};
+
+const RESULT_LABELS: Record<string, string> = {
+  B: "B",
+  P: "P",
+  T: "T",
+};
+
 export default function BeadRoad() {
+  const { roads } = useStudio();
+  const entries = roads.beadRoad;
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -29,18 +48,42 @@ export default function BeadRoad() {
           gap: "2px",
         }}
       >
-        {Array.from({ length: COLS * ROWS }).map((_, i) => (
-          <div key={i} className="flex items-center justify-center">
-            <div
-              style={{
-                width: "80%",
-                aspectRatio: "1",
-                borderRadius: "9999px",
-                border: "1px solid #392c07",
-              }}
-            />
-          </div>
-        ))}
+        {Array.from({ length: COLS * ROWS }).map((_, i) => {
+          // Bead road fills column by column (top to bottom, then next column)
+          const col = Math.floor(i / ROWS);
+          const row = i % ROWS;
+          const entryIdx = col * ROWS + row;
+          const entry = entryIdx < entries.length ? entries[entryIdx] : null;
+
+          return (
+            <div key={i} className="flex items-center justify-center">
+              {entry ? (
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: "80%",
+                    aspectRatio: "1",
+                    borderRadius: "9999px",
+                    backgroundColor: RESULT_COLORS[entry.result] ?? "#392c07",
+                  }}
+                >
+                  <span className="font-bold text-white" style={{ fontSize: "clamp(8px, 0.7vw, 11px)" }}>
+                    {RESULT_LABELS[entry.result]}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    width: "80%",
+                    aspectRatio: "1",
+                    borderRadius: "9999px",
+                    border: "1px solid #392c07",
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
