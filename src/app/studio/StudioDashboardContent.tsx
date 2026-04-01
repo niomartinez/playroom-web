@@ -7,7 +7,6 @@ import BeadRoad from "@/components/studio/BeadRoad";
 import BigRoad from "@/components/studio/BigRoad";
 import DerivedRoad from "@/components/studio/DerivedRoad";
 import ScorePanel from "@/components/studio/ScorePanel";
-import NextGamePanel from "@/components/studio/NextGamePanel";
 import RoundControls from "@/components/studio/RoundControls";
 import ManualInputDialog from "@/components/studio/ManualInputDialog";
 
@@ -54,18 +53,15 @@ export default function StudioDashboardContent() {
           </div>
         </div>
 
-        {/* Right — Score Panel + Round Controls + Next Game + Manual Input */}
+        {/* Right — Score Panel + Round Controls + Manual Input */}
         <div
           className="min-h-0 flex flex-col gap-2"
         >
           <div className="shrink-0">
             <ScorePanel />
           </div>
-          <div className="shrink-0">
+          <div className="flex-1 min-h-0 overflow-auto">
             <RoundControls />
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <NextGamePanel />
           </div>
           <button
             onClick={() => setManualInputOpen(true)}
