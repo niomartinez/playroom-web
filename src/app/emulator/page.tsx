@@ -26,6 +26,7 @@ interface HistoryEntry extends RoundResult {
 interface Table {
   id: string;
   name: string;
+  external_game_id?: string;
 }
 
 /* ---------- constants ---------- */
@@ -140,13 +141,15 @@ export default function EmulatorPage() {
     fetch("/api/emulator/tables")
       .then((r) => r.json())
       .then((data) => {
-        const list: Table[] = Array.isArray(data)
+        const raw: Table[] = Array.isArray(data)
           ? data
           : Array.isArray(data?.data)
             ? data.data
             : Array.isArray(data?.tables)
               ? data.tables
               : [];
+        // Emulator only shows TEST- prefixed tables (safety)
+        const list = raw.filter((t) => (t.external_game_id || t.name || "").startsWith("TEST"));
         setTables(list);
         if (list.length > 0) setSelectedTable(list[0].id);
       })
