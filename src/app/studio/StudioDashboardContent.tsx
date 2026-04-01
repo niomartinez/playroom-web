@@ -59,7 +59,7 @@ export default function StudioDashboardContent() {
           className="min-h-0"
           style={{
             display: "grid",
-            gridTemplateRows: "2fr 3fr 1fr",
+            gridTemplateRows: "5fr 4fr 3fr",
             gap: "8px",
           }}
         >

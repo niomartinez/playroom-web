@@ -124,6 +124,7 @@ export default function EmulatorPage() {
   const [selectedTable, setSelectedTable] = useState("");
   const [autoDeal, setAutoDeal] = useState(false);
   const [bettingTime, setBettingTime] = useState(15);
+  const [pauseBetween, setPauseBetween] = useState(5); // seconds between rounds
   const [status, setStatus] = useState<"ready" | "dealing" | "error">("ready");
   const [roundCount, setRoundCount] = useState(0);
   const [lastResult, setLastResult] = useState<RoundResult | null>(null);
@@ -235,6 +236,7 @@ export default function EmulatorPage() {
 
     if (autoDeal && selectedTable) {
       const roundTime = estimateRoundTime(bettingTime);
+      const totalInterval = roundTime + pauseBetween * 1000;
 
       const runDeal = async () => {
         if (dealingRef.current) return; // prevent overlap
@@ -244,13 +246,13 @@ export default function EmulatorPage() {
       };
 
       runDeal();
-      intervalRef.current = setInterval(runDeal, roundTime + 3000);
+      intervalRef.current = setInterval(runDeal, totalInterval);
     }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [autoDeal, bettingTime, selectedTable, dealRound]);
+  }, [autoDeal, bettingTime, pauseBetween, selectedTable, dealRound]);
 
   /* ---------- render ---------- */
   return (
@@ -355,6 +357,28 @@ export default function EmulatorPage() {
                 }}
               >
                 {t === 0 ? "Instant" : `${t}s`}
+              </button>
+            ))}
+          </div>
+
+          {/* Pause between rounds (for auto-deal) */}
+          <div className="flex items-center gap-1">
+            <span className="text-xs mr-1" style={{ color: "#6a7282" }}>Pause:</span>
+            {[0, 3, 5, 10].map((t) => (
+              <button
+                key={t}
+                onClick={() => setPauseBetween(t)}
+                className="rounded px-2 py-1.5 text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor: pauseBetween === t ? "rgba(43,127,255,0.25)" : "rgba(255,255,255,0.05)",
+                  color: pauseBetween === t ? "#2b7fff" : "#99a1af",
+                  border:
+                    pauseBetween === t
+                      ? "1px solid rgba(43,127,255,0.4)"
+                      : "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {t === 0 ? "None" : `${t}s`}
               </button>
             ))}
           </div>

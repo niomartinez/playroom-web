@@ -35,15 +35,18 @@ function parseCard(card: string): { rank: string; suit: string; suitSymbol: stri
 /*  Single card component with fade-in animation                       */
 /* ------------------------------------------------------------------ */
 
-function DealCard({ card, index }: { card: string; index: number }) {
+function DealCard({ card, index, side }: { card: string; index: number; side: "player" | "banker" }) {
   const [visible, setVisible] = useState(false);
   const { rank, suitSymbol, color } = parseCard(card);
 
   useEffect(() => {
-    // Stagger entrance slightly per card index
-    const timer = setTimeout(() => setVisible(true), index * 80);
+    // Stagger card reveals to simulate deal order: P1(0s), B1(1s), P2(2s), B2(3s), P3(4s), B3(5s)
+    // Each card on a side: index 0 = first card, index 1 = second, index 2 = third
+    // Deal order alternates P,B so: P0=0, B0=1, P1=2, B1=3, P2=4, B2=5
+    const dealPosition = index * 2 + (side === "banker" ? 1 : 0);
+    const timer = setTimeout(() => setVisible(true), dealPosition * 800);
     return () => clearTimeout(timer);
-  }, [index]);
+  }, [index, side]);
 
   return (
     <div
@@ -274,7 +277,7 @@ export default function DealVisualizer() {
             </div>
             <div style={{ display: "flex", gap: "clamp(4px, 0.6vw, 8px)" }}>
               {playerCards.length > 0
-                ? playerCards.map((card, i) => <DealCard key={`p-${i}-${card}`} card={card} index={i} />)
+                ? playerCards.map((card, i) => <DealCard key={`p-${i}-${card}`} card={card} index={i} side="player" />)
                 : [0, 1].map((i) => <EmptySlot key={`pe-${i}`} />)}
             </div>
           </div>
@@ -319,7 +322,7 @@ export default function DealVisualizer() {
             </div>
             <div style={{ display: "flex", gap: "clamp(4px, 0.6vw, 8px)" }}>
               {bankerCards.length > 0
-                ? bankerCards.map((card, i) => <DealCard key={`b-${i}-${card}`} card={card} index={i} />)
+                ? bankerCards.map((card, i) => <DealCard key={`b-${i}-${card}`} card={card} index={i} side="banker" />)
                 : [0, 1].map((i) => <EmptySlot key={`be-${i}`} />)}
             </div>
           </div>
