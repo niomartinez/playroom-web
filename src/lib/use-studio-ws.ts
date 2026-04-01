@@ -89,7 +89,7 @@ function handleStudioMessage(
   switch (type) {
     case "RoundStarted":
     case "round_started": {
-      setRoundStatus("dealing");
+      setRoundStatus("betting_open");
       const roundId = (data.roundId ?? data.round_id ?? "") as string;
       setCurrentRound({
         roundId,
@@ -98,7 +98,14 @@ function handleStudioMessage(
         bankerCards: [],
         playerScore: 0,
         bankerScore: 0,
+        countdown: (data.countdown as number) || undefined,
       });
+      break;
+    }
+
+    case "RoundClosed":
+    case "round_closed": {
+      setRoundStatus("waiting");
       break;
     }
 

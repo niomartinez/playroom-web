@@ -195,6 +195,13 @@ function handleMessage(
       break;
     }
 
+    case "RoundClosed":
+    case "round_closed": {
+      // Round fully settled — go back to waiting for next round
+      setRoundStatus("waiting");
+      break;
+    }
+
     case "TableOpened":
     case "table_opened": {
       setRoundStatus("waiting");
