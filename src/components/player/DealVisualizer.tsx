@@ -20,11 +20,12 @@ const SUIT_COLORS: Record<string, string> = {
 };
 
 function parseCard(card: string): { rank: string; suit: string; suitSymbol: string; color: string } {
-  // Cards can be "Ah", "10s", "Kd", etc. — last char is suit
+  // Cards come as "TH", "6D", "QS" etc. — last char is suit
   const suit = card.slice(-1);
-  const rank = card.slice(0, -1);
+  let rank = card.slice(0, -1).toUpperCase();
+  if (rank === "T") rank = "10";
   return {
-    rank: rank.toUpperCase(),
+    rank,
     suit,
     suitSymbol: SUIT_SYMBOLS[suit] || suit,
     color: SUIT_COLORS[suit] || "#e5e7eb",

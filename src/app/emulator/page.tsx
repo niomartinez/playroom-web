@@ -90,7 +90,7 @@ function CardDisplay({ card }: { card: Card }) {
         gap: 2,
       }}
     >
-      <span className="text-white">{card.rank}</span>
+      <span className="text-white">{card.rank === "T" ? "10" : card.rank}</span>
       <span style={{ color }}>{symbol}</span>
     </div>
   );
