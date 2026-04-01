@@ -111,7 +111,15 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   };
 
   /* ---- Save ---- */
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Sync dealer name to backend so player UI sees it
+    if (selectedTableId && dealerName) {
+      clientFetch(`/api/studio/table/${selectedTableId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ dealer_name: dealerName }),
+      }).catch(() => {});
+    }
+
     // Persist to localStorage
     localStorage.setItem("selectedTableId", selectedTableId);
     localStorage.setItem("selectedTableName", selectedTableName);

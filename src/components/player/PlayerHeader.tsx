@@ -35,9 +35,13 @@ export default function PlayerHeader() {
     };
   }, [roundStatus, currentRound?.countdown]);
 
-  const roundLabel = currentRound?.roundNumber
-    ? `Round #${currentRound.roundNumber}`
-    : "---";
+  const roundLabel = (() => {
+    if (!currentRound?.roundNumber) return "---";
+    const rn = String(currentRound.roundNumber);
+    // Clean up internal IDs like "ROUND-EA6EC7C8" → just show short hash
+    if (rn.startsWith("ROUND-")) return `Round #${rn.slice(6, 10)}`;
+    return `Round #${rn}`;
+  })();
 
   const statusColor: Record<string, string> = {
     waiting: "#6a7282",
