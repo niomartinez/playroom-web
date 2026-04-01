@@ -5,7 +5,7 @@ import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
 
 export default function PlayerHeader() {
-  const { currentRound, roundStatus, lobbyUrl } = useGame();
+  const { currentRound, roundStatus, lobbyUrl, tableName, dealerName } = useGame();
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -74,6 +74,10 @@ export default function PlayerHeader() {
           <img src="/logo.png" alt="Play Room Gaming" className="object-contain h-[3.5vh]" />
         </button>
         <span className="text-[1.1vh] text-[#99a1af]">Live Baccarat</span>
+        <span className="text-[1vh] text-[#6a7282]">|</span>
+        <span className="text-[1.1vh] text-white font-semibold">{tableName}</span>
+        <span className="text-[1vh] text-[#6a7282]">•</span>
+        <span className="text-[1.1vh] text-[#99a1af]">{dealerName}</span>
       </div>
       <div className="flex items-center gap-[0.6vw]">
         {/* Round status pill */}

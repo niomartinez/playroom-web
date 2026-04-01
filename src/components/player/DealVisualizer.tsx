@@ -107,7 +107,7 @@ function EmptySlot() {
 /*  Phase banner                                                       */
 /* ------------------------------------------------------------------ */
 
-function PhaseBanner({ roundStatus, countdown }: { roundStatus: string; countdown: number | null }) {
+function PhaseBanner({ roundStatus, countdown, hasCards }: { roundStatus: string; countdown: number | null; hasCards: boolean }) {
   let text = "";
   let bgColor = "rgba(255,255,255,0.06)";
   let textColor = "#99a1af";
@@ -121,7 +121,8 @@ function PhaseBanner({ roundStatus, countdown }: { roundStatus: string; countdow
       pulse = true;
       break;
     case "dealing":
-      text = "NO MORE BETS";
+      // "NO MORE BETS" until first card arrives, then "DEALING"
+      text = hasCards ? "DEALING" : "NO MORE BETS";
       bgColor = "rgba(240,177,0,0.15)";
       textColor = "#f0b100";
       pulse = true;
@@ -233,7 +234,7 @@ export default function DealVisualizer() {
 
       {/* Phase banner */}
       <div style={{ marginBottom: hasCards ? 24 : 0 }}>
-        <PhaseBanner roundStatus={roundStatus} countdown={countdown} />
+        <PhaseBanner roundStatus={roundStatus} countdown={countdown} hasCards={hasCards} />
       </div>
 
       {/* Cards area — only visible when dealing or result */}

@@ -79,6 +79,10 @@ export interface GameState {
   lobbyUrl: string | null;
   cashierUrl: string | null;
 
+  /* Table info */
+  tableName: string;
+  dealerName: string;
+
   /* Live state */
   balance: number;
   roundStatus: RoundStatus;
@@ -90,6 +94,8 @@ export interface GameState {
   placedBets: PlacedBet[];
 
   /* Setters — accept direct values or functional updaters */
+  setTableName: (n: string) => void;
+  setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
   setRoundStatus: (s: SetStateAction<RoundStatus>) => void;
   setCurrentRound: (r: SetStateAction<CurrentRound | null>) => void;
@@ -130,6 +136,8 @@ export function GameProvider({
   cashierUrl,
   children,
 }: GameProviderProps) {
+  const [tableName, setTableName] = useState("Baccarat Table 1");
+  const [dealerName, setDealerName] = useState("Studio Dealer");
   const [balance, setBalance] = useState(0);
   const [roundStatus, setRoundStatus] = useState<RoundStatus>("waiting");
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
@@ -151,12 +159,16 @@ export function GameProvider({
     lang,
     lobbyUrl,
     cashierUrl,
+    tableName,
+    dealerName,
     balance,
     roundStatus,
     currentRound,
     roads,
     selectedChip,
     placedBets,
+    setTableName,
+    setDealerName,
     setBalance,
     setRoundStatus,
     setCurrentRound,

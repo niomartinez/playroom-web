@@ -9,11 +9,19 @@ const TIPS = [50, 100, 250, 500, 1000, 2500, 5000];
 /** Left sidebar — TIP selector for tipping the dealer. Separate from betting chips. */
 export default function ChipSelector() {
   const [selectedTip, setSelectedTip] = useState<number>(100);
-  const { cashierUrl } = useGame();
+  const [sent, setSent] = useState(false);
+  const { token, balance, setBalance, cashierUrl } = useGame();
 
   const handleSendTip = () => {
-    // In real mode this would call the tip API
-    // For now just trigger cashier or log
+    if (token === "demo") {
+      // Demo mode: deduct from local balance
+      if (selectedTip > balance) return;
+      setBalance((prev) => prev - selectedTip);
+      setSent(true);
+      setTimeout(() => setSent(false), 1500);
+      return;
+    }
+    // Real mode: call tip API or open cashier
     if (cashierUrl) {
       window.location.href = cashierUrl;
     } else {
@@ -62,7 +70,7 @@ export default function ChipSelector() {
         <svg fill="currentColor" viewBox="0 0 20 20" style={{ width: "1.4vh", height: "1.4vh" }} className="text-white">
           <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
         </svg>
-        <span className="font-bold text-white" style={{ fontSize: "1.4vh" }}>SEND</span>
+        <span className="font-bold text-white" style={{ fontSize: "1.4vh" }}>{sent ? "SENT!" : "SEND"}</span>
       </button>
     </div>
   );
