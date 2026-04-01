@@ -5,7 +5,7 @@ import { GameProvider, useGame } from "@/lib/game-context";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 
 const DEMO_BALANCE = 10000;
-const DEMO_TABLE = "8a65e8e6-f373-47ad-bb7f-b583e59e7be1"; // Baccarat Table 1
+const DEMO_TABLE = "de860e3e-20f5-4596-8ba1-1ab7d978adcd"; // TEST table
 
 function DemoConnections({ children }: { children: ReactNode }) {
   useLobbyWs();
