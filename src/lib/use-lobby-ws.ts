@@ -101,6 +101,7 @@ function handleMessage(
       setRoundStatus("betting_open");
       clearPlacedBets?.(); // Clear bets from previous round
       const roundId = (data.roundId ?? data.round_id ?? "") as string;
+      // Force-replace the entire round object so ALL previous round data is wiped
       setCurrentRound({
         roundId,
         roundNumber: (data.round_number ?? data.roundNumber ?? roundId) as string | number,
@@ -108,6 +109,7 @@ function handleMessage(
         bankerCards: [],
         playerScore: 0,
         bankerScore: 0,
+        winner: undefined,
         countdown: (data.countdown as number) || undefined,
       });
       break;
@@ -121,21 +123,30 @@ function handleMessage(
 
     case "CardDealt":
     case "card_dealt": {
+      const eventRoundId = (data.roundId ?? data.round_id) as string | undefined;
       setCurrentRound((prev) => {
         if (!prev) return prev;
+        // Guard: if the event carries a round ID that doesn't match, ignore it
+        if (eventRoundId && String(prev.roundId) !== String(eventRoundId)) return prev;
+        // Guard: don't add cards to a round that already has a result
+        if (prev.winner) return prev;
+
         const side = (data.side as string)?.toLowerCase();
         const card = data.card as string;
         if (side === "player") {
+          // Use running totals from backend if provided
+          const allPlayerCards = (data.player_cards ?? data.playerCards) as string[] | undefined;
           return {
             ...prev,
-            playerCards: [...prev.playerCards, card],
+            playerCards: allPlayerCards ?? [...prev.playerCards, card],
             playerScore: (data.player_score ?? data.playerScore ?? prev.playerScore) as number,
           };
         }
         if (side === "banker") {
+          const allBankerCards = (data.banker_cards ?? data.bankerCards) as string[] | undefined;
           return {
             ...prev,
-            bankerCards: [...prev.bankerCards, card],
+            bankerCards: allBankerCards ?? [...prev.bankerCards, card],
             bankerScore: (data.banker_score ?? data.bankerScore ?? prev.bankerScore) as number,
           };
         }

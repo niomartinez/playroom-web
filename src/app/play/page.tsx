@@ -6,6 +6,7 @@ import MainBets from "@/components/player/MainBets";
 import BaccaratTable from "@/components/player/BaccaratTable";
 import BalanceBar from "@/components/player/BalanceBar";
 import RoadmapPanel from "@/components/player/RoadmapPanel";
+import DealVisualizer from "@/components/player/DealVisualizer";
 import GameWrapper from "./GameWrapper";
 
 export default async function PlayPage({
@@ -40,9 +41,9 @@ export default async function PlayPage({
         {/* 4vh -- Header */}
         <PlayerHeader />
 
-        {/* 1fr -- Video Stream with overlays */}
+        {/* 1fr -- Deal Visualizer with overlays */}
         <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
-          <span className="text-[#6a7282] text-lg select-none">Live video stream</span>
+          <DealVisualizer />
           <ChipSelector />
           <LiveChat />
         </div>
