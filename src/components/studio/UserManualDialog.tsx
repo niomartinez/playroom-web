@@ -5,7 +5,22 @@ interface UserManualDialogProps {
   onClose: () => void;
 }
 
-const MANUAL_PDF_URL = "/studio-manual.pdf";
+/** Print the manual content — browser's Save as PDF works from the print dialog */
+function handlePrint() {
+  const content = document.getElementById("manual-content");
+  if (!content) return;
+  const win = window.open("", "_blank");
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head><title>Studio Manual — Play Room Gaming</title>
+    <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#222;line-height:1.7}
+    h1{color:#b8860b;border-bottom:2px solid #b8860b;padding-bottom:8px}h3{color:#b8860b;margin-top:24px}
+    table{width:100%;border-collapse:collapse;margin:12px 0}th,td{padding:8px;border:1px solid #ddd;text-align:left}
+    th{background:#f5f5f5;font-weight:600}code{background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px}
+    @media print{body{margin:0;padding:20px}}</style></head><body>
+    <h1>Play Room Gaming — Studio Manual</h1>${content.innerHTML}</body></html>`);
+  win.document.close();
+  win.print();
+}
 
 export default function UserManualDialog({ open, onClose }: UserManualDialogProps) {
   if (!open) return null;
@@ -40,20 +55,18 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
             <h2 className="font-bold text-white" style={{ fontSize: 18 }}>Studio User Manual</h2>
           </div>
           <div className="flex items-center gap-3">
-            <a
-              href={MANUAL_PDF_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handlePrint}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80"
               style={{ backgroundColor: "rgba(208,135,0,0.2)", color: "#d08700", border: "1px solid rgba(208,135,0,0.4)" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
               </svg>
-              Open PDF
-            </a>
+              Print / Save PDF
+            </button>
             <button
               onClick={onClose}
               className="flex items-center justify-center rounded-lg transition-opacity hover:opacity-80"
@@ -86,15 +99,17 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
             .manual td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #d1d5db; }
           `}</style>
 
-          <div className="manual">
+          <div className="manual" id="manual-content">
             <h3>1. Setup (Per Shift)</h3>
 
             <div className="step"><span className="step-num">1</span><span className="step-text">Open <strong>Chrome</strong> on the Studio PC</span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text">Navigate to the Studio URL and <strong>log in</strong> with your dealer credentials</span></div>
-            <div className="step"><span className="step-num">3</span><span className="step-text"><strong>Connect the Angel Eye shoe</strong> — click "Connect Shoe" and select the serial port from the browser dialog</span></div>
-            <div className="step"><span className="step-num">4</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Open <strong>Settings</strong> (gear icon, top-right) — set your <strong>dealer name</strong> and select the <strong>table</strong></span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text">In Settings, scroll to <strong>Angel Eye Shoe</strong> — click <strong>"Connect Shoe"</strong> and select the serial port</span></div>
+            <div className="step"><span className="step-num">5</span><span className="step-text">Click <strong>Save</strong> — your name will appear in the player UI</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream</span></div>
 
-            <div className="info">You only need to grant serial port permission once per session. If Chrome asks "Allow this site to access a serial port?" — click Allow.</div>
+            <div className="info">You only need to grant serial port permission once per session. If Chrome asks &quot;Allow this site to access a serial port?&quot; — click Allow.</div>
 
             <h3>2. Dealing a Round</h3>
 
