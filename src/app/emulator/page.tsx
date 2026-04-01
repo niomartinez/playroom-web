@@ -177,16 +177,17 @@ export default function EmulatorPage() {
   }, []);
 
   /* deal one round */
-  const dealRound = useCallback(async () => {
+  /* Deal cards for the active round (simulates Angel Eye shoe) */
+  const dealShoe = useCallback(async () => {
     if (!selectedTable) return;
     setStatus("dealing");
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/emulator/deal", {
+      const res = await fetch("/api/emulator/shoe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game_id: selectedTable, betting_time: bettingTime }),
+        body: JSON.stringify({ game_id: selectedTable }),
       });
 
       if (!res.ok) {
@@ -222,9 +223,53 @@ export default function EmulatorPage() {
       setStatus("error");
       setErrorMsg(e instanceof Error ? e.message : "Unknown error");
     }
+  }, [selectedTable]);
+
+  /* Full auto-deal: starts round + deals (standalone, for automated testing) */
+  const dealFullRound = useCallback(async () => {
+    if (!selectedTable) return;
+    setStatus("dealing");
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/emulator/deal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game_id: selectedTable, betting_time: bettingTime }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || err.detail || `HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+      const raw = json.data || json;
+      const data: RoundResult = {
+        ...raw,
+        outcome: (raw.outcome || "").toLowerCase() as RoundResult["outcome"],
+        player_cards: (raw.player_cards || []).map((c: string | Card) =>
+          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+        ),
+        banker_cards: (raw.banker_cards || []).map((c: string | Card) =>
+          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+        ),
+      };
+      roundRef.current += 1;
+      const round = roundRef.current;
+      setRoundCount(round);
+      setLastResult(data);
+      setHistory((prev) => [{ ...data, round }, ...prev].slice(0, 20));
+      setStatus("ready");
+      setFlash(true);
+      setTimeout(() => setFlash(false), 600);
+    } catch (e: unknown) {
+      setStatus("error");
+      setErrorMsg(e instanceof Error ? e.message : "Unknown error");
+    }
   }, [selectedTable, bettingTime]);
 
-  /* auto-deal: wait for round to complete, then start next */
+  /* auto-deal: starts round + deals (standalone, for automated testing) */
   const dealingRef = useRef(false);
 
   useEffect(() => {
@@ -241,7 +286,7 @@ export default function EmulatorPage() {
       const runDeal = async () => {
         if (dealingRef.current) return; // prevent overlap
         dealingRef.current = true;
-        await dealRound();
+        await dealFullRound();
         dealingRef.current = false;
       };
 
@@ -252,7 +297,7 @@ export default function EmulatorPage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [autoDeal, bettingTime, pauseBetween, selectedTable, dealRound]);
+  }, [autoDeal, bettingTime, pauseBetween, selectedTable, dealFullRound]);
 
   /* ---------- render ---------- */
   return (
@@ -384,7 +429,7 @@ export default function EmulatorPage() {
           </div>
 
           <button
-            onClick={dealRound}
+            onClick={dealShoe}
             disabled={!selectedTable || status === "dealing"}
             className="rounded-md px-5 py-2 text-sm font-semibold transition-colors"
             style={{
@@ -400,7 +445,7 @@ export default function EmulatorPage() {
                   : "pointer",
             }}
           >
-            Deal Now
+            🃏 Deal Cards
           </button>
         </div>
 
