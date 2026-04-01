@@ -14,9 +14,9 @@ const SUIT_SYMBOLS: Record<string, string> = {
 };
 
 const SUIT_COLORS: Record<string, string> = {
-  H: "#fb2c36", D: "#fb2c36", C: "#e5e7eb", S: "#e5e7eb",
-  hearts: "#fb2c36", diamonds: "#fb2c36", clubs: "#e5e7eb", spades: "#e5e7eb",
-  h: "#fb2c36", d: "#fb2c36", c: "#e5e7eb", s: "#e5e7eb",
+  H: "#fb2c36", D: "#fb2c36", C: "#1a1a2e", S: "#1a1a2e",
+  hearts: "#fb2c36", diamonds: "#fb2c36", clubs: "#1a1a2e", spades: "#1a1a2e",
+  h: "#fb2c36", d: "#fb2c36", c: "#1a1a2e", s: "#1a1a2e",
 };
 
 function parseCard(card: string): { rank: string; suit: string; suitSymbol: string; color: string } {
