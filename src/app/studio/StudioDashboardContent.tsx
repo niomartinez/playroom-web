@@ -54,44 +54,37 @@ export default function StudioDashboardContent() {
           </div>
         </div>
 
-        {/* Right — Score Panel + Round Controls + Next Game */}
+        {/* Right — Score Panel + Round Controls + Next Game + Manual Input */}
         <div
-          className="min-h-0"
-          style={{
-            display: "grid",
-            gridTemplateRows: "5fr 4fr 3fr",
-            gap: "8px",
-          }}
+          className="min-h-0 flex flex-col gap-2"
         >
-          <div className="overflow-hidden">
+          <div className="shrink-0">
             <ScorePanel />
           </div>
-          <div className="overflow-hidden">
+          <div className="shrink-0">
             <RoundControls />
           </div>
-          <div className="overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <NextGamePanel />
           </div>
+          <button
+            onClick={() => setManualInputOpen(true)}
+            className="shrink-0 flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold text-sm text-black hover:opacity-90 transition-opacity"
+            style={{
+              backgroundColor: "#f0b100",
+              boxShadow: "0 4px 15px rgba(208,135,0,0.4)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2" />
+              <path d="M8 12h8M12 8v8" />
+            </svg>
+            Manual Input
+          </button>
         </div>
       </main>
 
       <StudioFooter />
-
-      {/* Manual Input floating button */}
-      <button
-        onClick={() => setManualInputOpen(true)}
-        className="fixed bottom-16 right-6 z-40 flex items-center gap-2 rounded-lg px-4 py-2.5 font-semibold text-sm text-black shadow-lg hover:opacity-90 transition-opacity"
-        style={{
-          backgroundColor: "#f0b100",
-          boxShadow: "0 4px 15px rgba(208,135,0,0.4)",
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="2" />
-          <path d="M8 12h8M12 8v8" />
-        </svg>
-        Manual Input
-      </button>
 
       <ManualInputDialog
         open={manualInputOpen}

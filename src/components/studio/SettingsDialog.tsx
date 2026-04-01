@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStudio } from "@/lib/studio-context";
 import { clientFetch } from "@/lib/api";
+import { useAngelEye } from "@/lib/use-angel-eye";
 
 interface TableOption {
   id: string;
@@ -18,6 +19,7 @@ interface SettingsDialogProps {
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const studio = useStudio();
+  const angelEye = useAngelEye();
 
   /* ---- Local form state ---- */
   const [tables, setTables] = useState<TableOption[]>([]);
@@ -351,6 +353,78 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 }}
               />
             </button>
+          </div>
+
+          {/* ── Hardware: Angel Eye Shoe ── */}
+          <div>
+            <label className="block text-xs font-medium text-[#99a1af] mb-2">
+              Angel Eye Shoe
+            </label>
+            <div
+              className="rounded-lg p-3"
+              style={{
+                backgroundColor: "rgba(0,0,0,0.4)",
+                border: "1px solid rgba(208,135,0,0.15)",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block rounded-full"
+                    style={{
+                      width: 8,
+                      height: 8,
+                      backgroundColor:
+                        angelEye.status === "connected" ? "#05df72" :
+                        angelEye.status === "connecting" ? "#f0b100" :
+                        angelEye.status === "error" ? "#fb2c36" : "#6a7282",
+                    }}
+                  />
+                  <span className="text-xs font-medium" style={{
+                    color:
+                      angelEye.status === "connected" ? "#05df72" :
+                      angelEye.status === "connecting" ? "#f0b100" :
+                      angelEye.status === "error" ? "#fb2c36" : "#6a7282",
+                  }}>
+                    {angelEye.status === "connected" ? "Connected" :
+                     angelEye.status === "connecting" ? "Connecting..." :
+                     angelEye.status === "error" ? "Error" :
+                     angelEye.status === "unsupported" ? "Browser not supported" :
+                     "Not connected"}
+                  </span>
+                </div>
+                {angelEye.status === "connected" ? (
+                  <button
+                    onClick={angelEye.disconnect}
+                    className="rounded px-3 py-1 text-xs font-medium"
+                    style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "#6a7282" }}
+                  >
+                    Disconnect
+                  </button>
+                ) : angelEye.status !== "unsupported" ? (
+                  <button
+                    onClick={angelEye.connect}
+                    className="rounded px-3 py-1 text-xs font-semibold"
+                    style={{ backgroundColor: "rgba(208,135,0,0.2)", color: "#d08700", border: "1px solid rgba(208,135,0,0.4)" }}
+                  >
+                    Connect Shoe
+                  </button>
+                ) : null}
+              </div>
+              {angelEye.error && (
+                <p className="text-xs mt-2" style={{ color: "#fb2c36" }}>{angelEye.error}</p>
+              )}
+              {!angelEye.isSupported && (
+                <p className="text-xs mt-2" style={{ color: "#6a7282" }}>
+                  Web Serial API requires Chrome or Edge browser.
+                </p>
+              )}
+              {angelEye.status === "connected" && (
+                <p className="text-xs mt-2" style={{ color: "#6a7282" }}>
+                  Shoe is connected. Cards will be read automatically when dealing.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* ── Bet Limits per Type ── */}
