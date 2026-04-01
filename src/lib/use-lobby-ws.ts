@@ -23,6 +23,9 @@ type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
  */
 export function useLobbyWs() {
   const {
+    token,
+    setBalance,
+    placedBets,
     setRoundStatus,
     setCurrentRound,
     setRoads,
@@ -30,8 +33,8 @@ export function useLobbyWs() {
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads, clearPlacedBets });
-  settersRef.current = { setRoundStatus, setCurrentRound, setRoads, clearPlacedBets };
+  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets });
+  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets };
 
   useEffect(() => {
     let mounted = true;
@@ -53,7 +56,7 @@ export function useLobbyWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance);
         } catch {
           // ignore
         }
@@ -85,12 +88,22 @@ export function useLobbyWs() {
 /*  Message handling                                                    */
 /* ------------------------------------------------------------------ */
 
+/** Demo payout odds */
+const DEMO_ODDS: Record<string, Record<string, number>> = {
+  P: { BAC_Player: 2, BAC_Tie: 0, BAC_Banker: 0 },
+  B: { BAC_Banker: 1.95, BAC_Tie: 0, BAC_Player: 0 },
+  T: { BAC_Tie: 9, BAC_Player: 1, BAC_Banker: 1 }, // tie = push on P/B
+};
+
 function handleMessage(
   msg: Record<string, unknown>,
   setRoundStatus: StatusSetter,
   setCurrentRound: RoundSetter,
   setRoads: RoadsSetter,
   clearPlacedBets?: () => void,
+  token?: string | null,
+  placedBets?: { betCode: string; amount: number }[],
+  setBalance?: (b: SetStateAction<number>) => void,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -191,6 +204,21 @@ function handleMessage(
             ties: prev.ties + (winner === "T" ? 1 : 0),
           };
         });
+      }
+
+      // Demo mode settlement — credit winnings to local balance
+      if (token === "demo" && placedBets && placedBets.length > 0 && setBalance && winner) {
+        const odds = DEMO_ODDS[winner] || {};
+        let totalPayout = 0;
+        for (const bet of placedBets) {
+          const multiplier = odds[bet.betCode];
+          if (multiplier !== undefined && multiplier > 0) {
+            totalPayout += bet.amount * multiplier;
+          }
+        }
+        if (totalPayout > 0) {
+          setBalance((prev) => prev + totalPayout);
+        }
       }
       break;
     }
