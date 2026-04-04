@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
+const STUDIO_JWT_SECRET = new TextEncoder().encode(
   process.env.STUDIO_JWT_SECRET || "playroom-studio-secret-change-in-prod"
+);
+const ADMIN_JWT_SECRET = new TextEncoder().encode(
+  process.env.ADMIN_JWT_SECRET || "playroom-admin-secret-change-in-prod"
 );
 const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
   .split(",")
@@ -12,13 +15,31 @@ const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Gate /studio and /emulator routes (except the login page)
+  /* ── Admin routes ── */
+  if (pathname.startsWith("/admin")) {
+    // Allow the login page without auth
+    if (pathname === "/admin/login") return NextResponse.next();
+
+    const token = req.cookies.get("admin_session")?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+
+    try {
+      await jwtVerify(token, ADMIN_JWT_SECRET);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+  }
+
+  /* ── Studio / Emulator routes ── */
   const isProtected =
     pathname.startsWith("/studio") || pathname.startsWith("/emulator");
   if (!isProtected) return NextResponse.next();
   if (pathname === "/studio/login") return NextResponse.next();
 
-  // IP whitelist check
+  // IP whitelist check (studio only)
   if (ALLOWED_IPS.length > 0) {
     const clientIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -36,7 +57,7 @@ export async function proxy(req: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, JWT_SECRET);
+    await jwtVerify(token, STUDIO_JWT_SECRET);
     return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL("/studio/login", req.url));
@@ -44,5 +65,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*", "/emulator/:path*"],
+  matcher: ["/studio/:path*", "/emulator/:path*", "/admin/:path*"],
 };
