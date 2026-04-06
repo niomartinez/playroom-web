@@ -71,6 +71,7 @@ export default function PlayerHeader() {
     return (
       <header
         style={{
+          position: "relative",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -81,12 +82,23 @@ export default function PlayerHeader() {
         }}
       >
         {/* Left: Logo */}
-        <button onClick={handleBack} style={{ cursor: "pointer", background: "none", border: "none", padding: 0 }}>
+        <button onClick={handleBack} style={{ cursor: "pointer", background: "none", border: "none", padding: 0, zIndex: 1 }}>
           <img src="/logo.png" alt="Play Room Gaming" style={{ height: 32, objectFit: "contain" }} />
         </button>
 
-        {/* Center: LIVE badge + "Live Baccarat" */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+        {/* Center: LIVE badge + "Live Baccarat" — absolutely centered */}
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
           <div
             style={{
               display: "flex",
@@ -104,7 +116,6 @@ export default function PlayerHeader() {
                 height: 8,
                 borderRadius: "50%",
                 backgroundColor: "#FB2C36",
-                animation: "pulse 1s infinite",
               }}
             />
             <span style={{ fontSize: 16, fontWeight: 700, color: "#ffffff" }}>LIVE</span>
@@ -113,7 +124,7 @@ export default function PlayerHeader() {
         </div>
 
         {/* Right: Round number */}
-        <span style={{ fontSize: 16, fontWeight: 500, color: "#ffffff" }}>{roundLabel}</span>
+        <span style={{ fontSize: 16, fontWeight: 500, color: "#ffffff", zIndex: 1 }}>{roundLabel}</span>
       </header>
     );
   }
