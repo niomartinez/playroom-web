@@ -27,11 +27,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const data = await backendRes.json();
+  const rawData = await backendRes.json();
+  // Backend wraps response in BaseResponse: { error_code, message, data: { ... } }
+  const data = rawData.data || rawData;
 
-  // The backend returns user info + token. We create our own session cookie.
   const token = await createAdminSession({
-    sub: data.id || data.user_id || "",
+    sub: data.admin_id || data.id || data.user_id || "",
     email: data.email || "",
     role: data.role || "viewer",
     display_name: data.display_name || data.name || "",
