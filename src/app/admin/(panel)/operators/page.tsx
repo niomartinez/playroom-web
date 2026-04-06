@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface Operator {
   id: string;
@@ -18,6 +19,7 @@ interface Operator {
 
 export default function OperatorsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [operators, setOperators] = useState<Operator[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,12 +72,16 @@ export default function OperatorsPage() {
         setNewWalletUrl("");
         setNewWalletMode("seamless");
         fetchOperators();
+        toast({ type: "success", message: "Operator created" });
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || `Failed to create operator (${res.status})`);
+        const msg = data.message || `Failed to create operator (${res.status})`;
+        setError(msg);
+        toast({ type: "error", message: msg });
       }
     } catch {
       setError("Network error — check your connection");
+      toast({ type: "error", message: "Network error — check your connection" });
     } finally {
       setSaving(false);
     }

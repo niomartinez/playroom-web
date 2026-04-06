@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface Table {
   id: string;
@@ -20,6 +21,7 @@ interface Table {
 
 export default function TablesPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,9 +79,13 @@ export default function TablesPage() {
         setNewMinBet("10");
         setNewMaxBet("10000");
         fetchTables();
+        toast({ type: "success", message: "Table created" });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ type: "error", message: data.message || "Failed to create table" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     } finally {
       setSaving(false);
     }
@@ -92,9 +98,14 @@ export default function TablesPage() {
       const res = await fetch(`/api/admin/tables/${table.id}/${action}`, {
         method: "POST",
       });
-      if (res.ok) fetchTables();
+      if (res.ok) {
+        fetchTables();
+        toast({ type: "success", message: `Table ${action === "open" ? "opened" : "closed"}` });
+      } else {
+        toast({ type: "error", message: `Failed to ${action} table` });
+      }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     } finally {
       setToggling(null);
     }

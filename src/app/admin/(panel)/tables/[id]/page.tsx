@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface TableDetail {
   id: string;
@@ -28,6 +29,7 @@ interface TableDetail {
 export default function TableDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [table, setTable] = useState<TableDetail | null>(null);
@@ -96,12 +98,16 @@ export default function TableDetailPage() {
       });
       if (res.ok) {
         fetchTable();
+        toast({ type: "success", message: "Table saved" });
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || `Failed to save (${res.status})`);
+        const msg = data.message || `Failed to save (${res.status})`;
+        setError(msg);
+        toast({ type: "error", message: msg });
       }
     } catch {
       setError("Network error — check your connection");
+      toast({ type: "error", message: "Network error — check your connection" });
     } finally {
       setSaving(false);
     }
@@ -114,9 +120,14 @@ export default function TableDetailPage() {
       const res = await fetch(`/api/admin/tables/${id}/${action}`, {
         method: "POST",
       });
-      if (res.ok) fetchTable();
+      if (res.ok) {
+        fetchTable();
+        toast({ type: "success", message: `Table ${action === "open" ? "opened" : "closed"}` });
+      } else {
+        toast({ type: "error", message: `Failed to ${action} table` });
+      }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 
@@ -125,9 +136,14 @@ export default function TableDetailPage() {
       const res = await fetch(`/api/admin/tables/${id}`, {
         method: "DELETE",
       });
-      if (res.ok) router.push("/admin/tables");
+      if (res.ok) {
+        toast({ type: "success", message: "Table deactivated" });
+        router.push("/admin/tables");
+      } else {
+        toast({ type: "error", message: "Failed to deactivate table" });
+      }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 

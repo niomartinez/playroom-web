@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const STUDIO_JWT_SECRET = new TextEncoder().encode(
-  process.env.STUDIO_JWT_SECRET || "playroom-studio-secret-change-in-prod"
-);
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || "playroom-admin-secret-change-in-prod"
-);
+function getJwtSecret(envVar: string, name: string): Uint8Array {
+  const secret = process.env[envVar];
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error(`${envVar} must be set in production`);
+  }
+  return new TextEncoder().encode(
+    secret || `playroom-${name}-secret-change-in-prod`
+  );
+}
+
+const STUDIO_JWT_SECRET = getJwtSecret("STUDIO_JWT_SECRET", "studio");
+const ADMIN_JWT_SECRET = getJwtSecret("ADMIN_JWT_SECRET", "admin");
 const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
   .split(",")
   .map((ip) => ip.trim())

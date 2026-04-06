@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface ConfigEntry {
   key: string;
@@ -29,6 +30,7 @@ const BET_CODE_LABELS: Record<string, string> = {
 };
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [config, setConfig] = useState<ConfigEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -100,14 +102,20 @@ export default function SettingsPage() {
   async function saveKey(key: string, value: unknown) {
     setSaving(key);
     try {
-      await fetch(`/api/admin/config/${key}`, {
+      const res = await fetch(`/api/admin/config/${key}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value }),
       });
-      fetchConfig();
+      if (res.ok) {
+        fetchConfig();
+        toast({ type: "success", message: `Setting "${key.replace(/_/g, " ")}" saved` });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ type: "error", message: data.message || "Failed to save setting" });
+      }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     } finally {
       setSaving(null);
     }
@@ -117,9 +125,13 @@ export default function SettingsPage() {
     const newVal = !maintenanceMode;
     setMaintenanceMode(newVal);
     await saveKey("maintenance_mode", newVal);
+    const msg = newVal
+      ? "Maintenance mode ENABLED"
+      : "Maintenance mode disabled";
     setActionResult(
       newVal ? "Maintenance mode ENABLED — non-internal endpoints return 503" : "Maintenance mode disabled"
     );
+    toast({ type: newVal ? "info" : "success", message: msg });
   }
 
   async function handleForceClose() {
@@ -130,10 +142,14 @@ export default function SettingsPage() {
       if (res.ok) {
         const json = await res.json();
         const data = json.data ?? json;
-        setActionResult(`Force-closed ${data.tables_closed ?? 0} table(s)`);
+        const msg = `Force-closed ${data.tables_closed ?? 0} table(s)`;
+        setActionResult(msg);
+        toast({ type: "success", message: msg });
+      } else {
+        toast({ type: "error", message: "Failed to force-close tables" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 

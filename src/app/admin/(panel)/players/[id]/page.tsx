@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
 import StatCard from "@/components/admin/ui/StatCard";
+import { useToast } from "@/lib/toast-context";
 
 interface PlayerDetail {
   id: string;
@@ -41,6 +42,7 @@ interface Transaction {
 export default function PlayerDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [player, setPlayer] = useState<PlayerDetail | null>(null);
@@ -108,9 +110,12 @@ export default function PlayerDetailPage() {
       if (res.ok) {
         setKickResult("Player kicked — all tokens revoked.");
         fetchPlayer();
+        toast({ type: "success", message: "Player kicked" });
+      } else {
+        toast({ type: "error", message: "Failed to kick player" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 

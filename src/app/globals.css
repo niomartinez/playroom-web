@@ -34,6 +34,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Toast animation */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
+
 /* Mobile player UI */
 @media (max-width: 640px) {
   .player-layout {

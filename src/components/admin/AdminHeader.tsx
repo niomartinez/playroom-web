@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdmin } from "@/lib/admin-context";
+import AdminManualDialog from "@/components/admin/AdminManualDialog";
 
 /** Build breadcrumb segments from the current pathname. */
 function buildBreadcrumbs(pathname: string): { label: string; href: string }[] {
@@ -27,6 +29,7 @@ export default function AdminHeader() {
   const router = useRouter();
   const { currentUser } = useAdmin();
   const breadcrumbs = buildBreadcrumbs(pathname);
+  const [showManual, setShowManual] = useState(false);
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -100,6 +103,28 @@ export default function AdminHeader() {
         )}
 
         <button
+          onClick={() => setShowManual(true)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+          style={{ color: "#d08700" }}
+          title="Admin Manual"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
+          Manual
+        </button>
+
+        <button
           onClick={handleLogout}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
           style={{ color: "#99a1af" }}
@@ -121,6 +146,8 @@ export default function AdminHeader() {
           Logout
         </button>
       </div>
+
+      <AdminManualDialog open={showManual} onClose={() => setShowManual(false)} />
     </header>
   );
 }

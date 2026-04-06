@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
+import { useDebounce } from "@/lib/use-debounce";
 
 interface Player {
   id: string;
@@ -35,6 +36,7 @@ export default function PlayersPage() {
   /* Filters */
   const [filterOperator, setFilterOperator] = useState("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   // Fetch operators for filter dropdown
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function PlayersPage() {
       params.set("page", String(page));
       params.set("page_size", String(pageSize));
       if (filterOperator) params.set("operator_id", filterOperator);
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
 
       const res = await fetch(`/api/admin/players?${params.toString()}`);
       if (res.ok) {
@@ -68,7 +70,7 @@ export default function PlayersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterOperator, search]);
+  }, [page, filterOperator, debouncedSearch]);
 
   useEffect(() => {
     fetchPlayers();
@@ -197,6 +199,7 @@ export default function PlayersPage() {
         searchPlaceholder="Search in results..."
         onRowClick={(row) => router.push(`/admin/players/${row.id}`)}
         pageSize={pageSize}
+        disablePagination
       />
 
       {/* Server-side pagination */}

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface OperatorDetail {
   id: string;
@@ -21,6 +22,7 @@ interface OperatorDetail {
 export default function OperatorDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [operator, setOperator] = useState<OperatorDetail | null>(null);
@@ -88,12 +90,16 @@ export default function OperatorDetailPage() {
       });
       if (res.ok) {
         fetchOperator();
+        toast({ type: "success", message: "Operator saved" });
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || `Failed to save (${res.status})`);
+        const msg = data.message || `Failed to save (${res.status})`;
+        setError(msg);
+        toast({ type: "error", message: msg });
       }
     } catch {
       setError("Network error — check your connection");
+      toast({ type: "error", message: "Network error — check your connection" });
     } finally {
       setSaving(false);
     }
@@ -108,9 +114,12 @@ export default function OperatorDetailPage() {
         const data = await res.json();
         setNewApiKey(data.api_key || data.key || null);
         fetchOperator();
+        toast({ type: "success", message: "API key regenerated" });
+      } else {
+        toast({ type: "error", message: "Failed to regenerate API key" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 
@@ -120,10 +129,13 @@ export default function OperatorDetailPage() {
         method: "DELETE",
       });
       if (res.ok) {
+        toast({ type: "success", message: "Operator deactivated" });
         router.push("/admin/operators");
+      } else {
+        toast({ type: "error", message: "Failed to deactivate operator" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 

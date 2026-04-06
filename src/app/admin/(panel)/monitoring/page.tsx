@@ -184,6 +184,7 @@ export default function MonitoringPage() {
           loading={errorsLoading}
           emptyMessage="No wallet errors"
           pageSize={pageSize}
+          disablePagination
         />
 
         {totalPages > 1 && (

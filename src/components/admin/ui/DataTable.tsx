@@ -19,6 +19,7 @@ interface DataTableProps<T> {
   onSearch?: (query: string) => void;
   onRowClick?: (row: T) => void;
   pageSize?: number;
+  disablePagination?: boolean;
 }
 
 export default function DataTable<T extends Record<string, unknown>>({
@@ -31,6 +32,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   onSearch,
   onRowClick,
   pageSize = 10,
+  disablePagination = false,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -49,8 +51,8 @@ export default function DataTable<T extends Record<string, unknown>>({
     );
   }, [data, search, columns, onSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-  const pagedData = filteredData.slice(page * pageSize, (page + 1) * pageSize);
+  const totalPages = disablePagination ? 1 : Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const pagedData = disablePagination ? filteredData : filteredData.slice(page * pageSize, (page + 1) * pageSize);
 
   function handleSort(key: string) {
     const newDir = sortKey === key && sortDir === "asc" ? "desc" : "asc";
@@ -174,7 +176,7 @@ export default function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {!disablePagination && totalPages > 1 && (
         <div
           className="flex items-center justify-between px-4 py-3 text-xs"
           style={{

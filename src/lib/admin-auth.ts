@@ -12,7 +12,13 @@ import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || "playroom-admin-secret-change-in-prod"
+  (() => {
+    const secret = process.env.ADMIN_JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === "production") {
+      throw new Error("ADMIN_JWT_SECRET must be set in production");
+    }
+    return secret || "playroom-admin-secret-change-in-prod";
+  })()
 );
 
 const COOKIE_NAME = "admin_session";

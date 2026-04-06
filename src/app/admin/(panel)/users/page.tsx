@@ -5,6 +5,7 @@ import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface AdminUser {
   id: string;
@@ -23,6 +24,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function UsersPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,9 +83,13 @@ export default function UsersPage() {
         setNewDisplayName("");
         setNewRole("viewer");
         fetchUsers();
+        toast({ type: "success", message: "Admin user created" });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ type: "error", message: data.message || "Failed to create user" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     } finally {
       setSaving(false);
     }
@@ -112,9 +118,13 @@ export default function UsersPage() {
       if (res.ok) {
         setEditUser(null);
         fetchUsers();
+        toast({ type: "success", message: "User updated" });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ type: "error", message: data.message || "Failed to update user" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     } finally {
       setSaving(false);
     }
@@ -126,9 +136,14 @@ export default function UsersPage() {
       const res = await fetch(`/api/admin/users/${deactivateUser.id}`, {
         method: "DELETE",
       });
-      if (res.ok) fetchUsers();
+      if (res.ok) {
+        fetchUsers();
+        toast({ type: "success", message: "User deactivated" });
+      } else {
+        toast({ type: "error", message: "Failed to deactivate user" });
+      }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 

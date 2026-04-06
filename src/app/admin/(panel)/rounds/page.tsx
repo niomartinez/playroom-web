@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
+import { useDebounce } from "@/lib/use-debounce";
 
 interface Round {
   id: string;
@@ -65,6 +66,8 @@ export default function RoundsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const debouncedDateFrom = useDebounce(dateFrom, 300);
+  const debouncedDateTo = useDebounce(dateTo, 300);
 
   // Fetch tables for filter dropdown
   useEffect(() => {
@@ -85,8 +88,8 @@ export default function RoundsPage() {
       params.set("page_size", String(pageSize));
       if (filterTable) params.set("game_id", filterTable);
       if (filterStatus) params.set("status", filterStatus);
-      if (dateFrom) params.set("date_from", new Date(dateFrom).toISOString());
-      if (dateTo) params.set("date_to", new Date(dateTo + "T23:59:59").toISOString());
+      if (debouncedDateFrom) params.set("date_from", new Date(debouncedDateFrom).toISOString());
+      if (debouncedDateTo) params.set("date_to", new Date(debouncedDateTo + "T23:59:59").toISOString());
 
       const res = await fetch(`/api/admin/rounds?${params.toString()}`);
       if (res.ok) {
@@ -100,7 +103,7 @@ export default function RoundsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterTable, filterStatus, dateFrom, dateTo]);
+  }, [page, filterTable, filterStatus, debouncedDateFrom, debouncedDateTo]);
 
   useEffect(() => {
     fetchRounds();
@@ -276,6 +279,7 @@ export default function RoundsPage() {
         searchPlaceholder="Search rounds..."
         onRowClick={(row) => router.push(`/admin/rounds/${row.id}`)}
         pageSize={pageSize}
+        disablePagination
       />
 
       {/* Server-side pagination */}

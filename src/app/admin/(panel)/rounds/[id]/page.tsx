@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import { useToast } from "@/lib/toast-context";
 
 interface Bet {
   id: string;
@@ -111,6 +112,7 @@ function betStatusBadge(status: string): "active" | "inactive" | "pending" | "er
 export default function RoundDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
 
   const [round, setRound] = useState<RoundDetail | null>(null);
@@ -145,13 +147,16 @@ export default function RoundDetailPage() {
       if (res.ok) {
         const json = await res.json();
         const data = json.data ?? json;
-        setVoidResult(
-          `Round voided. ${data.voided_bets ?? 0} bet(s) voided.`
-        );
+        const msg = `Round voided. ${data.voided_bets ?? 0} bet(s) voided.`;
+        setVoidResult(msg);
         fetchRound();
+        toast({ type: "success", message: msg });
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast({ type: "error", message: json.message || "Failed to void round" });
       }
     } catch {
-      // silent
+      toast({ type: "error", message: "Network error" });
     }
   }
 
