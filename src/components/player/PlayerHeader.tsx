@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
+import { useIsMobile } from "@/lib/use-mobile";
 
 export default function PlayerHeader() {
   const { currentRound, roundStatus, lobbyUrl, tableName, dealerName } = useGame();
+  const isMobile = useIsMobile();
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -64,6 +66,57 @@ export default function PlayerHeader() {
       sendToParent("closeGame");
     }
   };
+
+  if (isMobile) {
+    return (
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          height: 80,
+          padding: "0 19px",
+          background: "rgba(16, 24, 40, 0.95)",
+          borderBottom: "1px solid #364153",
+        }}
+      >
+        {/* Left: Logo */}
+        <button onClick={handleBack} style={{ cursor: "pointer", background: "none", border: "none", padding: 0 }}>
+          <img src="/logo.png" alt="Play Room Gaming" style={{ height: 32, objectFit: "contain" }} />
+        </button>
+
+        {/* Center: LIVE badge + "Live Baccarat" */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(251, 44, 54, 0.15)",
+              border: "1px solid rgba(251, 44, 54, 0.4)",
+              borderRadius: 999,
+              padding: "4px 12px",
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: "#FB2C36",
+                animation: "pulse 1s infinite",
+              }}
+            />
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#ffffff" }}>LIVE</span>
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 400, color: "#99A1AF" }}>Live Baccarat</span>
+        </div>
+
+        {/* Right: Round number */}
+        <span style={{ fontSize: 16, fontWeight: 500, color: "#ffffff" }}>{roundLabel}</span>
+      </header>
+    );
+  }
 
   return (
     <header

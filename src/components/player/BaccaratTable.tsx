@@ -1,9 +1,11 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
+import { useIsMobile } from "@/lib/use-mobile";
 
 export default function BaccaratTable() {
   const { currentRound, roundStatus } = useGame();
+  const isMobile = useIsMobile();
 
   const playerScore = currentRound?.playerScore ?? 0;
   const bankerScore = currentRound?.bankerScore ?? 0;
@@ -19,6 +21,163 @@ export default function BaccaratTable() {
   };
 
   const message = statusText[roundStatus] || "Waiting for bets...";
+
+  if (isMobile) {
+    const isPlayerWinner = roundStatus === "result" && winner === "P";
+    const isBankerWinner = roundStatus === "result" && winner === "B";
+
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 12,
+        }}
+      >
+        {/* Player score card */}
+        <div
+          style={{
+            background: "#1C2B4A",
+            border: "1.6px solid #2B7FFF",
+            borderRadius: 16,
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 0,
+            boxShadow: isPlayerWinner
+              ? "0 0 20px rgba(43,127,255,0.7), 0 0 40px rgba(43,127,255,0.3)"
+              : "none",
+            transition: "box-shadow 0.3s ease",
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
+            PLAYER
+          </span>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "rgba(43,127,255,0.25)",
+              border: "2px solid #2B7FFF",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 8,
+            }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+              (P)
+            </span>
+            <span style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+              {playerScore}
+            </span>
+          </div>
+          {playerCards.length > 0 ? (
+            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+              {playerCards.map((card, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 4,
+                    width: 28,
+                    height: 38,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#0a0f1a",
+                  }}
+                >
+                  {card}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span style={{ fontSize: 12, color: "#99A1AF", marginTop: 4, textAlign: "center" }}>
+              {message}
+            </span>
+          )}
+        </div>
+
+        {/* Banker score card */}
+        <div
+          style={{
+            background: "rgba(231,0,11,0.2)",
+            border: "1.6px solid rgba(251,44,54,0.5)",
+            borderRadius: 16,
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 0,
+            boxShadow: isBankerWinner
+              ? "0 0 20px rgba(251,44,54,0.7), 0 0 40px rgba(251,44,54,0.3)"
+              : "none",
+            transition: "box-shadow 0.3s ease",
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
+            BANKER
+          </span>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "rgba(251,44,54,0.2)",
+              border: "2px solid rgba(251,44,54,0.7)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 8,
+            }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+              (B)
+            </span>
+            <span style={{ fontSize: 28, fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+              {bankerScore}
+            </span>
+          </div>
+          {bankerCards.length > 0 ? (
+            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+              {bankerCards.map((card, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 4,
+                    width: 28,
+                    height: 38,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#0a0f1a",
+                  }}
+                >
+                  {card}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span style={{ fontSize: 12, color: "#99A1AF", marginTop: 4, textAlign: "center" }}>
+              {message}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

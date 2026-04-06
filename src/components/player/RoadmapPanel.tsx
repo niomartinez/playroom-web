@@ -1,6 +1,7 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
+import { useIsMobile } from "@/lib/use-mobile";
 
 const colorMap: Record<string, string> = { P: "#2b7fff", B: "#fb2c36", T: "#00c950" };
 const COLS = 36;
@@ -8,10 +9,186 @@ const ROWS = 6;
 
 export default function RoadmapPanel() {
   const { roads } = useGame();
+  const isMobile = useIsMobile();
 
   /* Build a flat bead road array from context roads data */
   const beadResults: string[] = roads.beadRoad.map((e) => e.result);
 
+  /* Prediction percentages — shared between both layouts */
+  const total = roads.playerWins + roads.bankerWins + roads.ties;
+  const pPct = total > 0 ? Math.round((roads.playerWins / total) * 100) : 0;
+  const bPct = total > 0 ? Math.round((roads.bankerWins / total) * 100) : 0;
+  const tPct = total > 0 ? Math.round((roads.ties / total) * 100) : 0;
+
+  /* ── Mobile layout ── */
+  if (isMobile) {
+    const mobileCols = 18;
+    const mobileRows = ROWS;
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          backgroundColor: "#101828",
+          border: "0.8px solid #364153",
+          borderRadius: 14,
+          padding: 12,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        {/* Big Road Grid */}
+        <div>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#d1d5dc",
+              marginBottom: 4,
+            }}
+          >
+            Big Road
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${mobileCols}, 1fr)`,
+              gridTemplateRows: `repeat(${mobileRows}, 1fr)`,
+              gap: 1,
+              width: "100%",
+              overflowX: "auto",
+            }}
+          >
+            {Array.from({ length: mobileRows * mobileCols }).map((_, idx) => {
+              const col = Math.floor(idx / mobileRows);
+              const row = idx % mobileRows;
+              const dataIndex = col * mobileRows + row;
+              const result = beadResults[dataIndex];
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    aspectRatio: "1",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "80%",
+                      aspectRatio: "1",
+                      borderRadius: "20%",
+                      backgroundColor: result
+                        ? colorMap[result]
+                        : "rgba(30,41,57,0.3)",
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Score Summary Bar */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          {[
+            { label: "P", bg: "#2b7fff", count: roads.playerWins },
+            { label: "T", bg: "#00c950", count: roads.ties },
+            { label: "B", bg: "#fb2c36", count: roads.bankerWins },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                backgroundColor: s.bg,
+                borderRadius: 999,
+                padding: "3px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <span>{s.label}:</span>
+              <span>{s.count}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Next Prediction Row */}
+        <div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#99A1AF",
+              marginBottom: 4,
+            }}
+          >
+            Next Prediction
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            {[
+              { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
+              { label: "T", bg: "#00c950", border: "#05df72", pct: tPct },
+              { label: "B", bg: "#fb2c36", border: "#ff6467", pct: bPct },
+            ].map((p) => (
+              <div
+                key={p.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    backgroundColor: p.bg,
+                    border: `1.6px solid ${p.border}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 10,
+                    }}
+                  >
+                    {p.label}
+                  </span>
+                </div>
+                <span style={{ color: "#99a1af", fontSize: 12 }}>
+                  {p.pct}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Desktop layout (unchanged) ── */
   return (
     <div className="flex flex-col h-full" style={{ gap: "0.4vh" }}>
       {/* Big Road Grid -- takes most space */}
@@ -56,24 +233,18 @@ export default function RoadmapPanel() {
       >
         <div className="font-semibold text-[#d1d5dc]" style={{ fontSize: "1vh", marginBottom: "0.3vh" }}>Next Prediction</div>
         <div className="flex items-center justify-center" style={{ gap: "1vw" }}>
-          {(() => {
-            const total = roads.playerWins + roads.bankerWins + roads.ties;
-            const pPct = total > 0 ? Math.round((roads.playerWins / total) * 100) : 0;
-            const bPct = total > 0 ? Math.round((roads.bankerWins / total) * 100) : 0;
-            const tPct = total > 0 ? Math.round((roads.ties / total) * 100) : 0;
-            return [
-              { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
-              { label: "T", bg: "#00c950", border: "#05df72", pct: tPct },
-              { label: "B", bg: "#fb2c36", border: "#ff6467", pct: bPct },
-            ].map((p) => (
-              <div key={p.label} className="flex items-center" style={{ gap: "0.3vw" }}>
-                <div className="rounded-full flex items-center justify-center" style={{ width: "2.2vh", height: "2.2vh", backgroundColor: p.bg, border: `1.6px solid ${p.border}` }}>
-                  <span className="text-white font-bold" style={{ fontSize: "1vh" }}>{p.label}</span>
-                </div>
-                <span className="text-[#99a1af]" style={{ fontSize: "1.2vh" }}>{p.pct}%</span>
+          {[
+            { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
+            { label: "T", bg: "#00c950", border: "#05df72", pct: tPct },
+            { label: "B", bg: "#fb2c36", border: "#ff6467", pct: bPct },
+          ].map((p) => (
+            <div key={p.label} className="flex items-center" style={{ gap: "0.3vw" }}>
+              <div className="rounded-full flex items-center justify-center" style={{ width: "2.2vh", height: "2.2vh", backgroundColor: p.bg, border: `1.6px solid ${p.border}` }}>
+                <span className="text-white font-bold" style={{ fontSize: "1vh" }}>{p.label}</span>
               </div>
-            ));
-          })()}
+              <span className="text-[#99a1af]" style={{ fontSize: "1.2vh" }}>{p.pct}%</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

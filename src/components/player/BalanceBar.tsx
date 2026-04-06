@@ -1,6 +1,7 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
+import { useIsMobile } from "@/lib/use-mobile";
 
 const CHIPS = [
   { color: "#e7000b", label: "10" },
@@ -13,6 +14,7 @@ const CHIPS = [
 
 export default function BalanceBar() {
   const { balance, selectedChip, setSelectedChip } = useGame();
+  const isMobile = useIsMobile();
 
   const formatted = balance.toLocaleString("en-US", {
     style: "currency",
@@ -20,6 +22,77 @@ export default function BalanceBar() {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          backgroundColor: "#101828",
+          border: "0.8px solid #364153",
+          borderRadius: 14,
+          padding: 16,
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Top section: icon + balance */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <img
+            src="/mobile-assets/balance-icon.svg"
+            alt="Balance"
+            style={{ width: 20, height: 20, flexShrink: 0 }}
+          />
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 400, color: "#99A1AF", lineHeight: 1.2 }}>
+              Balance
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", lineHeight: 1.2 }}>
+              {formatted}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom section: chip spritesheet row */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          {CHIPS.map((chip, index) => {
+            const value = Number(chip.label);
+            const isSelected = selectedChip === value;
+            return (
+              <button
+                key={chip.label}
+                onClick={() => setSelectedChip(value)}
+                style={{
+                  width: 51,
+                  height: 51,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  backgroundImage: "url(/mobile-assets/chips-spritesheet.png)",
+                  backgroundPosition: `${-index * 51}px 0`,
+                  backgroundSize: `${6 * 51}px 51px`,
+                  backgroundRepeat: "no-repeat",
+                  border: isSelected ? "2px solid white" : "2px solid transparent",
+                  transform: isSelected ? "scale(1.1)" : "scale(1)",
+                  transition: "transform 0.15s ease, border 0.15s ease",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                  cursor: "pointer",
+                  padding: 0,
+                  backgroundColor: "transparent",
+                  flexShrink: 0,
+                }}
+                aria-label={`$${chip.label} chip`}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

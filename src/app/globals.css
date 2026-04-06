@@ -33,3 +33,13 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Mobile player UI */
+@media (max-width: 640px) {
+  .player-layout {
+    background: linear-gradient(107.15deg, #030712 0%, #101828 50%, #000000 100%);
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
+  }
+}

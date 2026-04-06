@@ -1,6 +1,7 @@
 "use client";
 
 import { useGame } from "@/lib/game-context";
+import { useIsMobile } from "@/lib/use-mobile";
 import { useState, useEffect, useRef } from "react";
 
 /* ------------------------------------------------------------------ */
@@ -36,7 +37,7 @@ function parseCard(card: string): { rank: string; suit: string; suitSymbol: stri
 /*  Single card component with fade-in animation                       */
 /* ------------------------------------------------------------------ */
 
-function DealCard({ card }: { card: string }) {
+function DealCard({ card, isMobile }: { card: string; isMobile?: boolean }) {
   const [visible, setVisible] = useState(false);
   const { rank, suitSymbol, color } = parseCard(card);
 
@@ -48,10 +49,11 @@ function DealCard({ card }: { card: string }) {
   return (
     <div
       style={{
-        width: "clamp(36px, 5vw, 56px)",
-        height: "clamp(52px, 7vw, 80px)",
+        width: isMobile ? "12%" : "clamp(36px, 5vw, 56px)",
+        height: isMobile ? "auto" : "clamp(52px, 7vw, 80px)",
+        aspectRatio: isMobile ? "9 / 13" : undefined,
         backgroundColor: "#fff",
-        borderRadius: "0.5vw",
+        borderRadius: isMobile ? 4 : "0.5vw",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -65,7 +67,7 @@ function DealCard({ card }: { card: string }) {
     >
       <span
         style={{
-          fontSize: "clamp(14px, 2vw, 22px)",
+          fontSize: isMobile ? "clamp(10px, 3.5vw, 16px)" : "clamp(14px, 2vw, 22px)",
           fontWeight: 800,
           color: "#0a0f1a",
           lineHeight: 1,
@@ -75,7 +77,7 @@ function DealCard({ card }: { card: string }) {
       </span>
       <span
         style={{
-          fontSize: "clamp(12px, 1.6vw, 18px)",
+          fontSize: isMobile ? "clamp(8px, 3vw, 14px)" : "clamp(12px, 1.6vw, 18px)",
           color,
           lineHeight: 1,
         }}
@@ -90,13 +92,14 @@ function DealCard({ card }: { card: string }) {
 /*  Empty card placeholder (face-down)                                 */
 /* ------------------------------------------------------------------ */
 
-function EmptySlot() {
+function EmptySlot({ isMobile }: { isMobile?: boolean }) {
   return (
     <div
       style={{
-        width: "clamp(36px, 5vw, 56px)",
-        height: "clamp(52px, 7vw, 80px)",
-        borderRadius: "0.5vw",
+        width: isMobile ? "12%" : "clamp(36px, 5vw, 56px)",
+        height: isMobile ? "auto" : "clamp(52px, 7vw, 80px)",
+        aspectRatio: isMobile ? "9 / 13" : undefined,
+        borderRadius: isMobile ? 4 : "0.5vw",
         border: "1.5px dashed rgba(255,255,255,0.12)",
         backgroundColor: "rgba(255,255,255,0.03)",
       }}
@@ -178,6 +181,7 @@ function PhaseBanner({ roundStatus, countdown, hasCards }: { roundStatus: string
 /* ------------------------------------------------------------------ */
 
 export default function DealVisualizer() {
+  const isMobile = useIsMobile();
   const { currentRound, roundStatus } = useGame();
 
   const playerCards = currentRound?.playerCards ?? [];
@@ -221,6 +225,8 @@ export default function DealVisualizer() {
       style={{
         position: "absolute",
         inset: 0,
+        width: isMobile ? "100%" : undefined,
+        height: isMobile ? "100%" : undefined,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -233,8 +239,25 @@ export default function DealVisualizer() {
       {/* Pulse animation keyframes */}
       <style>{`@keyframes vizPulse{0%,100%{opacity:1}50%{opacity:.35}}`}</style>
 
+      {/* PRG logo watermark */}
+      {isMobile && (
+        <img
+          src="/logo.png"
+          alt=""
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            opacity: 0.15,
+            width: "30%",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
       {/* Phase banner */}
-      <div style={{ marginBottom: hasCards ? 24 : 0 }}>
+      <div style={{ marginBottom: hasCards ? (isMobile ? 12 : 24) : 0 }}>
         <PhaseBanner roundStatus={roundStatus} countdown={countdown} hasCards={hasCards} />
       </div>
 
@@ -245,17 +268,18 @@ export default function DealVisualizer() {
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "center",
-            gap: "clamp(24px, 6vw, 80px)",
+            gap: isMobile ? "clamp(12px, 4vw, 32px)" : "clamp(24px, 6vw, 80px)",
             width: "100%",
-            maxWidth: 700,
+            maxWidth: isMobile ? "100%" : 700,
+            padding: isMobile ? "0 4%" : undefined,
           }}
         >
           {/* Player side */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: isMobile ? 6 : 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 4 : 8 }}>
               <span
                 style={{
-                  fontSize: "clamp(11px, 1.3vw, 14px)",
+                  fontSize: isMobile ? "clamp(9px, 2.5vw, 12px)" : "clamp(11px, 1.3vw, 14px)",
                   fontWeight: 700,
                   letterSpacing: "0.1em",
                   color: "#2b7fff",
@@ -265,7 +289,7 @@ export default function DealVisualizer() {
               </span>
               <span
                 style={{
-                  fontSize: "clamp(20px, 3vw, 36px)",
+                  fontSize: isMobile ? "clamp(16px, 5vw, 28px)" : "clamp(20px, 3vw, 36px)",
                   fontWeight: 800,
                   color: "#2b7fff",
                 }}
@@ -273,10 +297,10 @@ export default function DealVisualizer() {
                 {playerScore}
               </span>
             </div>
-            <div style={{ display: "flex", gap: "clamp(4px, 0.6vw, 8px)" }}>
+            <div style={{ display: "flex", gap: isMobile ? "clamp(3px, 1vw, 6px)" : "clamp(4px, 0.6vw, 8px)" }}>
               {playerCards.length > 0
-                ? playerCards.map((card, i) => <DealCard key={`p-${i}-${card}`} card={card} />)
-                : [0, 1].map((i) => <EmptySlot key={`pe-${i}`} />)}
+                ? playerCards.map((card, i) => <DealCard key={`p-${i}-${card}`} card={card} isMobile={isMobile} />)
+                : [0, 1].map((i) => <EmptySlot key={`pe-${i}`} isMobile={isMobile} />)}
             </div>
           </div>
 
@@ -285,8 +309,8 @@ export default function DealVisualizer() {
             style={{
               display: "flex",
               alignItems: "center",
-              paddingTop: 32,
-              fontSize: "clamp(10px, 1.2vw, 14px)",
+              paddingTop: isMobile ? 20 : 32,
+              fontSize: isMobile ? "clamp(8px, 2.5vw, 12px)" : "clamp(10px, 1.2vw, 14px)",
               fontWeight: 700,
               color: "#4b5563",
               letterSpacing: "0.15em",
@@ -296,11 +320,11 @@ export default function DealVisualizer() {
           </div>
 
           {/* Banker side */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: isMobile ? 6 : 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 4 : 8 }}>
               <span
                 style={{
-                  fontSize: "clamp(11px, 1.3vw, 14px)",
+                  fontSize: isMobile ? "clamp(9px, 2.5vw, 12px)" : "clamp(11px, 1.3vw, 14px)",
                   fontWeight: 700,
                   letterSpacing: "0.1em",
                   color: "#fb2c36",
@@ -310,7 +334,7 @@ export default function DealVisualizer() {
               </span>
               <span
                 style={{
-                  fontSize: "clamp(20px, 3vw, 36px)",
+                  fontSize: isMobile ? "clamp(16px, 5vw, 28px)" : "clamp(20px, 3vw, 36px)",
                   fontWeight: 800,
                   color: "#fb2c36",
                 }}
@@ -318,10 +342,10 @@ export default function DealVisualizer() {
                 {bankerScore}
               </span>
             </div>
-            <div style={{ display: "flex", gap: "clamp(4px, 0.6vw, 8px)" }}>
+            <div style={{ display: "flex", gap: isMobile ? "clamp(3px, 1vw, 6px)" : "clamp(4px, 0.6vw, 8px)" }}>
               {bankerCards.length > 0
-                ? bankerCards.map((card, i) => <DealCard key={`b-${i}-${card}`} card={card} />)
-                : [0, 1].map((i) => <EmptySlot key={`be-${i}`} />)}
+                ? bankerCards.map((card, i) => <DealCard key={`b-${i}-${card}`} card={card} isMobile={isMobile} />)
+                : [0, 1].map((i) => <EmptySlot key={`be-${i}`} isMobile={isMobile} />)}
             </div>
           </div>
         </div>
@@ -331,10 +355,10 @@ export default function DealVisualizer() {
       {roundStatus === "result" && winner && (
         <div
           style={{
-            marginTop: 20,
-            padding: "8px 32px",
-            borderRadius: 12,
-            fontSize: "clamp(18px, 2.8vw, 32px)",
+            marginTop: isMobile ? 10 : 20,
+            padding: isMobile ? "6px 20px" : "8px 32px",
+            borderRadius: isMobile ? 8 : 12,
+            fontSize: isMobile ? "clamp(14px, 4.5vw, 24px)" : "clamp(18px, 2.8vw, 32px)",
             fontWeight: 800,
             letterSpacing: "0.15em",
             color: "#fff",
