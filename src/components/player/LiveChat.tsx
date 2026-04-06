@@ -20,8 +20,9 @@ const MOCK_MESSAGES: ChatMessage[] = [
   { id: 5, user: "CardShark", emoji: "🦈", level: 12, time: "6m ago", text: "Good luck everyone!" },
 ];
 
-export default function LiveChat() {
-  const isMobile = useIsMobile();
+export default function LiveChat({ mobile }: { mobile?: boolean }) {
+  const isMobileHook = useIsMobile();
+  const isMobile = mobile ?? isMobileHook;
   const [isOpen, setIsOpen] = useState(true);
   const [message, setMessage] = useState("");
 

@@ -71,7 +71,7 @@ export default function PlayerLayout({
         {/* Live Chat overlay */}
         {showChat && (
           <div style={{ padding: "0 19px" }}>
-            <LiveChat />
+            <LiveChat mobile />
           </div>
         )}
 
