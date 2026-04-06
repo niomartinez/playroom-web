@@ -27,6 +27,7 @@ export default function OperatorsPage() {
   const [newWalletUrl, setNewWalletUrl] = useState("");
   const [newWalletMode, setNewWalletMode] = useState("seamless");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchOperators = useCallback(async () => {
     setLoading(true);
@@ -52,6 +53,7 @@ export default function OperatorsPage() {
   async function handleCreate() {
     if (!newName.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/admin/operators", {
         method: "POST",
@@ -68,9 +70,12 @@ export default function OperatorsPage() {
         setNewWalletUrl("");
         setNewWalletMode("seamless");
         fetchOperators();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || `Failed to create operator (${res.status})`);
       }
     } catch {
-      // silent
+      setError("Network error — check your connection");
     } finally {
       setSaving(false);
     }
@@ -123,11 +128,16 @@ export default function OperatorsPage() {
       {/* Create Operator Dialog */}
       <FormDialog
         open={showCreate}
-        onClose={() => setShowCreate(false)}
+        onClose={() => { setShowCreate(false); setError(null); }}
         title="Create Operator"
         onSave={handleCreate}
         saving={saving}
       >
+        {error && (
+          <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: "rgba(251,44,54,0.1)", color: "#fb2c36", border: "1px solid rgba(251,44,54,0.3)" }}>
+            {error}
+          </div>
+        )}
         <div>
           <label
             className="block text-xs font-medium mb-1"

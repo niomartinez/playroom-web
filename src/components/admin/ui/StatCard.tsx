@@ -5,6 +5,7 @@ interface StatCardProps {
   value: string | number;
   icon?: React.ReactNode;
   trend?: "up" | "down" | "neutral";
+  color?: string;
 }
 
 const TREND_COLORS: Record<string, string> = {
@@ -13,7 +14,7 @@ const TREND_COLORS: Record<string, string> = {
   neutral: "#6a7282",
 };
 
-export default function StatCard({ label, value, icon, trend }: StatCardProps) {
+export default function StatCard({ label, value, icon, trend, color }: StatCardProps) {
   return (
     <div
       className="rounded-xl p-5 flex flex-col gap-2"
@@ -35,7 +36,7 @@ export default function StatCard({ label, value, icon, trend }: StatCardProps) {
       </div>
 
       <div className="flex items-end gap-2">
-        <span className="text-3xl font-bold text-white">{value}</span>
+        <span className="text-3xl font-bold" style={{ color: color || "#ffffff" }}>{value}</span>
         {trend && (
           <span
             className="text-xs font-medium mb-1"

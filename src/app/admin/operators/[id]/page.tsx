@@ -38,6 +38,7 @@ export default function OperatorDetailPage() {
   const [showRegenKey, setShowRegenKey] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchOperator = useCallback(async () => {
     setLoading(true);
@@ -69,6 +70,7 @@ export default function OperatorDetailPage() {
 
   async function handleSave() {
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`/api/admin/operators/${id}`, {
         method: "PATCH",
@@ -86,9 +88,12 @@ export default function OperatorDetailPage() {
       });
       if (res.ok) {
         fetchOperator();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.message || `Failed to save (${res.status})`);
       }
     } catch {
-      // silent
+      setError("Network error — check your connection");
     } finally {
       setSaving(false);
     }
@@ -316,6 +321,12 @@ export default function OperatorDetailPage() {
             />
           </button>
         </div>
+
+        {error && (
+          <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: "rgba(251,44,54,0.1)", color: "#fb2c36", border: "1px solid rgba(251,44,54,0.3)" }}>
+            {error}
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button
