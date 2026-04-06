@@ -63,6 +63,9 @@ export default function BalanceBar() {
           {CHIPS.map((chip, index) => {
             const value = Number(chip.label);
             const isSelected = selectedChip === value;
+            // Spritesheet is 3 cols × 2 rows, each cell 512×512 in original
+            const col = index % 3;
+            const row = Math.floor(index / 3);
             return (
               <button
                 key={chip.label}
@@ -73,8 +76,8 @@ export default function BalanceBar() {
                   borderRadius: "50%",
                   overflow: "hidden",
                   backgroundImage: "url(/mobile-assets/chips-spritesheet.png)",
-                  backgroundPosition: `${-index * 51}px 0`,
-                  backgroundSize: `${6 * 51}px 51px`,
+                  backgroundPosition: `${-col * 51}px ${-row * 51}px`,
+                  backgroundSize: `${3 * 51}px ${2 * 51}px`,
                   backgroundRepeat: "no-repeat",
                   border: isSelected ? "2px solid white" : "2px solid transparent",
                   transform: isSelected ? "scale(1.1)" : "scale(1)",
