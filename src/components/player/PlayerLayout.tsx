@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import PlayerHeader from "./PlayerHeader";
 import ChipSelector from "./ChipSelector";
@@ -11,6 +12,7 @@ import BalanceBar from "./BalanceBar";
 import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import MobileActionBar from "./MobileActionBar";
+import MobileTipPanel from "./MobileTipPanel";
 
 export default function PlayerLayout({
   footerText = "Play responsibly. This is a demo application for entertainment purposes only.",
@@ -18,6 +20,8 @@ export default function PlayerLayout({
   footerText?: string;
 }) {
   const isMobile = useIsMobile();
+  const [showTips, setShowTips] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   if (isMobile) {
     return (
@@ -31,6 +35,7 @@ export default function PlayerLayout({
           overflowX: "hidden",
           background:
             "linear-gradient(107.15deg, #030712 0%, #101828 50%, #000000 100%)",
+          position: "relative",
         }}
       >
         {/* Header — sticky */}
@@ -53,7 +58,22 @@ export default function PlayerLayout({
         </div>
 
         {/* Action Bar — Tip + Live Chat */}
-        <MobileActionBar />
+        <MobileActionBar
+          onTipPress={() => { setShowTips((v) => !v); setShowChat(false); }}
+          onChatPress={() => { setShowChat((v) => !v); setShowTips(false); }}
+        />
+
+        {/* Tip panel overlay */}
+        {showTips && (
+          <MobileTipPanel onClose={() => setShowTips(false)} />
+        )}
+
+        {/* Live Chat overlay */}
+        {showChat && (
+          <div style={{ padding: "0 19px" }}>
+            <LiveChat />
+          </div>
+        )}
 
         {/* Balance + Chips */}
         <div style={{ padding: "0 19px", marginTop: 16 }}>

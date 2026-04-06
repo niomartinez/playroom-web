@@ -1,6 +1,12 @@
 "use client";
 
-export default function MobileActionBar() {
+export default function MobileActionBar({
+  onTipPress,
+  onChatPress,
+}: {
+  onTipPress?: () => void;
+  onChatPress?: () => void;
+}) {
   return (
     <div
       style={{
@@ -13,6 +19,7 @@ export default function MobileActionBar() {
     >
       {/* Tip button */}
       <button
+        onClick={onTipPress}
         style={{
           display: "flex",
           alignItems: "center",
@@ -40,6 +47,7 @@ export default function MobileActionBar() {
 
       {/* Live Chat button */}
       <button
+        onClick={onChatPress}
         style={{
           display: "flex",
           alignItems: "center",

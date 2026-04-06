@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsMobile } from "@/lib/use-mobile";
 
 interface ChatMessage {
   id: number;
@@ -20,10 +21,11 @@ const MOCK_MESSAGES: ChatMessage[] = [
 ];
 
 export default function LiveChat() {
+  const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(true);
   const [message, setMessage] = useState("");
 
-  if (!isOpen) {
+  if (!isOpen && !isMobile) {
     return (
       <button
         onClick={() => setIsOpen(true)}
@@ -36,12 +38,13 @@ export default function LiveChat() {
 
   return (
     <div
-      className="absolute right-4 top-4 bottom-4 z-20 w-[280px] flex flex-col overflow-hidden"
+      className={isMobile ? "flex flex-col overflow-hidden" : "absolute right-4 top-4 bottom-4 z-20 w-[280px] flex flex-col overflow-hidden"}
       style={{
         backgroundColor: "#101828",
         border: "1px solid #364153",
-        borderRadius: "16px",
+        borderRadius: isMobile ? "14px" : "16px",
         boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
+        ...(isMobile ? { maxHeight: 360, width: "100%" } : {}),
       }}
     >
       {/* Header */}

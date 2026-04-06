@@ -52,7 +52,7 @@ export default function BalanceBar() {
           </div>
         </div>
 
-        {/* Bottom section: chip spritesheet row */}
+        {/* Bottom section: chip row */}
         <div
           style={{
             display: "flex",
@@ -60,36 +60,41 @@ export default function BalanceBar() {
             alignItems: "center",
           }}
         >
-          {CHIPS.map((chip, index) => {
+          {CHIPS.map((chip) => {
             const value = Number(chip.label);
             const isSelected = selectedChip === value;
-            // Spritesheet is 3 cols × 2 rows, each cell 512×512 in original
-            const col = index % 3;
-            const row = Math.floor(index / 3);
             return (
               <button
                 key={chip.label}
                 onClick={() => setSelectedChip(value)}
                 style={{
-                  width: 51,
-                  height: 51,
+                  width: 46,
+                  height: 46,
                   borderRadius: "50%",
-                  overflow: "hidden",
-                  backgroundImage: "url(/mobile-assets/chips-spritesheet.png)",
-                  backgroundPosition: `${-col * 51}px ${-row * 51}px`,
-                  backgroundSize: `${3 * 51}px ${2 * 51}px`,
-                  backgroundRepeat: "no-repeat",
-                  border: isSelected ? "2px solid white" : "2px solid transparent",
-                  transform: isSelected ? "scale(1.1)" : "scale(1)",
+                  backgroundColor: chip.color,
+                  border: isSelected
+                    ? "2.5px solid rgba(255,255,255,0.95)"
+                    : "2px solid rgba(255,255,255,0.3)",
+                  transform: isSelected ? "scale(1.12)" : "scale(1)",
                   transition: "transform 0.15s ease, border 0.15s ease",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                  boxShadow: isSelected
+                    ? "0 0 12px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.3)"
+                    : "0 2px 4px rgba(0,0,0,0.3)",
                   cursor: "pointer",
                   padding: 0,
-                  backgroundColor: "transparent",
                   flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: value >= 1000 ? 9 : value >= 100 ? 10 : 11,
+                  fontWeight: 700,
+                  color: "#fff",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.5)",
                 }}
                 aria-label={`$${chip.label} chip`}
-              />
+              >
+                {chip.label}
+              </button>
             );
           })}
         </div>
