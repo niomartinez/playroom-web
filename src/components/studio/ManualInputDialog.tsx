@@ -223,9 +223,10 @@ interface ManualInputDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmitted?: () => void;
+  gameId: string;
 }
 
-export default function ManualInputDialog({ open, onClose, onSubmitted }: ManualInputDialogProps) {
+export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }: ManualInputDialogProps) {
   const [state, dispatch] = useReducer(dealReducer, {
     playerCards: [],
     bankerCards: [],
@@ -290,9 +291,10 @@ export default function ManualInputDialog({ open, onClose, onSubmitted }: Manual
       const playerPair = playerCards.length >= 2 && playerCards[0].slice(0, -1) === playerCards[1].slice(0, -1);
       const bankerPair = bankerCards.length >= 2 && bankerCards[0].slice(0, -1) === bankerCards[1].slice(0, -1);
 
-      await clientFetch("/api/emulator/deal", {
+      const res = await clientFetch("/api/studio/manual-deal", {
         method: "POST",
         body: JSON.stringify({
+          game_id: gameId,
           player_cards: playerCards,
           banker_cards: bankerCards,
           player_score: ps,
@@ -302,6 +304,11 @@ export default function ManualInputDialog({ open, onClose, onSubmitted }: Manual
           banker_pair: bankerPair,
         }),
       });
+
+      if (res && typeof res === "object" && "error" in res) {
+        setError(String(res.error));
+        return;
+      }
 
       onSubmitted?.();
       dispatch({ type: "CLEAR" });

@@ -9,9 +9,11 @@ import DerivedRoad from "@/components/studio/DerivedRoad";
 import ScorePanel from "@/components/studio/ScorePanel";
 import RoundControls from "@/components/studio/RoundControls";
 import ManualInputDialog from "@/components/studio/ManualInputDialog";
+import { useStudio } from "@/lib/studio-context";
 
 export default function StudioDashboardContent() {
   const [manualInputOpen, setManualInputOpen] = useState(false);
+  const studio = useStudio();
 
   return (
     <div
@@ -85,6 +87,7 @@ export default function StudioDashboardContent() {
       <ManualInputDialog
         open={manualInputOpen}
         onClose={() => setManualInputOpen(false)}
+        gameId={studio.tableId}
       />
     </div>
   );
