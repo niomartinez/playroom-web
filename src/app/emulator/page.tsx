@@ -148,11 +148,8 @@ export default function EmulatorPage() {
             : Array.isArray(data?.tables)
               ? data.tables
               : [];
-        // In production, only show TEST-prefixed tables (safety)
-        const isProd = process.env.NEXT_PUBLIC_API_URL?.includes("api.playroomgaming.ph");
-        const list = isProd
-          ? raw.filter((t) => (t.external_game_id || t.name || "").startsWith("TEST"))
-          : raw;
+        // Show all tables — backend enforces TEST-only restriction in production
+        const list = raw;
         setTables(list);
         if (list.length > 0) setSelectedTable(list[0].id);
       })
