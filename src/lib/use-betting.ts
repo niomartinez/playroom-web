@@ -23,6 +23,22 @@ export function useBetting() {
   const isBettingOpen = roundStatus === "betting_open";
   const isDemo = token === "demo";
 
+  // Check if a bet code is blocked due to opposing bet rule
+  const isOpposingBlocked = useCallback(
+    (betCode: BetCode): boolean => {
+      const opposites: Record<string, string[]> = {
+        BAC_Player: ["BAC_Banker", "BAC_BANKER"],
+        BAC_PLAYER: ["BAC_Banker", "BAC_BANKER"],
+        BAC_Banker: ["BAC_Player", "BAC_PLAYER"],
+        BAC_BANKER: ["BAC_Player", "BAC_PLAYER"],
+      };
+      const blocked = opposites[betCode];
+      if (!blocked) return false;
+      return placedBets.some((b) => blocked.includes(b.betCode));
+    },
+    [placedBets],
+  );
+
   const placeBet = useCallback(
     async (betCode: BetCode): Promise<BetResult> => {
       if (!isBettingOpen) {
@@ -30,6 +46,9 @@ export function useBetting() {
       }
       if (selectedChip > balance) {
         return { success: false, error: "Insufficient balance" };
+      }
+      if (isOpposingBlocked(betCode)) {
+        return { success: false, error: "Opposing bets are not allowed" };
       }
 
       if (isDemo) {
@@ -69,7 +88,7 @@ export function useBetting() {
         };
       }
     },
-    [isBettingOpen, isDemo, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
   );
 
   const totalBet = placedBets.reduce((sum, b) => sum + b.amount, 0);
@@ -77,6 +96,7 @@ export function useBetting() {
   return {
     placeBet,
     isBettingOpen,
+    isOpposingBlocked,
     selectedChip,
     placedBets,
     totalBet,

@@ -50,7 +50,7 @@ function formatCompact(amount: number): string {
 }
 
 export default function MainBets() {
-  const { placeBet, isBettingOpen, placedBets, selectedChip } = useBetting();
+  const { placeBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
   const { roundStatus } = useGame();
   const isMobile = useIsMobile();
 
@@ -69,7 +69,7 @@ export default function MainBets() {
         {BETS.map((bet) => {
           const myBets = placedBets.filter((b) => b.betCode === bet.betCode);
           const myTotal = myBets.reduce((sum, b) => sum + b.amount, 0);
-          const disabled = !isBettingOpen;
+          const disabled = !isBettingOpen || isOpposingBlocked(bet.betCode);
           const winPct = bet.betCode === "BAC_Tie" ? 9 : bet.betCode === "BAC_Player" ? 47 : 44;
 
           return (
