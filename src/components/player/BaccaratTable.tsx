@@ -3,6 +3,37 @@
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 
+const SUIT_SYMBOLS: Record<string, string> = {
+  H: "\u2665", D: "\u2666", C: "\u2663", S: "\u2660",
+  h: "\u2665", d: "\u2666", c: "\u2663", s: "\u2660",
+};
+const RED_SUITS = new Set(["H", "D", "h", "d"]);
+
+function parseCard(card: string): { rank: string; suit: string; isRed: boolean } {
+  const suit = card.slice(-1);
+  const rawRank = card.slice(0, -1);
+  const rank = rawRank === "T" ? "10" : rawRank;
+  return { rank, suit: SUIT_SYMBOLS[suit] || suit, isRed: RED_SUITS.has(suit) };
+}
+
+function PlayingCard({ card, size }: { card: string; size: "mobile" | "desktop" }) {
+  const { rank, suit, isRed } = parseCard(card);
+  const suitColor = isRed ? "#fb2c36" : "#0a0f1a";
+  const wrapperStyle =
+    size === "mobile"
+      ? { width: 34, height: 46, fontSize: 14, gap: 1 }
+      : { width: "4vh", height: "5.6vh", fontSize: "1.8vh", gap: "0.1vh" };
+  return (
+    <div
+      className="bg-white rounded-md flex flex-col items-center justify-center shadow-lg font-bold"
+      style={{ ...wrapperStyle, color: "#0a0f1a" }}
+    >
+      <span style={{ lineHeight: 1 }}>{rank}</span>
+      <span style={{ color: suitColor, lineHeight: 1 }}>{suit}</span>
+    </div>
+  );
+}
+
 export default function BaccaratTable() {
   const { currentRound, roundStatus } = useGame();
   const isMobile = useIsMobile();
@@ -79,23 +110,7 @@ export default function BaccaratTable() {
           {playerCards.length > 0 ? (
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
               {playerCards.map((card, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "#fff",
-                    borderRadius: 4,
-                    width: 28,
-                    height: 38,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#0a0f1a",
-                  }}
-                >
-                  {card}
-                </div>
+                <PlayingCard key={i} card={card} size="mobile" />
               ))}
             </div>
           ) : (
@@ -150,23 +165,7 @@ export default function BaccaratTable() {
           {bankerCards.length > 0 ? (
             <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
               {bankerCards.map((card, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "#fff",
-                    borderRadius: 4,
-                    width: 28,
-                    height: 38,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#0a0f1a",
-                  }}
-                >
-                  {card}
-                </div>
+                <PlayingCard key={i} card={card} size="mobile" />
               ))}
             </div>
           ) : (
@@ -211,19 +210,7 @@ export default function BaccaratTable() {
         <div className="flex-1 flex items-center justify-center" style={{ gap: "0.5vw" }}>
           {playerCards.length > 0 ? (
             playerCards.map((card, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-md flex items-center justify-center shadow-lg"
-                style={{
-                  width: "3.5vh",
-                  height: "5vh",
-                  fontSize: "1.2vh",
-                  fontWeight: 700,
-                  color: "#0a0f1a",
-                }}
-              >
-                {card}
-              </div>
+              <PlayingCard key={i} card={card} size="desktop" />
             ))
           ) : (
             <span className="text-white/50" style={{ fontSize: "1.2vh" }}>{message}</span>
@@ -247,19 +234,7 @@ export default function BaccaratTable() {
         <div className="flex-1 flex items-center justify-center" style={{ gap: "0.5vw" }}>
           {bankerCards.length > 0 ? (
             bankerCards.map((card, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-md flex items-center justify-center shadow-lg"
-                style={{
-                  width: "3.5vh",
-                  height: "5vh",
-                  fontSize: "1.2vh",
-                  fontWeight: 700,
-                  color: "#0a0f1a",
-                }}
-              >
-                {card}
-              </div>
+              <PlayingCard key={i} card={card} size="desktop" />
             ))
           ) : (
             <span className="text-white/50" style={{ fontSize: "1.2vh" }}>{message}</span>
