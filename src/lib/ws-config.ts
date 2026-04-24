@@ -1,7 +1,7 @@
 /** WebSocket connection configuration. */
 
-const DEFAULT_API = "https://topless-casino-api.onrender.com";
-const DEFAULT_WS = "wss://topless-casino-api.onrender.com";
+const DEFAULT_API = "https://staging-api.playroomgaming.ph";
+const DEFAULT_WS = "wss://staging-api.playroomgaming.ph";
 // Operator API key for WebSocket auth (read-only, public)
 // Stored split to avoid GitHub secret scanning false positive (sk_live_ prefix)
 const DEFAULT_API_KEY = ["sk", "live", "pzV1KEm5Eva8wM1pasm78xGS68mA9PVN"].join("_");

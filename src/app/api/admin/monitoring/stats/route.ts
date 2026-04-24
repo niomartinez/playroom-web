@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://topless-casino-api.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://staging-api.playroomgaming.ph";
 const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
 
 function adminHeaders(req: NextRequest): Record<string, string> {

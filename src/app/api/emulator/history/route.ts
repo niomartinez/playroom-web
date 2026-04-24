@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://topless-casino-api.onrender.com";
+  "https://staging-api.playroomgaming.ph";
 
 export async function GET() {
   const res = await fetch(`${API_URL}/bridge/status`, {

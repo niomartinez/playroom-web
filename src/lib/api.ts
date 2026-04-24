@@ -1,6 +1,6 @@
 /** Backend API client for the Render-hosted Playroom API. */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://topless-casino-api.onrender.com";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://staging-api.playroomgaming.ph";
 const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
 
 /** Server-side fetch with service key auth. */
