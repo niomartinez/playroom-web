@@ -179,6 +179,28 @@ export default function EmulatorPage() {
       .catch(() => {});
   }, []);
 
+  /* Shared handler: extracts RoundResult from backend response, throws on error_code */
+  const processDealResponse = (json: Record<string, unknown>): RoundResult => {
+    if (json.error_code || json.error) {
+      throw new Error(
+        (json.message as string) ||
+          (json.error as string) ||
+          `error_code=${json.error_code}`
+      );
+    }
+    const raw = (json.data as Record<string, unknown>) || json;
+    return {
+      ...(raw as unknown as RoundResult),
+      outcome: ((raw.outcome as string) || "").toLowerCase() as RoundResult["outcome"],
+      player_cards: ((raw.player_cards as (string | Card)[]) || []).map((c) =>
+        typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+      ),
+      banker_cards: ((raw.banker_cards as (string | Card)[]) || []).map((c) =>
+        typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
+      ),
+    };
+  };
+
   /* deal one round */
   /* Deal cards for the active round (simulates Angel Eye shoe) */
   const dealShoe = useCallback(async () => {
@@ -199,18 +221,7 @@ export default function EmulatorPage() {
       }
 
       const json = await res.json();
-      const raw = json.data || json;
-      // Normalize outcome to lowercase and cards to string format
-      const data: RoundResult = {
-        ...raw,
-        outcome: (raw.outcome || "").toLowerCase() as RoundResult["outcome"],
-        player_cards: (raw.player_cards || []).map((c: string | Card) =>
-          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
-        ),
-        banker_cards: (raw.banker_cards || []).map((c: string | Card) =>
-          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
-        ),
-      };
+      const data = processDealResponse(json);
       roundRef.current += 1;
       const round = roundRef.current;
 
@@ -235,29 +246,35 @@ export default function EmulatorPage() {
     setErrorMsg("");
 
     try {
-      const res = await fetch("/api/emulator/deal", {
+      /* If studio has a round already waiting for cards, use shoe instead of starting a new round. */
+      const shoeRes = await fetch("/api/emulator/shoe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game_id: selectedTable, betting_time: bettingTime }),
+        body: JSON.stringify({ game_id: selectedTable }),
       });
+      let json: Record<string, unknown> = await shoeRes.json().catch(() => ({}));
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || err.detail || `HTTP ${res.status}`);
+      const noActiveRound =
+        json.error_code === "ROUND_NOT_FOUND" ||
+        (typeof json.message === "string" &&
+          json.message.toLowerCase().includes("no active round"));
+
+      if (noActiveRound) {
+        const res = await fetch("/api/emulator/deal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: selectedTable, betting_time: bettingTime }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || err.detail || `HTTP ${res.status}`);
+        }
+        json = await res.json();
+      } else if (!shoeRes.ok) {
+        throw new Error((json.error as string) || `HTTP ${shoeRes.status}`);
       }
 
-      const json = await res.json();
-      const raw = json.data || json;
-      const data: RoundResult = {
-        ...raw,
-        outcome: (raw.outcome || "").toLowerCase() as RoundResult["outcome"],
-        player_cards: (raw.player_cards || []).map((c: string | Card) =>
-          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
-        ),
-        banker_cards: (raw.banker_cards || []).map((c: string | Card) =>
-          typeof c === "string" ? { rank: c.slice(0, -1), suit: c.slice(-1) } : c
-        ),
-      };
+      const data = processDealResponse(json);
       roundRef.current += 1;
       const round = roundRef.current;
       setRoundCount(round);
