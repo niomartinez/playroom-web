@@ -179,9 +179,17 @@ export default function EmulatorPage() {
       .catch(() => {});
   }, []);
 
-  /* Shared handler: extracts RoundResult from backend response, throws on error_code */
+  /* Shared handler: extracts RoundResult from backend response, throws on non-zero error_code */
+  const isErrorResponse = (json: Record<string, unknown>): boolean => {
+    const code = json.error_code;
+    if (code !== undefined && code !== null && code !== "0" && code !== 0 && code !== "") {
+      return true;
+    }
+    return typeof json.error === "string" && json.error.length > 0;
+  };
+
   const processDealResponse = (json: Record<string, unknown>): RoundResult => {
-    if (json.error_code || json.error) {
+    if (isErrorResponse(json)) {
       throw new Error(
         (json.message as string) ||
           (json.error as string) ||
@@ -259,7 +267,9 @@ export default function EmulatorPage() {
         (typeof json.message === "string" &&
           json.message.toLowerCase().includes("no active round"));
 
-      if (noActiveRound) {
+      /* Only fall back to /deal when shoe truly couldn't find a round.
+         If shoe succeeded (error_code=0 or missing), use its response. */
+      if (noActiveRound && isErrorResponse(json)) {
         const res = await fetch("/api/emulator/deal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
