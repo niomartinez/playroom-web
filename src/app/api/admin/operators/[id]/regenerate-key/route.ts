@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://topless-casino-api.onrender.com";
+  "https://staging-api.playroomgaming.ph";
 const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
 
 /** POST /api/admin/operators/[id]/regenerate-key — regenerate operator API key */

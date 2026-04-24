@@ -3,10 +3,12 @@
 Web UI for Play Room Gaming live baccarat. Two UIs in one repo, deployed on Vercel.
 
 ## URLs
-- Production: https://playroom-web-hazel.vercel.app
+- Production Web: https://app.playroomgaming.ph
+- Production API: https://api.playroomgaming.ph
+- Staging Web: https://staging-app.playroomgaming.ph (staging branch)
+- Staging API: https://staging-api.playroomgaming.ph
 - Studio: /studio (login: shared credentials, IP whitelisted)
 - Player: /play (public, iframe-embeddable)
-- Backend API: https://topless-casino-api.onrender.com
 - Repo: https://github.com/niomartinez/playroom-web
 
 ## Stack
