@@ -49,6 +49,12 @@ body {
   animation: slide-in-right 0.25s ease-out;
 }
 
+/* Calm live stream pulse — soft fade, not flashy */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+
 /* Mobile player UI */
 @media (max-width: 640px) {
   .player-layout {

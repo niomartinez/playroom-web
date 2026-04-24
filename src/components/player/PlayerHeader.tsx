@@ -38,7 +38,7 @@ export default function PlayerHeader() {
   }, [roundStatus, currentRound?.countdown]);
 
   const roundLabel = (() => {
-    if (!currentRound?.roundNumber) return "---";
+    if (!currentRound?.roundNumber) return "No round";
     const rn = String(currentRound.roundNumber);
     // Clean up internal IDs like "ROUND-EA6EC7C8" → just show short hash
     if (rn.startsWith("ROUND-")) return `Round #${rn.slice(6, 10)}`;
@@ -116,6 +116,8 @@ export default function PlayerHeader() {
                 height: 8,
                 borderRadius: "50%",
                 backgroundColor: "#FB2C36",
+                animation: "live-pulse 2.4s ease-in-out infinite",
+                boxShadow: "0 0 6px rgba(251,44,54,0.4)",
               }}
             />
             <span style={{ fontSize: 16, fontWeight: 700, color: "#ffffff" }}>LIVE</span>
@@ -161,8 +163,11 @@ export default function PlayerHeader() {
             style={{
               width: "0.8vh",
               height: "0.8vh",
-              backgroundColor: statusColor[roundStatus] || "#6a7282",
-              animation: roundStatus === "betting_open" ? "pulse 1s infinite" : undefined,
+              /* Always red with a calm slow pulse to show the stream is live,
+                 independent of round phase. */
+              backgroundColor: roundStatus === "betting_open" ? statusColor.betting_open : "#fb2c36",
+              animation: "live-pulse 2.4s ease-in-out infinite",
+              boxShadow: "0 0 6px rgba(251,44,54,0.4)",
             }}
           />
           <span
