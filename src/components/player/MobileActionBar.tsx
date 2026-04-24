@@ -3,16 +3,18 @@
 export default function MobileActionBar({
   onTipPress,
   onChatPress,
+  chatEnabled = true,
 }: {
   onTipPress?: () => void;
   onChatPress?: () => void;
+  chatEnabled?: boolean;
 }) {
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: chatEnabled ? "space-between" : "flex-start",
         padding: "8px 19px",
         minHeight: 55,
       }}
@@ -45,33 +47,35 @@ export default function MobileActionBar({
         </span>
       </button>
 
-      {/* Live Chat button */}
-      <button
-        onClick={onChatPress}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          background: "#101828",
-          border: "1px solid #364153",
-          borderRadius: 9999,
-          padding: "8px 20px",
-          minHeight: 44,
-          cursor: "pointer",
-        }}
-      >
-        <span style={{ fontSize: 16, lineHeight: 1 }}>&#128172;</span>
-        <span
+      {/* Live Chat button — gated by feature flag */}
+      {chatEnabled && (
+        <button
+          onClick={onChatPress}
           style={{
-            fontSize: 14,
-            fontWeight: 500,
-            color: "#FFFFFF",
-            lineHeight: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#101828",
+            border: "1px solid #364153",
+            borderRadius: 9999,
+            padding: "8px 20px",
+            minHeight: 44,
+            cursor: "pointer",
           }}
         >
-          Live Chat
-        </span>
-      </button>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>&#128172;</span>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#FFFFFF",
+              lineHeight: 1,
+            }}
+          >
+            Live Chat
+          </span>
+        </button>
+      )}
     </div>
   );
 }

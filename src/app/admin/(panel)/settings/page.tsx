@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [bettingTime, setBettingTime] = useState("15");
   const [currencies, setCurrencies] = useState("PHP");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [liveChatEnabled, setLiveChatEnabled] = useState(false);
   const [odds, setOdds] = useState<Record<string, string>>({});
 
   /* Danger zone */
@@ -71,6 +72,9 @@ export default function SettingsPage() {
               break;
             case "maintenance_mode":
               setMaintenanceMode(val === true || val === "true");
+              break;
+            case "live_chat_enabled":
+              setLiveChatEnabled(val === true || val === "true");
               break;
             case "baccarat_odds":
               if (typeof val === "object" && val !== null) {
@@ -119,6 +123,16 @@ export default function SettingsPage() {
     } finally {
       setSaving(null);
     }
+  }
+
+  async function handleToggleLiveChat() {
+    const newVal = !liveChatEnabled;
+    setLiveChatEnabled(newVal);
+    await saveKey("live_chat_enabled", newVal);
+    toast({
+      type: newVal ? "success" : "info",
+      message: newVal ? "Live Chat enabled for players" : "Live Chat hidden from players",
+    });
   }
 
   async function handleToggleMaintenance() {
@@ -240,6 +254,31 @@ export default function SettingsPage() {
               {saving === "supported_currencies" ? "..." : "Save"}
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            <label className="text-xs font-medium" style={{ color: "#99a1af" }}>
+              Live Chat (Player UI)
+            </label>
+            <p className="text-xs mt-0.5" style={{ color: "#6a7282" }}>
+              Show the Live Chat panel and button in the player interface
+            </p>
+          </div>
+          <button
+            onClick={handleToggleLiveChat}
+            disabled={saving === "live_chat_enabled"}
+            className="relative rounded-full transition-colors disabled:opacity-50"
+            style={{
+              width: 44, height: 24,
+              backgroundColor: liveChatEnabled ? "rgba(5,223,114,0.6)" : "rgba(255,255,255,0.1)",
+            }}
+          >
+            <span
+              className="absolute top-0.5 rounded-full transition-transform bg-white"
+              style={{ width: 20, height: 20, left: liveChatEnabled ? 22 : 2 }}
+            />
+          </button>
         </div>
 
         <div className="flex items-center justify-between pt-2">

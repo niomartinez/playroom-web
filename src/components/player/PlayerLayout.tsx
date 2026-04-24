@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useFeatures } from "@/lib/use-features";
 import PlayerHeader from "./PlayerHeader";
 import ChipSelector from "./ChipSelector";
 import LiveChat from "./LiveChat";
@@ -20,6 +21,7 @@ export default function PlayerLayout({
   footerText?: string;
 }) {
   const isMobile = useIsMobile();
+  const { live_chat_enabled } = useFeatures();
   const [showTips, setShowTips] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
@@ -60,7 +62,8 @@ export default function PlayerLayout({
         {/* Action Bar — Tip + Live Chat */}
         <MobileActionBar
           onTipPress={() => { setShowTips((v) => !v); setShowChat(false); }}
-          onChatPress={() => { setShowChat((v) => !v); setShowTips(false); }}
+          onChatPress={live_chat_enabled ? () => { setShowChat((v) => !v); setShowTips(false); } : undefined}
+          chatEnabled={live_chat_enabled}
         />
 
         {/* Tip panel overlay */}
@@ -68,8 +71,8 @@ export default function PlayerLayout({
           <MobileTipPanel onClose={() => setShowTips(false)} />
         )}
 
-        {/* Live Chat overlay */}
-        {showChat && (
+        {/* Live Chat overlay — gated by feature flag */}
+        {live_chat_enabled && showChat && (
           <div style={{ padding: "0 19px" }}>
             <LiveChat mobile />
           </div>
@@ -118,7 +121,7 @@ export default function PlayerLayout({
       <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
         <DealVisualizer />
         <ChipSelector />
-        <LiveChat />
+        {live_chat_enabled && <LiveChat />}
       </div>
 
       <div
