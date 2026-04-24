@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
   type SetStateAction,
 } from "react";
@@ -139,6 +140,19 @@ export function GameProvider({
   const [tableName, setTableName] = useState("Baccarat Table 1");
   const [dealerName, setDealerName] = useState("Studio Dealer");
   const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    if (!gameId) return;
+    fetch("/api/emulator/tables")
+      .then((r) => r.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        const t = list.find((x: { id: string }) => x.id === gameId);
+        if (t?.name) setTableName(t.name);
+        if (t?.dealer_name) setDealerName(t.dealer_name);
+      })
+      .catch(() => {});
+  }, [gameId]);
   const [roundStatus, setRoundStatus] = useState<RoundStatus>("waiting");
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
