@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { WS_BASE, LOBBY_API_KEY } from "@/lib/ws-config";
 
 /* ---------- types ---------- */
 
@@ -75,9 +76,14 @@ function estimateRoundTime(bettingTime: number): number {
 
 /* ---------- small components ---------- */
 
-function CardDisplay({ card }: { card: Card }) {
-  const symbol = SUIT_SYMBOLS[card.suit] || card.suit;
-  const color = SUIT_COLORS[card.suit] || "#ffffff";
+function parseCardString(card: string): Card {
+  return { rank: card.slice(0, -1), suit: card.slice(-1) };
+}
+
+function CardDisplay({ card }: { card: Card | string }) {
+  const c: Card = typeof card === "string" ? parseCardString(card) : card;
+  const symbol = SUIT_SYMBOLS[c.suit] || c.suit;
+  const color = SUIT_COLORS[c.suit] || "#ffffff";
 
   return (
     <div
@@ -91,7 +97,7 @@ function CardDisplay({ card }: { card: Card }) {
         gap: 2,
       }}
     >
-      <span className="text-white">{card.rank === "T" ? "10" : card.rank}</span>
+      <span className="text-white">{c.rank === "T" ? "10" : c.rank}</span>
       <span style={{ color }}>{symbol}</span>
     </div>
   );
@@ -133,8 +139,66 @@ export default function EmulatorPage() {
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  /* Progressive card reveal driven by lobby WS CardDealt events */
+  const [dealingCards, setDealingCards] = useState<{
+    playerCards: string[];
+    bankerCards: string[];
+    playerScore: number;
+    bankerScore: number;
+  } | null>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const roundRef = useRef(0);
+
+  /* Subscribe to lobby WS so we can show cards as the shoe reveals them.
+     Filters events to the currently selected table's external_game_id. */
+  const selectedExternalId = tables.find((t) => t.id === selectedTable)?.external_game_id || "";
+  useEffect(() => {
+    if (!selectedExternalId) return;
+    let ws: WebSocket | null = null;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) return;
+      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      ws = new WebSocket(url);
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.tableId && msg.tableId !== selectedExternalId) return;
+          if (msg.type === "RoundStarted" || msg.type === "round_started") {
+            setDealingCards({ playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 });
+          } else if (msg.type === "CardDealt" || msg.type === "card_dealt") {
+            setDealingCards((prev) => {
+              const base = prev ?? { playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 };
+              const side = msg.side as "player" | "banker";
+              return {
+                playerCards: side === "player" ? [...base.playerCards, msg.card] : base.playerCards,
+                bankerCards: side === "banker" ? [...base.bankerCards, msg.card] : base.bankerCards,
+                playerScore: msg.player_score ?? base.playerScore,
+                bankerScore: msg.banker_score ?? base.bankerScore,
+              };
+            });
+          } else if (msg.type === "RoundClosed" || msg.type === "round_closed") {
+            setDealingCards(null);
+          }
+        } catch {
+          /* ignore malformed messages */
+        }
+      };
+      ws.onclose = () => {
+        if (!cancelled) retry = setTimeout(connect, 2000);
+      };
+    };
+
+    connect();
+    return () => {
+      cancelled = true;
+      if (retry) clearTimeout(retry);
+      ws?.close();
+    };
+  }, [selectedExternalId]);
 
   /* fetch tables on mount */
   useEffect(() => {
@@ -525,7 +589,45 @@ export default function EmulatorPage() {
           className="flex-1 min-h-0 flex items-center justify-center"
           style={{ padding: "16px 24px" }}
         >
-          {lastResult ? (
+          {status === "dealing" && dealingCards && (dealingCards.playerCards.length + dealingCards.bankerCards.length) > 0 ? (
+            <div
+              className="rounded-xl w-full h-full flex flex-col items-center justify-center gap-5"
+              style={{
+                background: "linear-gradient(123deg, #171717 0%, #000000 100%)",
+                border: "1px solid rgba(208,135,0,0.3)",
+                boxShadow: "0px 10px 15px rgba(208,135,0,0.1), 0px 4px 6px rgba(208,135,0,0.1)",
+              }}
+            >
+              <div className="font-bold tracking-widest" style={{ fontSize: "clamp(20px, 2.4vw, 28px)", color: "#d08700" }}>
+                DEALING...
+              </div>
+              <div className="flex items-start gap-12">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold tracking-wider" style={{ color: "#2b7fff" }}>PLAYER</span>
+                    <span className="font-bold" style={{ fontSize: 28, color: "#2b7fff" }}>{dealingCards.playerScore}</span>
+                  </div>
+                  <div className="flex gap-2" style={{ minHeight: 72 }}>
+                    {dealingCards.playerCards.map((c, i) => (
+                      <CardDisplay key={i} card={c} />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center font-bold" style={{ color: "#6a7282", fontSize: 14, paddingTop: 28 }}>VS</div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold tracking-wider" style={{ color: "#fb2c36" }}>BANKER</span>
+                    <span className="font-bold" style={{ fontSize: 28, color: "#fb2c36" }}>{dealingCards.bankerScore}</span>
+                  </div>
+                  <div className="flex gap-2" style={{ minHeight: 72 }}>
+                    {dealingCards.bankerCards.map((c, i) => (
+                      <CardDisplay key={i} card={c} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : lastResult ? (
             <div
               className="rounded-xl w-full h-full flex flex-col items-center justify-center gap-5"
               style={{
