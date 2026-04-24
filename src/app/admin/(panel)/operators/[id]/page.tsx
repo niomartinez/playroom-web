@@ -47,7 +47,10 @@ export default function OperatorDetailPage() {
     try {
       const res = await fetch(`/api/admin/operators/${id}`);
       if (res.ok) {
-        const data = await res.json();
+        const json = await res.json();
+        /* Backend wraps operator in BaseResponse.data; fall back to json itself
+           for legacy flat responses. */
+        const data: OperatorDetail = (json?.data ?? json) as OperatorDetail;
         setOperator(data);
         setName(data.name || "");
         setWalletUrl(data.wallet_url || "");
@@ -111,8 +114,9 @@ export default function OperatorDetailPage() {
         method: "POST",
       });
       if (res.ok) {
-        const data = await res.json();
-        setNewApiKey(data.api_key || data.key || null);
+        const json = await res.json();
+        const payload = (json?.data ?? json) as { api_key?: string; key?: string };
+        setNewApiKey(payload.api_key || payload.key || null);
         fetchOperator();
         toast({ type: "success", message: "API key regenerated" });
       } else {
