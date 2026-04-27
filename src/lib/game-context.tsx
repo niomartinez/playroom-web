@@ -147,7 +147,10 @@ export function GameProvider({
       .then((r) => r.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-        const t = list.find((x: { id: string }) => x.id === gameId);
+        const t = list.find(
+          (x: { id: string; external_game_id?: string }) =>
+            x.external_game_id === gameId || x.id === gameId,
+        );
         if (t?.name) setTableName(t.name);
         if (t?.dealer_name) setDealerName(t.dealer_name);
       })

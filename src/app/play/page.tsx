@@ -9,10 +9,10 @@ export default async function PlayPage({
   const params = await searchParams;
 
   const token = (typeof params.token === "string" ? params.token : null);
-  const gameId = (typeof params.game_id === "string" ? params.game_id : null);
+  const gameId = (typeof params.game === "string" ? params.game : null);
   const lang = (typeof params.lang === "string" ? params.lang : "en");
-  const lobbyUrl = (typeof params.lobby_url === "string" ? params.lobby_url : null);
-  const cashierUrl = (typeof params.cashier_url === "string" ? params.cashier_url : null);
+  const lobbyUrl = (typeof params.lobbyUrl === "string" ? params.lobbyUrl : null);
+  const cashierUrl = (typeof params.cashierUrl === "string" ? params.cashierUrl : null);
 
   return (
     <GameWrapper
