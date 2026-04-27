@@ -1,18 +1,40 @@
 "use client";
 
+import { useMemo } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { buildBigRoadColumns } from "@/lib/big-road";
+import { BigRoadGrid } from "@/components/shared/BigRoadGrid";
 
-const colorMap: Record<string, string> = { P: "#2b7fff", B: "#fb2c36", T: "#00c950" };
 const COLS = 36;
+const MOBILE_COLS = 18;
 const ROWS = 6;
 
 export default function RoadmapPanel() {
   const { roads } = useGame();
   const isMobile = useIsMobile();
 
-  /* Build a flat bead road array from context roads data */
-  const beadResults: string[] = roads.beadRoad.map((e) => e.result);
+  /* Build big road columns (dragon-style with vertical streaks, ties
+     overlayed on the most recent non-Tie cell, wrap to last 3 columns
+     when the grid fills). */
+  const bigRoadDesktop = useMemo(
+    () =>
+      buildBigRoadColumns(
+        roads.bigRoad.map((e) => e.result),
+        COLS,
+        ROWS,
+      ),
+    [roads.bigRoad],
+  );
+  const bigRoadMobile = useMemo(
+    () =>
+      buildBigRoadColumns(
+        roads.bigRoad.map((e) => e.result),
+        MOBILE_COLS,
+        ROWS,
+      ),
+    [roads.bigRoad],
+  );
 
   /* Prediction percentages — shared between both layouts */
   const total = roads.playerWins + roads.bankerWins + roads.ties;
@@ -22,9 +44,6 @@ export default function RoadmapPanel() {
 
   /* ── Mobile layout ── */
   if (isMobile) {
-    const mobileCols = 18;
-    const mobileRows = ROWS;
-
     return (
       <div
         style={{
@@ -50,44 +69,15 @@ export default function RoadmapPanel() {
           >
             Big Road
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${mobileCols}, 1fr)`,
-              gridTemplateRows: `repeat(${mobileRows}, 1fr)`,
-              gap: 1,
-              width: "100%",
-              overflowX: "auto",
-            }}
-          >
-            {Array.from({ length: mobileRows * mobileCols }).map((_, idx) => {
-              const col = Math.floor(idx / mobileRows);
-              const row = idx % mobileRows;
-              const dataIndex = col * mobileRows + row;
-              const result = beadResults[dataIndex];
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    aspectRatio: "1",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "80%",
-                      aspectRatio: "1",
-                      borderRadius: "20%",
-                      backgroundColor: result
-                        ? colorMap[result]
-                        : "rgba(30,41,57,0.3)",
-                    }}
-                  />
-                </div>
-              );
-            })}
+          <div style={{ width: "100%" }}>
+            <BigRoadGrid
+              columns={bigRoadMobile.columns}
+              leadingTie={bigRoadMobile.leadingTie}
+              cols={MOBILE_COLS}
+              rows={ROWS}
+              emptyBorderColor="rgba(54,65,83,0.6)"
+              gap={1}
+            />
           </div>
         </div>
 
@@ -197,19 +187,14 @@ export default function RoadmapPanel() {
         style={{ backgroundColor: "#101828", border: "0.8px solid #364153", borderRadius: "0.6vw", padding: "0.4vh 0.6vw" }}
       >
         <div className="font-semibold text-[#d1d5dc] shrink-0" style={{ fontSize: "1.1vh", marginBottom: "0.3vh" }}>Big Road</div>
-        <div className="grid flex-1 min-h-0" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)`, gap: "1px" }}>
-          {Array.from({ length: ROWS * COLS }).map((_, idx) => {
-            const col = Math.floor(idx / ROWS);
-            const row = idx % ROWS;
-            const dataIndex = col * ROWS + row;
-            const result = beadResults[dataIndex];
-            return (
-              <div key={idx} className="flex items-center justify-center">
-                <div style={{ width: "80%", aspectRatio: "1", borderRadius: "20%", backgroundColor: result ? colorMap[result] : "rgba(30,41,57,0.3)" }} />
-              </div>
-            );
-          })}
-        </div>
+        <BigRoadGrid
+          columns={bigRoadDesktop.columns}
+          leadingTie={bigRoadDesktop.leadingTie}
+          cols={COLS}
+          rows={ROWS}
+          emptyBorderColor="rgba(54,65,83,0.6)"
+          gap={1}
+        />
       </div>
 
       {/* Score Counters */}
