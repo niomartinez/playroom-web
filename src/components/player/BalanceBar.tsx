@@ -75,10 +75,10 @@ export default function BalanceBar() {
                   border: isSelected
                     ? "2.5px solid rgba(255,255,255,0.95)"
                     : "2px solid rgba(255,255,255,0.3)",
-                  transform: isSelected ? "scale(1.12)" : "scale(1)",
-                  transition: "transform 0.15s ease, border 0.15s ease",
+                  transform: isSelected ? "scale(1.2)" : "scale(1)",
+                  transition: "transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease",
                   boxShadow: isSelected
-                    ? "0 0 12px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.3)"
+                    ? `0 0 18px ${chip.color}cc, 0 0 0 3px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.3)`
                     : "0 2px 4px rgba(0,0,0,0.3)",
                   cursor: "pointer",
                   padding: 0,
@@ -90,6 +90,7 @@ export default function BalanceBar() {
                   fontWeight: 700,
                   color: "#fff",
                   textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                  zIndex: isSelected ? 2 : 1,
                 }}
                 aria-label={`$${chip.label} chip`}
               >
@@ -132,7 +133,7 @@ export default function BalanceBar() {
             <button
               key={chip.label}
               onClick={() => setSelectedChip(value)}
-              className="rounded-full flex items-center justify-center font-bold text-white shadow-md cursor-pointer transition-transform"
+              className="rounded-full flex items-center justify-center font-bold text-white cursor-pointer"
               style={{
                 width: "clamp(20px, 2.2vh, 36px)",
                 height: "clamp(20px, 2.2vh, 36px)",
@@ -141,7 +142,12 @@ export default function BalanceBar() {
                 border: isSelected
                   ? "2px solid rgba(255,255,255,0.9)"
                   : "2px solid rgba(255,255,255,0.3)",
-                transform: isSelected ? "scale(1.15)" : "scale(1)",
+                transform: isSelected ? "scale(1.2)" : "scale(1)",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                boxShadow: isSelected
+                  ? `0 0 18px ${chip.color}cc, 0 0 0 3px rgba(255,255,255,0.9)`
+                  : "0 2px 4px rgba(0,0,0,0.3)",
+                zIndex: isSelected ? 2 : 1,
               }}
             >
               {chip.label}
