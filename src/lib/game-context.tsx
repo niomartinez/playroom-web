@@ -137,8 +137,8 @@ export function GameProvider({
   cashierUrl,
   children,
 }: GameProviderProps) {
-  const [tableName, setTableName] = useState("Baccarat Table 1");
-  const [dealerName, setDealerName] = useState("Studio Dealer");
+  const [tableName, setTableName] = useState("");
+  const [dealerName, setDealerName] = useState("");
   const [balance, setBalance] = useState(0);
 
   useEffect(() => {
