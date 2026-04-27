@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { StudioProvider } from "@/lib/studio-context";
 import { useStudioWs } from "@/lib/use-studio-ws";
+import { useStudioStateRecovery } from "@/lib/use-studio-state-recovery";
 
 /* ------------------------------------------------------------------ */
 /*  Inner component that activates WebSocket hook inside StudioProvider */
@@ -10,6 +11,9 @@ import { useStudioWs } from "@/lib/use-studio-ws";
 
 function StudioConnections({ children }: { children: ReactNode }) {
   useStudioWs();
+  // One-shot fetch on mount: rehydrates round status + cards + countdown
+  // if the studio dashboard is refreshed during a live round.
+  useStudioStateRecovery();
   return <>{children}</>;
 }
 

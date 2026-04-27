@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { GameProvider } from "@/lib/game-context";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 import { useBalanceWs } from "@/lib/use-balance-ws";
+import { useStateRecovery } from "@/lib/use-state-recovery";
 import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 
 /* ------------------------------------------------------------------ */
@@ -13,6 +14,9 @@ import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 function GameConnections({ children }: { children: ReactNode }) {
   useLobbyWs();
   useBalanceWs();
+  // One-shot fetch on mount: rehydrates round state + this player's
+  // placed bets if they refresh during a live round.
+  useStateRecovery();
 
   /* Send gameReady on mount, listen for parent commands */
   useEffect(() => {
