@@ -140,7 +140,16 @@ export default function BalanceBar() {
             <div style={{ fontSize: 12, fontWeight: 400, color: "#99A1AF", lineHeight: 1.2 }}>
               Balance
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", lineHeight: 1.2 }}>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: "#ffffff",
+                lineHeight: 1.2,
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
               {formatted}
             </div>
           </div>
@@ -231,7 +240,19 @@ export default function BalanceBar() {
         />
         <div>
           <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>Balance</div>
-          <div className="font-bold text-white" style={{ fontSize: "clamp(18px, 2.4vh, 30px)" }}>{formatted}</div>
+          <div
+            className="font-bold text-white"
+            style={{
+              fontSize: "clamp(18px, 2.4vh, 30px)",
+              // Tabular figures keep every digit the same width while the
+              // odometer crawls, so the row layout doesn't jiggle and shake
+              // CLEAR BETS / chips on every animated tick.
+              fontVariantNumeric: "tabular-nums",
+              fontFeatureSettings: '"tnum"',
+            }}
+          >
+            {formatted}
+          </div>
         </div>
       </div>
 
