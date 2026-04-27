@@ -26,6 +26,11 @@ export type BetCode =
 export interface PlacedBet {
   betCode: BetCode;
   amount: number;
+  /**
+   * Optional transient client-side id for tracking optimistic placements
+   * so they can be rolled back on server rejection.
+   */
+  id?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -187,6 +192,7 @@ export interface GameState {
   setMainBetCounts: (c: SetStateAction<MainBetCounts | null>) => void;
   setSelectedChip: (amount: number) => void;
   addPlacedBet: (bet: PlacedBet) => void;
+  removePlacedBet: (id: string) => void;
   clearPlacedBets: () => void;
   addFlyingChip: (chip: Omit<FlyingChip, "id" | "startedAt">) => void;
   removeFlyingChip: (id: string) => void;
@@ -259,6 +265,10 @@ export function GameProvider({
     setPlacedBets((prev) => [...prev, bet]);
   }, []);
 
+  const removePlacedBet = useCallback((id: string) => {
+    setPlacedBets((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
   const clearPlacedBets = useCallback(() => {
     setPlacedBets([]);
   }, []);
@@ -323,6 +333,7 @@ export function GameProvider({
     setMainBetCounts,
     setSelectedChip,
     addPlacedBet,
+    removePlacedBet,
     clearPlacedBets,
     addFlyingChip,
     removeFlyingChip,

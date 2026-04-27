@@ -17,6 +17,7 @@ export function useBetting() {
     placedBets,
     balance,
     addPlacedBet,
+    removePlacedBet,
     setBalance,
   } = useGame();
 
@@ -53,17 +54,35 @@ export function useBetting() {
 
       // Optimistic UI: deduct + place chip immediately so the click feels snappy.
       // The balance WS reconciles to the canonical value once the backend
-      // confirms (debit) or rejects the bet.
-      const bet: PlacedBet = { betCode, amount: selectedChip };
+      // confirms (debit) or rejects the bet. We tag the placement with a
+      // transient id so we can roll it back if the server rejects.
+      const betId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `bet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const chipAmount = selectedChip;
+      const bet: PlacedBet = { id: betId, betCode, amount: chipAmount };
       addPlacedBet(bet);
-      setBalance(balance - selectedChip);
+      setBalance((b) => b - chipAmount);
 
       if (isDemo) {
         return { success: true };
       }
 
+      const rollback = (reason: string) => {
+        console.warn("Bet rejected by backend, rolling back:", reason);
+        removePlacedBet(betId);
+        // Functional setter avoids stale-closure double-counting when the
+        // user spams bets faster than React commits.
+        setBalance((b) => b + chipAmount);
+      };
+
       // Fire-and-forget — UI doesn't block on the network round-trip.
-      // On failure, the canonical balance comes back via the WS push.
+      // On rejection we roll back the optimistic placedBet + balance so the
+      // local total never drifts above what the server actually accepted.
+      // (We deliberately do NOT roll back the visual chip stack here; it
+      // clears at round end via existing logic, and the user-visible bug was
+      // the AMOUNT, not the chip image.)
       fetch("/api/bet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,22 +90,22 @@ export function useBetting() {
           session_token: token,
           fight_id: currentRound?.roundId,
           bet_code: betCode,
-          bet_amount: selectedChip,
+          bet_amount: chipAmount,
         }),
       })
         .then(async (res) => {
           const data = await res.json().catch(() => ({}));
           if (!res.ok || (data.error_code && data.error_code !== "0")) {
-            console.warn("Bet rejected by backend:", data.message || res.statusText);
+            rollback(data.message || res.statusText || "rejected");
           }
         })
         .catch((err) => {
-          console.warn("Bet request failed:", err);
+          rollback(err instanceof Error ? err.message : String(err));
         });
 
       return { success: true };
     },
-    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance],
   );
 
   const totalBet = placedBets.reduce((sum, b) => sum + b.amount, 0);
