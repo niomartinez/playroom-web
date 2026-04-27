@@ -274,8 +274,12 @@ export default function EmulatorPage() {
   };
 
   /* deal one round */
-  /* Deal cards for the active round (simulates Angel Eye shoe) */
-  const dealShoe = useCallback(async () => {
+  /* Deal cards for the active round (simulates Angel Eye shoe).
+     Pass forceOutcome to deterministically settle on Banker/Player/Tie
+     for testing — the per-card reveal animations still play. */
+  const dealShoe = useCallback(async (
+    forceOutcome?: "Banker" | "Player" | "Tie",
+  ) => {
     if (!selectedTable) return;
     setStatus("dealing");
     setErrorMsg("");
@@ -284,7 +288,10 @@ export default function EmulatorPage() {
       const res = await fetch("/api/emulator/shoe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ game_id: selectedTable }),
+        body: JSON.stringify({
+          game_id: selectedTable,
+          ...(forceOutcome ? { force_outcome: forceOutcome } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -523,7 +530,7 @@ export default function EmulatorPage() {
           </div>
 
           <button
-            onClick={dealShoe}
+            onClick={() => dealShoe()}
             disabled={!selectedTable || status === "dealing"}
             className="rounded-md px-5 py-2 text-sm font-semibold transition-colors"
             style={{
@@ -541,6 +548,36 @@ export default function EmulatorPage() {
           >
             🃏 Deal Cards
           </button>
+
+          {/* Force-outcome buttons for testing wins/losses against the player UI */}
+          {([
+            { label: "Banker", color: "#fb2c36" },
+            { label: "Player", color: "#2b7fff" },
+            { label: "Tie", color: "#00bc7d" },
+          ] as const).map(({ label, color }) => (
+            <button
+              key={label}
+              onClick={() => dealShoe(label)}
+              disabled={!selectedTable || status === "dealing"}
+              className="rounded-md px-3 py-2 text-xs font-semibold transition-colors"
+              style={{
+                backgroundColor:
+                  !selectedTable || status === "dealing"
+                    ? "rgba(255,255,255,0.05)"
+                    : `${color}22`,
+                color:
+                  !selectedTable || status === "dealing" ? "#6a7282" : color,
+                border: `1px solid ${color}66`,
+                cursor:
+                  !selectedTable || status === "dealing"
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+              title={`Deal a hand that resolves to ${label}`}
+            >
+              Deal {label}
+            </button>
+          ))}
         </div>
 
         {/* Right: Counter + status */}
