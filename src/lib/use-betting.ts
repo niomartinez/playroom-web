@@ -51,42 +51,40 @@ export function useBetting() {
         return { success: false, error: "Opposing bets are not allowed" };
       }
 
+      // Optimistic UI: deduct + place chip immediately so the click feels snappy.
+      // The balance WS reconciles to the canonical value once the backend
+      // confirms (debit) or rejects the bet.
+      const bet: PlacedBet = { betCode, amount: selectedChip };
+      addPlacedBet(bet);
+      setBalance(balance - selectedChip);
+
       if (isDemo) {
-        // Demo mode: client-side only, no API call
-        const bet: PlacedBet = { betCode, amount: selectedChip };
-        addPlacedBet(bet);
-        setBalance(balance - selectedChip);
         return { success: true };
       }
 
-      // Real mode: call backend API
-      try {
-        const res = await fetch("/api/bet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_token: token,
-            fight_id: currentRound?.roundId,
-            bet_code: betCode,
-            bet_amount: selectedChip,
-          }),
+      // Fire-and-forget — UI doesn't block on the network round-trip.
+      // On failure, the canonical balance comes back via the WS push.
+      fetch("/api/bet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_token: token,
+          fight_id: currentRound?.roundId,
+          bet_code: betCode,
+          bet_amount: selectedChip,
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || (data.error_code && data.error_code !== "0")) {
+            console.warn("Bet rejected by backend:", data.message || res.statusText);
+          }
+        })
+        .catch((err) => {
+          console.warn("Bet request failed:", err);
         });
 
-        const data = await res.json();
-        if (data.error_code && data.error_code !== "0") {
-          return { success: false, error: data.message || "Bet failed" };
-        }
-
-        const bet: PlacedBet = { betCode, amount: selectedChip };
-        addPlacedBet(bet);
-        setBalance(balance - selectedChip);
-        return { success: true };
-      } catch (err) {
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Bet failed",
-        };
-      }
+      return { success: true };
     },
     [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, setBalance],
   );
