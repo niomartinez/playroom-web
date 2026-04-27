@@ -87,9 +87,11 @@ function useDisplayBalance(target: number): number {
 }
 
 export default function BalanceBar() {
-  const { balance, selectedChip, setSelectedChip } = useGame();
+  const { balance, selectedChip, setSelectedChip, roundStatus, placedBets, clearPlacedBets } = useGame();
   const isMobile = useIsMobile();
   const displayBalance = useDisplayBalance(balance);
+  const isBettingOpen = roundStatus === "betting_open";
+  const hasPlacedBets = placedBets.length > 0;
 
   /**
    * Auto-step-down: when the live balance drops below the current selected
@@ -233,8 +235,36 @@ export default function BalanceBar() {
         </div>
       </div>
 
+      {/* CLEAR BETS pill — fills the dead space between balance and chips
+          while betting is open. Inline keeps it from clipping the panel
+          edge the way an absolute-positioned overlay did. */}
+      {isBettingOpen && (
+        <button
+          onClick={clearPlacedBets}
+          disabled={!hasPlacedBets}
+          style={{
+            padding: "0.4vh 1vw",
+            borderRadius: 999,
+            background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
+            border: hasPlacedBets ? "1.5px solid #fb2c36" : "1px solid rgba(255,255,255,0.18)",
+            color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
+            fontSize: "clamp(9px, 1vh, 12px)",
+            fontWeight: 800,
+            letterSpacing: 0.6,
+            cursor: hasPlacedBets ? "pointer" : "not-allowed",
+            boxShadow: hasPlacedBets
+              ? "0 2px 8px rgba(251,44,54,0.35)"
+              : "none",
+            transition: "background 0.15s ease, color 0.15s ease",
+            whiteSpace: "nowrap",
+          }}
+        >
+          CLEAR BETS
+        </button>
+      )}
+
       {/* Chip icons */}
-      <div data-balance-chips="" className="flex items-center" style={{ gap: "0.6vw" }}>
+      <div data-balance-chips="" className="flex items-center" style={{ gap: "0.5vw" }}>
         {CHIPS.map((chip) => {
           const isSelected = selectedChip === chip.value;
           const isDisabled = balance < chip.value;
@@ -249,8 +279,8 @@ export default function BalanceBar() {
               disabled={isDisabled}
               className="rounded-full flex items-center justify-center"
               style={{
-                width: "clamp(40px, 4.4vh, 60px)",
-                height: "clamp(40px, 4.4vh, 60px)",
+                width: "clamp(32px, 3.6vh, 48px)",
+                height: "clamp(32px, 3.6vh, 48px)",
                 backgroundColor: "transparent",
                 border: "none",
                 padding: 0,

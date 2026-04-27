@@ -219,36 +219,9 @@ export default function PlayerLayout() {
             position: "relative",
           }}
         >
-          {/* Clear bets — overlay top-center when betting is open. Uses a
-              red accent so it doesn't blend into the gold/green pulse. */}
-          {isBettingOpen && (
-            <button
-              onClick={clearPlacedBets}
-              disabled={!hasPlacedBets}
-              style={{
-                position: "absolute",
-                top: "-1.6vh",
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 6,
-                padding: "0.5vh 1.2vw",
-                borderRadius: 999,
-                background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
-                border: hasPlacedBets ? "1.5px solid #fb2c36" : "1px solid rgba(255,255,255,0.18)",
-                color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
-                fontSize: "clamp(10px, 1.1vh, 14px)",
-                fontWeight: 800,
-                letterSpacing: 0.6,
-                cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                boxShadow: hasPlacedBets
-                  ? "0 4px 12px rgba(251,44,54,0.45), 0 0 0 4px rgba(10,15,26,1)"
-                  : "0 0 0 4px rgba(10,15,26,1)",
-                transition: "background 0.15s ease, color 0.15s ease, transform 0.05s ease",
-              }}
-            >
-              CLEAR BETS
-            </button>
-          )}
+          {/* Clear bets is rendered inline inside BalanceBar so it sits
+              in the same row as the chips, in the space between balance
+              and the chip selector. */}
           <BalanceBar />
           <SideBets />
           <MainBets />

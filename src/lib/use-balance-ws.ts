@@ -98,11 +98,19 @@ export function useBalanceWs() {
 
           const fightId = String(data.fightId ?? "");
           const totalPayoff = Number(data.totalPayoff ?? 0);
-          const lines: RecentWinLine[] = winners.map((b) => ({
-            label: betCodeLabel(b.betCode),
-            amount: Number(b.payoff),
-            betCode: b.betCode,
-          }));
+          // Consolidate per bet code so 5 separate Player bets of $200 each
+          // render as ONE line "PLAYER +$1000" instead of 5 cluttered lines.
+          const grouped = new Map<string, number>();
+          for (const b of winners) {
+            grouped.set(b.betCode, (grouped.get(b.betCode) ?? 0) + Number(b.payoff));
+          }
+          const lines: RecentWinLine[] = Array.from(grouped.entries()).map(
+            ([betCode, amount]) => ({
+              label: betCodeLabel(betCode),
+              amount,
+              betCode,
+            }),
+          );
 
           s.setRecentWin({ fightId, totalPayoff, lines });
 
