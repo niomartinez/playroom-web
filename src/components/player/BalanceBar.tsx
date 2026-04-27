@@ -229,6 +229,7 @@ export default function BalanceBar() {
         border: "0.8px solid #364153",
         borderRadius: "0.7vw",
         padding: "0.6vh 1vw",
+        position: "relative",
       }}
     >
       <div className="flex items-center" style={{ gap: "0.7vw" }}>
@@ -256,19 +257,22 @@ export default function BalanceBar() {
         </div>
       </div>
 
-      {/* CLEAR BETS pill — fills the dead space between balance and chips
-          while betting is open. Inline keeps it from clipping the panel
-          edge the way an absolute-positioned overlay did. */}
+      {/* CLEAR BETS pill — pinned to the geometric center of the bar so
+          it doesn't slide when the balance number's width changes during
+          the odometer crawl. Out of flow so it has zero effect on the
+          balance / chip flex layout. */}
       {isBettingOpen && (
         <button
           onClick={clearPlacedBets}
           disabled={!hasPlacedBets}
           style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
             padding: "0.4vh 1vw",
             borderRadius: 999,
             background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
-            // Constant border width so toggling hasPlacedBets doesn't shift
-            // the layout 0.5px and ripple through to the chip row.
             border: `1.5px solid ${hasPlacedBets ? "#fb2c36" : "rgba(255,255,255,0.18)"}`,
             color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
             fontSize: "clamp(9px, 1vh, 12px)",
@@ -280,6 +284,7 @@ export default function BalanceBar() {
               : "none",
             transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
             whiteSpace: "nowrap",
+            zIndex: 3,
           }}
         >
           CLEAR BETS
