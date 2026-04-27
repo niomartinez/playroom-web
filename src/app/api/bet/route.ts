@@ -20,18 +20,21 @@ export async function POST(req: NextRequest) {
         "X-Service-Key": SERVICE_KEY,
       },
       body: JSON.stringify({
-        player_id: body.session_token,
+        session_token: body.session_token,
         fight_id: body.fight_id,
         bet_code: body.bet_code,
-        amount: body.amount,
+        bet_amount: body.bet_amount,
       }),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: data.detail || data.error || "Bet failed" },
+        {
+          error_code: "PROXY_ERROR",
+          message: data.detail || data.message || data.error || "Bet failed",
+        },
         { status: res.status },
       );
     }
