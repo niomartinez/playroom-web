@@ -2,14 +2,14 @@
 
 import { useGame, type BetCode } from "@/lib/game-context";
 
-const STACK_SIZE = 28;
-const STACK_OFFSET_X = 4;
-const STACK_OFFSET_Y = -3;
-const MAX_VISIBLE = 6;
+const STACK_SIZE = 24;
+const MAX_VISIBLE = 3;
 
 /**
- * Renders a small stack of chip-marker images for the given bet code.
- * Anchors to its containing relatively-positioned parent (the bet button).
+ * Renders a small chip-marker row for the given bet code.
+ * Centered along the bottom of the bet button. Shows up to 3 chips,
+ * one per denomination, sorted highest -> lowest, so the row stays
+ * tidy regardless of how many bets the player placed on this side.
  */
 export default function BetStackedChips({
   betCode,
@@ -22,57 +22,38 @@ export default function BetStackedChips({
   const list = stackedChips[betCode] ?? [];
   if (list.length === 0) return null;
 
-  // Show at most the last MAX_VISIBLE chips, stack visually offset.
-  const visible = list.slice(-MAX_VISIBLE);
-  const hiddenCount = list.length - visible.length;
+  // One chip per denomination, sorted descending. Cap at MAX_VISIBLE so a
+  // player spamming the same chip doesn't cover the bet info.
+  const uniqueDenoms = Array.from(new Set(list.map((c) => c.denom))).sort((a, b) => b - a);
+  const visible = uniqueDenoms.slice(0, MAX_VISIBLE);
 
   return (
     <div
       aria-hidden="true"
       style={{
         position: "absolute",
-        bottom: 6,
-        right: 6,
-        width: size + (visible.length - 1) * STACK_OFFSET_X + 4,
-        height: size + (visible.length - 1) * Math.abs(STACK_OFFSET_Y) + 4,
+        bottom: 4,
+        left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex",
+        gap: 4,
         pointerEvents: "none",
         zIndex: 5,
       }}
     >
-      {visible.map((chip, i) => (
+      {visible.map((denom) => (
         <img
-          key={chip.id}
-          src={`/mobile-assets/chip-${chip.denom}.png`}
+          key={denom}
+          src={`/mobile-assets/chip-${denom}.png`}
           alt=""
           style={{
-            position: "absolute",
             width: size,
             height: size,
             borderRadius: "50%",
-            left: i * STACK_OFFSET_X,
-            bottom: i * Math.abs(STACK_OFFSET_Y),
-            boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.45)",
           }}
         />
       ))}
-      {hiddenCount > 0 && (
-        <span
-          style={{
-            position: "absolute",
-            top: -4,
-            right: -4,
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#fff",
-            background: "rgba(0,0,0,0.7)",
-            borderRadius: 8,
-            padding: "1px 5px",
-            lineHeight: 1.2,
-          }}
-        >
-          +{hiddenCount}
-        </span>
-      )}
     </div>
   );
 }

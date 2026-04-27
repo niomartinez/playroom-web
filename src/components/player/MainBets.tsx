@@ -261,31 +261,37 @@ export default function MainBets() {
               <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />
             </div>
 
-            <div className="relative z-10 w-full flex flex-col items-center justify-center h-full" style={{ padding: "0.4vh 0.8vw" }}>
-              {/* Title centered */}
-              <div className="font-bold text-white text-center" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{bet.name}</div>
+            <div className="relative z-10 w-full flex flex-col items-center justify-start h-full" style={{ padding: "0.6vh 0.8vw 3.2vh", gap: "0.3vh" }}>
+              {/* Bet title */}
+              <div className="font-bold text-white text-center leading-none" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{bet.name}</div>
 
-              {/* Bet info row: chip-hint on the left, live total on the right */}
-              <div className="flex items-center justify-between w-full text-white" style={{ fontSize: "clamp(8px, 1vh, 14px)", marginTop: "0.3vh" }}>
-                <span className="font-medium opacity-80">
-                  {isBettingOpen ? `+${selectedChip}` : roundStatus === "waiting" ? "---" : "Closed"}
-                </span>
-                <span className="font-semibold">
-                  {totalAmount > 0 ? `$${totalAmount.toLocaleString()}` : "---"}
-                </span>
+              {/* Player's own bet amount on this side -- the most important
+                  number on the button. Falls back to a 1-em line when no bet
+                  yet so the layout doesn't reflow when the first chip lands. */}
+              <div
+                className="font-extrabold text-white text-center leading-none"
+                style={{
+                  fontSize: "clamp(18px, 2.6vh, 32px)",
+                  textShadow: "0 1px 4px rgba(0,0,0,0.45)",
+                  letterSpacing: 0.3,
+                  minHeight: "2.6vh",
+                }}
+              >
+                {myTotal > 0 ? `$${myTotal.toLocaleString()}` : isBettingOpen ? "—" : roundStatus === "waiting" ? "—" : "Closed"}
               </div>
 
               {/* Share-of-players bar */}
-              <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "clamp(3px, 0.4vh, 8px)", marginTop: "0.3vh" }}>
+              <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "clamp(3px, 0.4vh, 8px)" }}>
                 <div
                   className="h-full bg-white rounded-full transition-all"
                   style={{ width: `${sharePct}%` }}
                 />
               </div>
 
-              {/* Player count (unique players who bet on this side) */}
-              <div className="flex items-center justify-between w-full text-white/70" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>
+              {/* Player count + total bet across all players + share */}
+              <div className="flex items-center justify-between w-full text-white/70" style={{ fontSize: "clamp(7px, 0.85vh, 12px)" }}>
                 <span>{playerCount} player{playerCount !== 1 ? "s" : ""}</span>
+                <span className="opacity-80">{totalAmount > 0 ? `$${totalAmount.toLocaleString()}` : "$0"}</span>
                 <span>{sharePct}%</span>
               </div>
             </div>

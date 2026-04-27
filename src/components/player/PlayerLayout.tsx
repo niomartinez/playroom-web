@@ -219,27 +219,31 @@ export default function PlayerLayout() {
             position: "relative",
           }}
         >
-          {/* Clear bets — overlay top-right when betting is open */}
+          {/* Clear bets — overlay top-center when betting is open. Uses a
+              red accent so it doesn't blend into the gold/green pulse. */}
           {isBettingOpen && (
             <button
               onClick={clearPlacedBets}
               disabled={!hasPlacedBets}
               style={{
                 position: "absolute",
-                top: "0.4vh",
-                right: "0.5vw",
-                zIndex: 5,
-                padding: "0.4vh 0.7vw",
-                borderRadius: "0.4vw",
-                background: "rgba(0,0,0,0.6)",
-                border: "1px solid rgba(208,135,0,0.3)",
-                color: hasPlacedBets ? "#f0b100" : "rgba(240,177,0,0.4)",
-                fontSize: "clamp(9px, 1vh, 13px)",
-                fontWeight: 700,
-                letterSpacing: 0.5,
+                top: "-1.6vh",
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 6,
+                padding: "0.5vh 1.2vw",
+                borderRadius: 999,
+                background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
+                border: hasPlacedBets ? "1.5px solid #fb2c36" : "1px solid rgba(255,255,255,0.18)",
+                color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
+                fontSize: "clamp(10px, 1.1vh, 14px)",
+                fontWeight: 800,
+                letterSpacing: 0.6,
                 cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                opacity: hasPlacedBets ? 1 : 0.55,
-                transition: "opacity 0.15s ease, color 0.15s ease",
+                boxShadow: hasPlacedBets
+                  ? "0 4px 12px rgba(251,44,54,0.45), 0 0 0 4px rgba(10,15,26,1)"
+                  : "0 0 0 4px rgba(10,15,26,1)",
+                transition: "background 0.15s ease, color 0.15s ease, transform 0.05s ease",
               }}
             >
               CLEAR BETS
