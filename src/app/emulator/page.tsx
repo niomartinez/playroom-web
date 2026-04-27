@@ -166,18 +166,24 @@ export default function EmulatorPage() {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.tableId && msg.tableId !== selectedExternalId) return;
+          // Backend wraps every event as { type, data: {...} }. Older versions
+          // of this handler read fields off the top-level msg, which silently
+          // dropped every event. Match the player-side use-lobby-ws.ts shape.
+          const data = (msg.data ?? msg) as Record<string, unknown>;
+          const tableId = (data.tableId ?? data.table_id) as string | undefined;
+          if (tableId && tableId !== selectedExternalId) return;
           if (msg.type === "RoundStarted" || msg.type === "round_started") {
             setDealingCards({ playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 });
           } else if (msg.type === "CardDealt" || msg.type === "card_dealt") {
             setDealingCards((prev) => {
               const base = prev ?? { playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 };
-              const side = msg.side as "player" | "banker";
+              const side = (data.side as string)?.toLowerCase() as "player" | "banker";
+              const card = data.card as string;
               return {
-                playerCards: side === "player" ? [...base.playerCards, msg.card] : base.playerCards,
-                bankerCards: side === "banker" ? [...base.bankerCards, msg.card] : base.bankerCards,
-                playerScore: msg.player_score ?? base.playerScore,
-                bankerScore: msg.banker_score ?? base.bankerScore,
+                playerCards: side === "player" ? [...base.playerCards, card] : base.playerCards,
+                bankerCards: side === "banker" ? [...base.bankerCards, card] : base.bankerCards,
+                playerScore: (data.player_score ?? data.playerScore ?? base.playerScore) as number,
+                bankerScore: (data.banker_score ?? data.bankerScore ?? base.bankerScore) as number,
               };
             });
           } else if (msg.type === "RoundClosed" || msg.type === "round_closed") {
