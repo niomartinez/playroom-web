@@ -1,10 +1,8 @@
 // Quick sanity test for the big-road helper.
-// Run via: npx tsx scripts/test-big-road.mjs
-//   (or compile and run; this file uses a tiny inline TS->JS port.)
+// Run via: npx tsx scripts/test-big-road.ts
 //
-// Instead of pulling in tsx, we re-implement just enough of the
-// runtime helper here (copied logic) and assert the same outputs the
-// real helper produces. This file exists only as a developer aid.
+// This file imports the real helper from src/lib/big-road and exercises
+// it directly. It exists only as a developer aid.
 
 import { buildBigRoadColumns, appendOutcome, KEEP_TAIL_COLS } from "../src/lib/big-road";
 
@@ -78,6 +76,109 @@ console.log("\nTest: wrap retains last 3 columns");
       columns[1].outcome === "P" &&
       columns[2].outcome === "B",
   );
+}
+
+console.log("\nTest: wrap cycle grows back to maxCols, then wraps again");
+{
+  // Build alternating sequences of `n` switches => `n` columns.
+  function altSeq(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(i % 2 === 0 ? "B" : "P");
+    }
+    return out;
+  }
+
+  const maxCols = 30;
+  const K = KEEP_TAIL_COLS; // 3
+
+  // n = maxCols (30) -> all visible (30 columns)
+  {
+    const { columns } = buildBigRoadColumns(altSeq(maxCols), maxCols, 6);
+    assert(
+      `n=${maxCols} -> all ${maxCols} visible`,
+      columns.length === maxCols,
+      `got ${columns.length}`,
+    );
+  }
+
+  // n = maxCols + 1 (31) -> exactly K visible (just wrapped)
+  {
+    const { columns } = buildBigRoadColumns(altSeq(maxCols + 1), maxCols, 6);
+    assert(
+      `n=${maxCols + 1} -> exactly ${K} visible (just wrapped)`,
+      columns.length === K,
+      `got ${columns.length}`,
+    );
+  }
+
+  // n = maxCols + (maxCols - K) + 1 (= 30 + 27 + 1 = 58) -> exactly maxCols visible
+  // (visible count grew back to maxCols just before next wrap). This is one
+  // full cycle of length (maxCols - K + 1) = 28 columns after the first wrap.
+  {
+    const target = maxCols + (maxCols - K) + 1;
+    const { columns } = buildBigRoadColumns(altSeq(target), maxCols, 6);
+    assert(
+      `n=${target} -> exactly ${maxCols} visible (grown back to maxCols)`,
+      columns.length === maxCols,
+      `got ${columns.length}`,
+    );
+  }
+
+  // n = maxCols + (maxCols - K) + 2 (= 59) -> wraps again to K visible
+  {
+    const target = maxCols + (maxCols - K) + 2;
+    const { columns } = buildBigRoadColumns(altSeq(target), maxCols, 6);
+    assert(
+      `n=${target} -> wraps again to ${K} visible`,
+      columns.length === K,
+      `got ${columns.length}`,
+    );
+  }
+
+  // Extra sanity from the spec docstring: n=58 was sample as "about to wrap".
+  // The two formulas produce equivalent values: (maxCols - K + 1) cycle.
+  // Spot-check intermediate growth: n=32 -> 4 visible
+  {
+    const { columns } = buildBigRoadColumns(altSeq(32), maxCols, 6);
+    assert(`n=32 -> 4 visible`, columns.length === 4, `got ${columns.length}`);
+  }
+
+  // Player breakpoints (maxCols=36): wrap cycle = 36 - 3 + 1 = 34.
+  {
+    const mc = 36;
+    const { columns: c0 } = buildBigRoadColumns(altSeq(mc), mc, 6);
+    assert(`maxCols=36, n=36 -> ${mc} visible`, c0.length === mc, `got ${c0.length}`);
+    const { columns: c1 } = buildBigRoadColumns(altSeq(mc + 1), mc, 6);
+    assert(
+      `maxCols=36, n=37 -> ${K} visible`,
+      c1.length === K,
+      `got ${c1.length}`,
+    );
+    const { columns: c2 } = buildBigRoadColumns(altSeq(mc + (mc - K) + 1), mc, 6);
+    assert(
+      `maxCols=36, n=${mc + (mc - K) + 1} -> ${mc} visible`,
+      c2.length === mc,
+      `got ${c2.length}`,
+    );
+  }
+
+  // maxCols=18 case (smaller player breakpoint).
+  {
+    const mc = 18;
+    const { columns: c0 } = buildBigRoadColumns(altSeq(mc + 1), mc, 6);
+    assert(
+      `maxCols=18, n=19 -> ${K} visible`,
+      c0.length === K,
+      `got ${c0.length}`,
+    );
+    const { columns: c1 } = buildBigRoadColumns(altSeq(mc + (mc - K) + 1), mc, 6);
+    assert(
+      `maxCols=18, n=${mc + (mc - K) + 1} -> ${mc} visible`,
+      c1.length === mc,
+      `got ${c1.length}`,
+    );
+  }
 }
 
 console.log("\nTest: streaming appendOutcome wrap behaviour");

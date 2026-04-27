@@ -144,28 +144,28 @@ export function buildBigRoadColumns(
   }
 
   // Phase 2: apply visible-window wrap. The rule (per spec):
-  //   When columns.length would exceed maxCols, keep the trailing
-  //   KEEP_TAIL_COLS columns as the new leftmost columns. Anything
-  //   already past that gets rebuilt from those tail columns plus
-  //   subsequent outcomes -- but since we've already laid out columns
-  //   from the full outcome list, the simplest faithful expression is:
-  //   if we overflow, slice the trailing columns and pretend they are
-  //   the start of the visible window again.
+  //   When the unbounded column count exceeds `maxCols`, perform a wrap:
+  //   keep the last `KEEP_TAIL_COLS` columns and shift them to the
+  //   leftmost slots. Future columns continue filling from slot
+  //   (KEEP_TAIL_COLS + 1) onward, growing the visible window back up to
+  //   `maxCols`. Once the visible count would exceed `maxCols` again,
+  //   wrap again the same way. The cycle from one wrap to the next is
+  //   `(maxCols - KEEP_TAIL_COLS + 1)` new columns.
   //
-  // The repeated-overflow case: keep wrapping while still over capacity.
-  //   This means after the wrap to last-3, the remaining new columns
-  //   beyond column 4 onward fill in normally; if they overflow again,
-  //   we wrap again. Because we're working from the full outcome list
-  //   and the wrap is purely a tail-slice, we can iterate.
-  let visibleColumns = columns;
-  while (visibleColumns.length > maxCols) {
-    const tail = visibleColumns.slice(-KEEP_TAIL_COLS);
-    // Whatever overflowed past the kept tail: nothing further to do --
-    // there are no "future" outcomes left to reapply since we've already
-    // consumed the whole outcome list. The next wrap iteration only
-    // triggers if the slice itself somehow still exceeds maxCols, which
-    // can't happen when KEEP_TAIL_COLS < maxCols.
-    visibleColumns = tail;
+  // Concretely, given the full uncapped column count `n`:
+  //   if n <= maxCols, return all n columns
+  //   else
+  //     cycleLength = maxCols - KEEP_TAIL_COLS + 1
+  //     visibleCount = ((n - maxCols - 1) % cycleLength) + KEEP_TAIL_COLS
+  //     return columns.slice(n - visibleCount, n)
+  const n = columns.length;
+  let visibleColumns: BigRoadColumn[];
+  if (n <= maxCols) {
+    visibleColumns = columns;
+  } else {
+    const cycleLength = maxCols - KEEP_TAIL_COLS + 1;
+    const visibleCount = ((n - maxCols - 1) % cycleLength) + KEEP_TAIL_COLS;
+    visibleColumns = columns.slice(n - visibleCount, n);
   }
 
   return {
