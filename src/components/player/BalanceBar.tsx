@@ -32,8 +32,19 @@ function useDisplayBalance(target: number): number {
   const startRef = useRef(0);
   const durationRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  const hasInitRef = useRef(false);
 
   useEffect(() => {
+    // First non-zero target: snap, don't animate. The GameContext balance
+    // starts at 0 and gets populated by the balance WS later — we don't want
+    // a 1.5s odometer crawl from $0 -> balance on initial page load.
+    if (!hasInitRef.current && target !== 0) {
+      hasInitRef.current = true;
+      fromRef.current = target;
+      setDisplay(target);
+      return;
+    }
+
     // First mount: snap immediately.
     if (display === target && fromRef.current === target) return;
 
