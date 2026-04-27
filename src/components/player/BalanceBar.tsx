@@ -258,7 +258,7 @@ export default function BalanceBar() {
                 transformOrigin: "center center",
                 transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease",
                 boxShadow: isSelected
-                  ? "0 0 14px rgba(255,255,255,0.55), 0 0 0 2.5px rgba(255,255,255,0.9)"
+                  ? "0 0 0 2px rgba(255,255,255,0.85), 0 0 18px rgba(255,255,255,0.65)"
                   : "0 1px 3px rgba(0,0,0,0.3)",
                 zIndex: isSelected ? 2 : 1,
                 cursor: isDisabled ? "not-allowed" : "pointer",
@@ -276,7 +276,7 @@ export default function BalanceBar() {
                   height: "100%",
                   display: "block",
                   borderRadius: "50%",
-                  transform: "translateY(1px)",
+                  transform: "translateY(2px)",
                   pointerEvents: "none",
                 }}
               />
