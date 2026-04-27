@@ -212,21 +212,21 @@ export default function BalanceBar() {
         padding: "0 1vw",
       }}
     >
-      <div className="flex items-center" style={{ gap: "0.5vw" }}>
+      <div className="flex items-center" style={{ gap: "0.7vw" }}>
         <img
           src="/mobile-assets/balance-icon.png"
           alt="Balance"
           className="flex-shrink-0"
-          style={{ width: "1.6vh", height: "1.6vh" }}
+          style={{ width: "clamp(28px, 3.4vh, 48px)", height: "clamp(28px, 3.4vh, 48px)" }}
         />
         <div>
-          <div className="text-[#99a1af]" style={{ fontSize: "clamp(8px, 0.9vh, 12px)" }}>Balance</div>
-          <div className="font-bold text-white" style={{ fontSize: "clamp(12px, 1.4vh, 20px)" }}>{formatted}</div>
+          <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>Balance</div>
+          <div className="font-bold text-white" style={{ fontSize: "clamp(18px, 2.4vh, 30px)" }}>{formatted}</div>
         </div>
       </div>
 
       {/* Chip icons */}
-      <div data-balance-chips="" className="flex items-center" style={{ gap: "0.3vw" }}>
+      <div data-balance-chips="" className="flex items-center" style={{ gap: "0.6vw" }}>
         {CHIPS.map((chip) => {
           const isSelected = selectedChip === chip.value;
           const isDisabled = balance < chip.value;
@@ -241,8 +241,8 @@ export default function BalanceBar() {
               disabled={isDisabled}
               className="rounded-full flex items-center justify-center"
               style={{
-                width: "clamp(20px, 2.2vh, 36px)",
-                height: "clamp(20px, 2.2vh, 36px)",
+                width: "clamp(40px, 4.8vh, 64px)",
+                height: "clamp(40px, 4.8vh, 64px)",
                 backgroundColor: "transparent",
                 border: "none",
                 padding: 0,

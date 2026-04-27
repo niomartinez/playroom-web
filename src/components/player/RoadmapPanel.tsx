@@ -6,8 +6,12 @@ import { useIsMobile } from "@/lib/use-mobile";
 import { buildBigRoadColumns } from "@/lib/big-road";
 import { BigRoadGrid } from "@/components/shared/BigRoadGrid";
 
-const COLS = 36;
-const MOBILE_COLS = 18;
+// Player big road density. 36 columns made cells ~15px wide (too small);
+// 22 columns gives readable circles and still wraps reasonably (cycle ~21
+// new outcomes between wraps). Mobile keeps 14 columns to balance density
+// vs. screen width.
+const COLS = 22;
+const MOBILE_COLS = 14;
 const ROWS = 6;
 
 export default function RoadmapPanel() {

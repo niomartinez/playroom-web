@@ -67,7 +67,7 @@ export function BigRoadGrid({
               >
                 <div
                   style={{
-                    width: "80%",
+                    width: "92%",
                     aspectRatio: "1",
                     borderRadius: "50%",
                     border: `1px solid ${emptyBorderColor}`,
@@ -132,10 +132,10 @@ export function BigRoadGrid({
             >
               <div
                 style={{
-                  width: "80%",
+                  width: "92%",
                   aspectRatio: "1",
                   borderRadius: "50%",
-                  border: `1.8px solid ${sideColor}`,
+                  border: "2px solid " + sideColor,
                   backgroundColor: "transparent",
                 }}
               />
