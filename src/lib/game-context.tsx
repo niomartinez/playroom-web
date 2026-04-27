@@ -47,6 +47,12 @@ export interface FlyingChip {
   betCode: BetCode;
   /** Timestamp the fly was dispatched */
   startedAt: number;
+  /**
+   * When true, the chip does NOT land into the per-bet stack on completion.
+   * Used by the reverse-fly settlement animation where chips dissolve into
+   * the balance area instead of accumulating somewhere new.
+   */
+  ephemeral?: boolean;
 }
 
 export interface StackedChip {
@@ -116,6 +122,28 @@ export interface MainBetCounts {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Recent win (post-settlement YOU WON flash)                         */
+/* ------------------------------------------------------------------ */
+
+export interface RecentWinLine {
+  /** Display label like "PERFECT PAIR" */
+  label: string;
+  /** Payoff amount (bet + winnings, as broadcast by the backend) */
+  amount: number;
+  /** Backend bet code -- used to source the chip-back-to-balance fly */
+  betCode: BetCode | string;
+}
+
+export interface RecentWin {
+  /** External fight id this settlement belongs to */
+  fightId: string;
+  /** Sum of all winning payoffs */
+  totalPayoff: number;
+  /** One line per WINNING bet */
+  lines: RecentWinLine[];
+}
+
+/* ------------------------------------------------------------------ */
 /*  Context shape                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -146,6 +174,9 @@ export interface GameState {
   flyingChips: FlyingChip[];
   stackedChips: Record<string, StackedChip[]>;
 
+  /* Settlement flash — set when a RoundSettled event arrives with winners */
+  recentWin: RecentWin | null;
+
   /* Setters — accept direct values or functional updaters */
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
@@ -161,6 +192,7 @@ export interface GameState {
   removeFlyingChip: (id: string) => void;
   addStackedChip: (betCode: BetCode, denom: number) => void;
   clearStackedChips: () => void;
+  setRecentWin: (w: RecentWin | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -221,6 +253,7 @@ export function GameProvider({
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
   const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
+  const [recentWin, setRecentWin] = useState<RecentWin | null>(null);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -280,6 +313,7 @@ export function GameProvider({
     placedBets,
     flyingChips,
     stackedChips,
+    recentWin,
     setTableName,
     setDealerName,
     setBalance,
@@ -294,6 +328,7 @@ export function GameProvider({
     removeFlyingChip,
     addStackedChip,
     clearStackedChips,
+    setRecentWin,
   };
 
   return <GameContext value={value}>{children}</GameContext>;

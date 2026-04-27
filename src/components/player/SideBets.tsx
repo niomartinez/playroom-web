@@ -89,6 +89,7 @@ export default function SideBets() {
           return (
             <button
               key={bet.name}
+              data-bet-code={bet.betCode}
               onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               disabled={disabled}
               style={{
@@ -174,6 +175,7 @@ export default function SideBets() {
         return (
           <button
             key={bet.name}
+            data-bet-code={bet.betCode}
             onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             disabled={disabled}
             className="relative text-center transition-all hover:brightness-110 active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"

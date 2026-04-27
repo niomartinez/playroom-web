@@ -16,6 +16,7 @@ import DealVisualizer from "./DealVisualizer";
 import MobileActionBar from "./MobileActionBar";
 import MobileTipPanel from "./MobileTipPanel";
 import FlyingChips from "./FlyingChips";
+import WinFlash from "./WinFlash";
 
 /**
  * Inline keyframes for the betting-open pulse on the bet panel border.
@@ -168,6 +169,7 @@ export default function PlayerLayout() {
         </div>
 
         <FlyingChips />
+        <WinFlash />
       </div>
     );
   }
@@ -253,6 +255,7 @@ export default function PlayerLayout() {
       </div>
 
       <FlyingChips />
+      <WinFlash />
     </div>
   );
 }

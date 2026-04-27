@@ -53,6 +53,8 @@ interface FlyingChipProps {
       | "BAC_BankerPair"
       | "BAC_EitherPair"
       | "BAC_PerfectPair";
+    /** Reverse-fly chips do not accumulate into a stack on landing */
+    ephemeral?: boolean;
   };
 }
 
@@ -70,14 +72,16 @@ function FlyingChip({ chip }: FlyingChipProps) {
   }, []);
 
   useEffect(() => {
-    // After the transition finishes, land the chip into the stack and
-    // remove the in-flight node.
+    // After the transition finishes, either land the chip into the stack
+    // (forward fly) or just remove the in-flight node (reverse/ephemeral fly).
     const timer = setTimeout(() => {
-      addStackedChip(chip.betCode, chip.denom);
+      if (!chip.ephemeral) {
+        addStackedChip(chip.betCode, chip.denom);
+      }
       removeFlyingChip(chip.id);
     }, FLY_DURATION_MS + 16);
     return () => clearTimeout(timer);
-  }, [chip.id, chip.betCode, chip.denom, addStackedChip, removeFlyingChip]);
+  }, [chip.id, chip.betCode, chip.denom, chip.ephemeral, addStackedChip, removeFlyingChip]);
 
   const x = phase === "start" ? chip.fromX : chip.toX;
   const y = phase === "start" ? chip.fromY : chip.toY;

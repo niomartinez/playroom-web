@@ -122,6 +122,7 @@ export default function MainBets() {
           return (
             <button
               key={bet.name}
+              data-bet-code={bet.betCode}
               onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               disabled={disabled}
               style={{
@@ -248,6 +249,7 @@ export default function MainBets() {
         return (
           <button
             key={bet.name}
+            data-bet-code={bet.betCode}
             onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             disabled={disabled}
             className="relative transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden h-full flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
