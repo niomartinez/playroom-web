@@ -275,23 +275,40 @@ export default function EmulatorPage() {
 
   /* deal one round */
   /* Deal cards for the active round (simulates Angel Eye shoe).
-     Pass forceOutcome to deterministically settle on Banker/Player/Tie
-     for testing — the per-card reveal animations still play. */
-  const dealShoe = useCallback(async (
-    forceOutcome?: "Banker" | "Player" | "Tie",
-  ) => {
+     Pass force options to deterministically rig the outcome / side-bet
+     winners for testing — the per-card reveal animations still play. */
+  type ForceKind =
+    | "Banker"
+    | "Player"
+    | "Tie"
+    | "PlayerPair"
+    | "BankerPair"
+    | "EitherPair"
+    | "PerfectPair";
+
+  const dealShoe = useCallback(async (force?: ForceKind) => {
     if (!selectedTable) return;
     setStatus("dealing");
     setErrorMsg("");
+
+    const body: Record<string, unknown> = { game_id: selectedTable };
+    if (force === "Banker" || force === "Player" || force === "Tie") {
+      body.force_outcome = force;
+    } else if (force === "PlayerPair") {
+      body.force_player_pair = true;
+    } else if (force === "BankerPair") {
+      body.force_banker_pair = true;
+    } else if (force === "EitherPair") {
+      body.force_either_pair = true;
+    } else if (force === "PerfectPair") {
+      body.force_perfect_pair = true;
+    }
 
     try {
       const res = await fetch("/api/emulator/shoe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          game_id: selectedTable,
-          ...(forceOutcome ? { force_outcome: forceOutcome } : {}),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -551,13 +568,17 @@ export default function EmulatorPage() {
 
           {/* Force-outcome buttons for testing wins/losses against the player UI */}
           {([
-            { label: "Banker", color: "#fb2c36" },
-            { label: "Player", color: "#2b7fff" },
-            { label: "Tie", color: "#00bc7d" },
-          ] as const).map(({ label, color }) => (
+            { kind: "Banker", label: "Banker", color: "#fb2c36" },
+            { kind: "Player", label: "Player", color: "#2b7fff" },
+            { kind: "Tie", label: "Tie", color: "#00bc7d" },
+            { kind: "PlayerPair", label: "P Pair", color: "#2b7fff" },
+            { kind: "BankerPair", label: "B Pair", color: "#fb2c36" },
+            { kind: "EitherPair", label: "Either Pair", color: "#d08700" },
+            { kind: "PerfectPair", label: "Perfect Pair", color: "#d08700" },
+          ] as const).map(({ kind, label, color }) => (
             <button
-              key={label}
-              onClick={() => dealShoe(label)}
+              key={kind}
+              onClick={() => dealShoe(kind)}
               disabled={!selectedTable || status === "dealing"}
               className="rounded-md px-3 py-2 text-xs font-semibold transition-colors"
               style={{
@@ -573,9 +594,9 @@ export default function EmulatorPage() {
                     ? "not-allowed"
                     : "pointer",
               }}
-              title={`Deal a hand that resolves to ${label}`}
+              title={`Deal a hand that wins ${label}`}
             >
-              Deal {label}
+              {label}
             </button>
           ))}
         </div>
