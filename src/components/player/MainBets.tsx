@@ -4,6 +4,8 @@ import { useCallback } from "react";
 import { useBetting } from "@/lib/use-betting";
 import { useGame, type BetCode } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { dispatchChipFly } from "@/lib/chip-fly";
+import BetStackedChips from "./BetStackedChips";
 
 const BETS: Array<{
   name: string;
@@ -51,15 +53,24 @@ function formatCompact(amount: number): string {
 
 export default function MainBets() {
   const { placeBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
-  const { roundStatus } = useGame();
+  const { roundStatus, balance, addFlyingChip } = useGame();
   const isMobile = useIsMobile();
 
   const handleBet = useCallback(
-    async (betCode: BetCode) => {
+    async (betCode: BetCode, targetEl: HTMLElement | null) => {
       if (!isBettingOpen) return;
+      // Snapshot the chip denom we'll animate (selectedChip can change after placeBet)
+      const flyDenom = selectedChip;
+      // Pre-check: don't animate if the bet would be rejected
+      if (selectedChip > balance || isOpposingBlocked(betCode)) {
+        await placeBet(betCode);
+        return;
+      }
+      // Fire the fly first so origin coords come from the still-active chip.
+      dispatchChipFly({ betCode, denom: flyDenom, targetEl, addFlyingChip });
       await placeBet(betCode);
     },
-    [isBettingOpen, placeBet],
+    [isBettingOpen, placeBet, selectedChip, balance, isOpposingBlocked, addFlyingChip],
   );
 
   /* ── Mobile layout ── */
@@ -75,7 +86,7 @@ export default function MainBets() {
           return (
             <button
               key={bet.name}
-              onClick={() => handleBet(bet.betCode)}
+              onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               disabled={disabled}
               style={{
                 position: "relative",
@@ -94,6 +105,7 @@ export default function MainBets() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
+              <BetStackedChips betCode={bet.betCode} />
               {/* Marble texture overlay */}
               <div
                 style={{
@@ -190,11 +202,12 @@ export default function MainBets() {
         return (
           <button
             key={bet.name}
-            onClick={() => handleBet(bet.betCode)}
+            onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             disabled={disabled}
             className="relative transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden h-full flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ border: `1.6px solid ${bet.border}`, borderRadius: "0.7vw" }}
           >
+            <BetStackedChips betCode={bet.betCode} size={22} />
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
               <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "0.7vw" }} />
               <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />

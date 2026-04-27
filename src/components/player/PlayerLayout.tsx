@@ -15,6 +15,7 @@ import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import MobileActionBar from "./MobileActionBar";
 import MobileTipPanel from "./MobileTipPanel";
+import FlyingChips from "./FlyingChips";
 
 /**
  * Inline keyframes for the betting-open pulse on the bet panel border.
@@ -165,6 +166,8 @@ export default function PlayerLayout() {
         <div style={{ padding: "0 19px", marginTop: 16, marginBottom: 24 }}>
           <BaccaratTable />
         </div>
+
+        <FlyingChips />
       </div>
     );
   }
@@ -248,6 +251,8 @@ export default function PlayerLayout() {
           <BaccaratTable />
         </div>
       </div>
+
+      <FlyingChips />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 
@@ -15,6 +16,21 @@ const CHIPS = [
 export default function BalanceBar() {
   const { balance, selectedChip, setSelectedChip } = useGame();
   const isMobile = useIsMobile();
+
+  /**
+   * Auto-step-down: when the live balance drops below the current selected
+   * chip, snap to the largest affordable chip. If no chip is affordable,
+   * leave the selection alone — placeBet's pre-check blocks the bet anyway.
+   */
+  useEffect(() => {
+    if (balance >= selectedChip) return;
+    const affordable = CHIPS.filter((c) => c.value <= balance);
+    if (affordable.length === 0) return;
+    const next = affordable[affordable.length - 1].value; // largest affordable
+    if (next !== selectedChip) {
+      setSelectedChip(next);
+    }
+  }, [balance, selectedChip, setSelectedChip]);
 
   const formatted = balance.toLocaleString("en-US", {
     style: "currency",
@@ -54,6 +70,7 @@ export default function BalanceBar() {
 
         {/* Bottom section: chip row */}
         <div
+          data-balance-chips=""
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -62,10 +79,16 @@ export default function BalanceBar() {
         >
           {CHIPS.map((chip) => {
             const isSelected = selectedChip === chip.value;
+            const isDisabled = balance < chip.value;
             return (
               <button
                 key={chip.value}
-                onClick={() => setSelectedChip(chip.value)}
+                data-chip-denom={chip.value}
+                onClick={() => {
+                  if (isDisabled) return;
+                  setSelectedChip(chip.value);
+                }}
+                disabled={isDisabled}
                 style={{
                   width: 46,
                   height: 46,
@@ -73,19 +96,22 @@ export default function BalanceBar() {
                   backgroundColor: "transparent",
                   border: "none",
                   transform: isSelected ? "scale(1.2)" : "scale(1)",
-                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                  transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease",
                   boxShadow: isSelected
                     ? "0 0 18px rgba(255,255,255,0.55), 0 0 0 3px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.3)"
                     : "0 2px 4px rgba(0,0,0,0.3)",
-                  cursor: "pointer",
+                  cursor: isDisabled ? "not-allowed" : "pointer",
                   padding: 0,
                   flexShrink: 0,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   zIndex: isSelected ? 2 : 1,
+                  opacity: isDisabled ? 0.4 : 1,
+                  filter: isDisabled ? "grayscale(1)" : "none",
                 }}
                 aria-label={`$${chip.value} chip`}
+                aria-disabled={isDisabled}
               >
                 <img
                   src={chip.src}
@@ -124,14 +150,20 @@ export default function BalanceBar() {
       </div>
 
       {/* Chip icons */}
-      <div className="flex items-center" style={{ gap: "0.3vw" }}>
+      <div data-balance-chips="" className="flex items-center" style={{ gap: "0.3vw" }}>
         {CHIPS.map((chip) => {
           const isSelected = selectedChip === chip.value;
+          const isDisabled = balance < chip.value;
           return (
             <button
               key={chip.value}
-              onClick={() => setSelectedChip(chip.value)}
-              className="rounded-full flex items-center justify-center cursor-pointer"
+              data-chip-denom={chip.value}
+              onClick={() => {
+                if (isDisabled) return;
+                setSelectedChip(chip.value);
+              }}
+              disabled={isDisabled}
+              className="rounded-full flex items-center justify-center"
               style={{
                 width: "clamp(20px, 2.2vh, 36px)",
                 height: "clamp(20px, 2.2vh, 36px)",
@@ -139,13 +171,17 @@ export default function BalanceBar() {
                 border: "none",
                 padding: 0,
                 transform: isSelected ? "scale(1.2)" : "scale(1)",
-                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease",
                 boxShadow: isSelected
                   ? "0 0 18px rgba(255,255,255,0.55), 0 0 0 3px rgba(255,255,255,0.9)"
                   : "0 2px 4px rgba(0,0,0,0.3)",
                 zIndex: isSelected ? 2 : 1,
+                cursor: isDisabled ? "not-allowed" : "pointer",
+                opacity: isDisabled ? 0.4 : 1,
+                filter: isDisabled ? "grayscale(1)" : "none",
               }}
               aria-label={`$${chip.value} chip`}
+              aria-disabled={isDisabled}
             >
               <img
                 src={chip.src}

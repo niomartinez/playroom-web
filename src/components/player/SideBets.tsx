@@ -3,7 +3,9 @@
 import { useCallback } from "react";
 import { useBetting } from "@/lib/use-betting";
 import { useIsMobile } from "@/lib/use-mobile";
-import type { BetCode } from "@/lib/game-context";
+import { useGame, type BetCode } from "@/lib/game-context";
+import { dispatchChipFly } from "@/lib/chip-fly";
+import BetStackedChips from "./BetStackedChips";
 
 const SIDE_BETS: Array<{
   name: string;
@@ -53,15 +55,22 @@ const SIDE_BETS: Array<{
 ];
 
 export default function SideBets() {
-  const { placeBet, isBettingOpen, placedBets } = useBetting();
+  const { placeBet, isBettingOpen, placedBets, selectedChip } = useBetting();
+  const { balance, addFlyingChip } = useGame();
   const isMobile = useIsMobile();
 
   const handleBet = useCallback(
-    async (betCode: BetCode) => {
+    async (betCode: BetCode, targetEl: HTMLElement | null) => {
       if (!isBettingOpen) return;
+      const flyDenom = selectedChip;
+      if (selectedChip > balance) {
+        await placeBet(betCode);
+        return;
+      }
+      dispatchChipFly({ betCode, denom: flyDenom, targetEl, addFlyingChip });
       await placeBet(betCode);
     },
-    [isBettingOpen, placeBet],
+    [isBettingOpen, placeBet, selectedChip, balance, addFlyingChip],
   );
 
   if (isMobile) {
@@ -80,7 +89,7 @@ export default function SideBets() {
           return (
             <button
               key={bet.name}
-              onClick={() => handleBet(bet.betCode)}
+              onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               disabled={disabled}
               style={{
                 position: "relative",
@@ -101,6 +110,7 @@ export default function SideBets() {
                 padding: 0,
               }}
             >
+              <BetStackedChips betCode={bet.betCode} size={22} />
               <img
                 alt=""
                 src="/texture.png"
@@ -164,7 +174,7 @@ export default function SideBets() {
         return (
           <button
             key={bet.name}
-            onClick={() => handleBet(bet.betCode)}
+            onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             disabled={disabled}
             className="relative text-center transition-all hover:brightness-110 active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
@@ -175,6 +185,7 @@ export default function SideBets() {
               padding: "0.6vh 0.4vw",
             }}
           >
+            <BetStackedChips betCode={bet.betCode} size={18} />
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
               <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "0.7vw" }} />
               <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />

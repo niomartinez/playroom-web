@@ -30,11 +30,12 @@ export function useLobbyWs() {
     setCurrentRound,
     setRoads,
     clearPlacedBets,
+    clearStackedChips,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets });
-  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets };
+  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets, clearStackedChips });
+  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets, clearStackedChips };
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +57,7 @@ export function useLobbyWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips);
         } catch {
           // ignore
         }
@@ -104,6 +105,7 @@ function handleMessage(
   token?: string | null,
   placedBets?: { betCode: string; amount: number }[],
   setBalance?: (b: SetStateAction<number>) => void,
+  clearStackedChips?: () => void,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -113,6 +115,7 @@ function handleMessage(
     case "round_started": {
       setRoundStatus("betting_open");
       clearPlacedBets?.(); // Clear bets from previous round
+      clearStackedChips?.(); // Clear stacked chip markers from previous round
       const roundId = (data.roundId ?? data.round_id ?? "") as string;
       // Force-replace the entire round object so ALL previous round data is wiped
       setCurrentRound({
@@ -227,6 +230,7 @@ function handleMessage(
     case "round_closed": {
       // Round fully settled — go back to waiting for next round
       setRoundStatus("waiting");
+      clearStackedChips?.();
       break;
     }
 

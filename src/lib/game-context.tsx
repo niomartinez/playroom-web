@@ -29,6 +29,32 @@ export interface PlacedBet {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Chip animation types                                               */
+/* ------------------------------------------------------------------ */
+
+export interface FlyingChip {
+  /** Stable unique id for this in-flight chip */
+  id: string;
+  /** Chip denomination (matches /mobile-assets/chip-{denom}.png) */
+  denom: number;
+  /** Source coords (top-left) in viewport pixels */
+  fromX: number;
+  fromY: number;
+  /** Destination coords (top-left) in viewport pixels */
+  toX: number;
+  toY: number;
+  /** Bet code the chip is heading to (used to land into the stacked map) */
+  betCode: BetCode;
+  /** Timestamp the fly was dispatched */
+  startedAt: number;
+}
+
+export interface StackedChip {
+  id: string;
+  denom: number;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Road data types                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -94,6 +120,10 @@ export interface GameState {
   selectedChip: number;
   placedBets: PlacedBet[];
 
+  /* Chip animation */
+  flyingChips: FlyingChip[];
+  stackedChips: Record<string, StackedChip[]>;
+
   /* Setters — accept direct values or functional updaters */
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
@@ -104,6 +134,10 @@ export interface GameState {
   setSelectedChip: (amount: number) => void;
   addPlacedBet: (bet: PlacedBet) => void;
   clearPlacedBets: () => void;
+  addFlyingChip: (chip: Omit<FlyingChip, "id" | "startedAt">) => void;
+  removeFlyingChip: (id: string) => void;
+  addStackedChip: (betCode: BetCode, denom: number) => void;
+  clearStackedChips: () => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -161,6 +195,8 @@ export function GameProvider({
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
   const [selectedChip, setSelectedChip] = useState(100);
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
+  const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
+  const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -168,6 +204,39 @@ export function GameProvider({
 
   const clearPlacedBets = useCallback(() => {
     setPlacedBets([]);
+  }, []);
+
+  const addFlyingChip = useCallback(
+    (chip: Omit<FlyingChip, "id" | "startedAt">) => {
+      const id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `chip-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setFlyingChips((prev) => [
+        ...prev,
+        { ...chip, id, startedAt: Date.now() },
+      ]);
+    },
+    [],
+  );
+
+  const removeFlyingChip = useCallback((id: string) => {
+    setFlyingChips((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const addStackedChip = useCallback((betCode: BetCode, denom: number) => {
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `stack-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setStackedChips((prev) => ({
+      ...prev,
+      [betCode]: [...(prev[betCode] ?? []), { id, denom }],
+    }));
+  }, []);
+
+  const clearStackedChips = useCallback(() => {
+    setStackedChips({});
   }, []);
 
   const value: GameState = {
@@ -184,6 +253,8 @@ export function GameProvider({
     roads,
     selectedChip,
     placedBets,
+    flyingChips,
+    stackedChips,
     setTableName,
     setDealerName,
     setBalance,
@@ -193,6 +264,10 @@ export function GameProvider({
     setSelectedChip,
     addPlacedBet,
     clearPlacedBets,
+    addFlyingChip,
+    removeFlyingChip,
+    addStackedChip,
+    clearStackedChips,
   };
 
   return <GameContext value={value}>{children}</GameContext>;
