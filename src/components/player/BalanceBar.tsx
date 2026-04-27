@@ -246,7 +246,9 @@ export default function BalanceBar() {
             padding: "0.4vh 1vw",
             borderRadius: 999,
             background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
-            border: hasPlacedBets ? "1.5px solid #fb2c36" : "1px solid rgba(255,255,255,0.18)",
+            // Constant border width so toggling hasPlacedBets doesn't shift
+            // the layout 0.5px and ripple through to the chip row.
+            border: `1.5px solid ${hasPlacedBets ? "#fb2c36" : "rgba(255,255,255,0.18)"}`,
             color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
             fontSize: "clamp(9px, 1vh, 12px)",
             fontWeight: 800,
@@ -255,7 +257,7 @@ export default function BalanceBar() {
             boxShadow: hasPlacedBets
               ? "0 2px 8px rgba(251,44,54,0.35)"
               : "none",
-            transition: "background 0.15s ease, color 0.15s ease",
+            transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
             whiteSpace: "nowrap",
           }}
         >
