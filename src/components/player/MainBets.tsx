@@ -51,10 +51,35 @@ function formatCompact(amount: number): string {
   return `$${amount}`;
 }
 
+// Map a UI bet code to the bucket key used in MainBetCounts payloads.
+const COUNTS_KEY: Record<BetCode, "Player" | "Tie" | "Banker" | null> = {
+  BAC_Player: "Player",
+  BAC_Tie:    "Tie",
+  BAC_Banker: "Banker",
+  BAC_PlayerPair: null,
+  BAC_BankerPair: null,
+  BAC_EitherPair: null,
+  BAC_PerfectPair: null,
+};
+
 export default function MainBets() {
   const { placeBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
-  const { roundStatus, balance, addFlyingChip } = useGame();
+  const { roundStatus, balance, addFlyingChip, mainBetCounts, currentRound } = useGame();
   const isMobile = useIsMobile();
+
+  // Only trust the live counts when they line up with the round currently
+  // displayed. After RoundClosed we deliberately KEEP the last counts (so the
+  // settlement screen still shows what people bet); a stale roundId during a
+  // brief reconnect window also falls through to the local-bets fallback.
+  const liveCounts =
+    mainBetCounts && currentRound &&
+    String(mainBetCounts.roundId) === String(currentRound.roundId)
+      ? mainBetCounts
+      : null;
+
+  const totalPlayers = liveCounts
+    ? liveCounts.Player.players + liveCounts.Tie.players + liveCounts.Banker.players
+    : 0;
 
   const handleBet = useCallback(
     async (betCode: BetCode, targetEl: HTMLElement | null) => {
@@ -81,7 +106,18 @@ export default function MainBets() {
           const myBets = placedBets.filter((b) => b.betCode === bet.betCode);
           const myTotal = myBets.reduce((sum, b) => sum + b.amount, 0);
           const disabled = !isBettingOpen || isOpposingBlocked(bet.betCode);
-          const winPct = bet.betCode === "BAC_Tie" ? 9 : bet.betCode === "BAC_Player" ? 47 : 44;
+
+          // Live aggregate across all players for this bucket. Falls back to
+          // the local user's own bets when live counts aren't available
+          // (demo mode or pre-WS).
+          const key = COUNTS_KEY[bet.betCode];
+          const liveBucket = liveCounts && key ? liveCounts[key] : null;
+          const playerCount = liveBucket ? liveBucket.players : (myBets.length > 0 ? 1 : 0);
+          const totalAmount = liveBucket ? liveBucket.amount : myTotal;
+          const sharePct =
+            liveCounts && totalPlayers > 0 && liveBucket
+              ? Math.round((liveBucket.players / totalPlayers) * 100)
+              : 0;
 
           return (
             <button
@@ -141,7 +177,7 @@ export default function MainBets() {
                   {bet.abbrev}
                 </span>
 
-                {/* People icon + bet count */}
+                {/* People icon + live unique-player count for this side */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <img
                     src="/mobile-assets/people-icon.svg"
@@ -149,21 +185,21 @@ export default function MainBets() {
                     style={{ width: 14, height: 14 }}
                   />
                   <span style={{ fontSize: 12, fontWeight: 500, color: "#fff" }}>
-                    {myBets.length}
+                    {playerCount}
                   </span>
                 </div>
 
-                {/* Bet amount */}
+                {/* Total bet amount on this side this round */}
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>
-                  {myTotal > 0 ? formatCompact(myTotal) : "$0"}
+                  {totalAmount > 0 ? formatCompact(totalAmount) : "$0"}
                 </span>
 
-                {/* Win percentage */}
+                {/* Share of total players (Player+Tie+Banker) */}
                 <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>
-                  {winPct}%
+                  {sharePct}%
                 </span>
 
-                {/* Progress bar */}
+                {/* Progress bar reflects share of total players */}
                 <div
                   style={{
                     width: "100%",
@@ -175,7 +211,7 @@ export default function MainBets() {
                 >
                   <div
                     style={{
-                      width: `${winPct}%`,
+                      width: `${sharePct}%`,
                       height: "100%",
                       borderRadius: 100,
                       backgroundColor: "#fff",
@@ -191,13 +227,23 @@ export default function MainBets() {
     );
   }
 
-  /* ── Desktop layout (unchanged) ── */
+  /* ── Desktop layout ── */
   return (
     <div className="grid grid-cols-3 h-full" style={{ gap: "0.4vw" }}>
       {BETS.map((bet) => {
         const myBets = placedBets.filter((b) => b.betCode === bet.betCode);
         const myTotal = myBets.reduce((sum, b) => sum + b.amount, 0);
         const disabled = !isBettingOpen;
+
+        // Live aggregate across all players (falls back to local bets in demo).
+        const key = COUNTS_KEY[bet.betCode];
+        const liveBucket = liveCounts && key ? liveCounts[key] : null;
+        const playerCount = liveBucket ? liveBucket.players : (myBets.length > 0 ? 1 : 0);
+        const totalAmount = liveBucket ? liveBucket.amount : myTotal;
+        const sharePct =
+          liveCounts && totalPlayers > 0 && liveBucket
+            ? Math.round((liveBucket.players / totalPlayers) * 100)
+            : 0;
 
         return (
           <button
@@ -217,27 +263,29 @@ export default function MainBets() {
               {/* Title centered */}
               <div className="font-bold text-white text-center" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{bet.name}</div>
 
-              {/* Bet info row */}
+              {/* Bet info row: chip-hint on the left, live total on the right */}
               <div className="flex items-center justify-between w-full text-white" style={{ fontSize: "clamp(8px, 1vh, 14px)", marginTop: "0.3vh" }}>
                 <span className="font-medium opacity-80">
                   {isBettingOpen ? `+${selectedChip}` : roundStatus === "waiting" ? "---" : "Closed"}
                 </span>
                 <span className="font-semibold">
-                  {myTotal > 0 ? `$${myTotal.toLocaleString()}` : "---"}
+                  {totalAmount > 0 ? `$${totalAmount.toLocaleString()}` : "---"}
                 </span>
               </div>
 
-              {/* Bet count indicator */}
-              {myBets.length > 0 && (
-                <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "clamp(3px, 0.4vh, 8px)", marginTop: "0.3vh" }}>
-                  <div className="h-full bg-white rounded-full transition-all" style={{ width: "100%" }} />
-                </div>
-              )}
-              {myBets.length > 0 && (
-                <div className="text-right w-full text-white/70" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>
-                  {myBets.length} bet{myBets.length !== 1 ? "s" : ""}
-                </div>
-              )}
+              {/* Share-of-players bar */}
+              <div className="w-full bg-white/20 rounded-full overflow-hidden" style={{ height: "clamp(3px, 0.4vh, 8px)", marginTop: "0.3vh" }}>
+                <div
+                  className="h-full bg-white rounded-full transition-all"
+                  style={{ width: `${sharePct}%` }}
+                />
+              </div>
+
+              {/* Player count (unique players who bet on this side) */}
+              <div className="flex items-center justify-between w-full text-white/70" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>
+                <span>{playerCount} player{playerCount !== 1 ? "s" : ""}</span>
+                <span>{sharePct}%</span>
+              </div>
             </div>
           </button>
         );

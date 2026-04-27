@@ -95,6 +95,27 @@ export interface CurrentRound {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Live main-bet aggregate counts (for the P/T/B bar)                  */
+/* ------------------------------------------------------------------ */
+
+export interface MainBetBucket {
+  /** Unique players with at least one accepted main bet on this side */
+  players: number;
+  /** Total bet amount on this side this round */
+  amount: number;
+}
+
+export interface MainBetCounts {
+  /** External table id (game.external_game_id) the counts apply to */
+  tableId: string;
+  /** External round id (fight.external_fight_id) the counts apply to */
+  roundId: string;
+  Player: MainBetBucket;
+  Tie: MainBetBucket;
+  Banker: MainBetBucket;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Context shape                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -115,6 +136,7 @@ export interface GameState {
   roundStatus: RoundStatus;
   currentRound: CurrentRound | null;
   roads: Roads;
+  mainBetCounts: MainBetCounts | null;
 
   /* Betting */
   selectedChip: number;
@@ -131,6 +153,7 @@ export interface GameState {
   setRoundStatus: (s: SetStateAction<RoundStatus>) => void;
   setCurrentRound: (r: SetStateAction<CurrentRound | null>) => void;
   setRoads: (r: SetStateAction<Roads>) => void;
+  setMainBetCounts: (c: SetStateAction<MainBetCounts | null>) => void;
   setSelectedChip: (amount: number) => void;
   addPlacedBet: (bet: PlacedBet) => void;
   clearPlacedBets: () => void;
@@ -193,6 +216,7 @@ export function GameProvider({
   const [roundStatus, setRoundStatus] = useState<RoundStatus>("waiting");
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
+  const [mainBetCounts, setMainBetCounts] = useState<MainBetCounts | null>(null);
   const [selectedChip, setSelectedChip] = useState(100);
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
@@ -251,6 +275,7 @@ export function GameProvider({
     roundStatus,
     currentRound,
     roads,
+    mainBetCounts,
     selectedChip,
     placedBets,
     flyingChips,
@@ -261,6 +286,7 @@ export function GameProvider({
     setRoundStatus,
     setCurrentRound,
     setRoads,
+    setMainBetCounts,
     setSelectedChip,
     addPlacedBet,
     clearPlacedBets,

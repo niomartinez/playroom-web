@@ -8,6 +8,7 @@ import {
   type CurrentRound,
   type Roads,
   type RoadEntry,
+  type MainBetCounts,
 } from "./game-context";
 
 /** Max reconnection delay in ms. */
@@ -16,6 +17,7 @@ const MAX_DELAY = 30_000;
 type RoundSetter = (r: SetStateAction<CurrentRound | null>) => void;
 type RoadsSetter = (r: SetStateAction<Roads>) => void;
 type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
+type MainBetCountsSetter = (c: SetStateAction<MainBetCounts | null>) => void;
 
 /**
  * Connects to the lobby WebSocket and keeps GameContext in sync.
@@ -29,13 +31,14 @@ export function useLobbyWs() {
     setRoundStatus,
     setCurrentRound,
     setRoads,
+    setMainBetCounts,
     clearPlacedBets,
     clearStackedChips,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets, clearStackedChips });
-  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, clearPlacedBets, clearStackedChips };
+  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips });
+  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips };
 
   useEffect(() => {
     let mounted = true;
@@ -57,7 +60,7 @@ export function useLobbyWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts);
         } catch {
           // ignore
         }
@@ -106,6 +109,7 @@ function handleMessage(
   placedBets?: { betCode: string; amount: number }[],
   setBalance?: (b: SetStateAction<number>) => void,
   clearStackedChips?: () => void,
+  setMainBetCounts?: MainBetCountsSetter,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -127,6 +131,41 @@ function handleMessage(
         bankerScore: 0,
         winner: undefined,
         countdown: (data.countdown as number) || undefined,
+      });
+      // Zero out the live P/T/B bar at the start of every round. The server
+      // also broadcasts an explicit MainBetCounts(zeros) right after — this
+      // is just defence in depth in case that broadcast is dropped.
+      const tableId = (data.tableId ?? data.table_id ?? "") as string;
+      setMainBetCounts?.({
+        tableId,
+        roundId,
+        Player: { players: 0, amount: 0 },
+        Tie:    { players: 0, amount: 0 },
+        Banker: { players: 0, amount: 0 },
+      });
+      break;
+    }
+
+    case "MainBetCounts":
+    case "main_bet_counts": {
+      const counts = (data.counts ?? {}) as Record<string, { players?: number; amount?: number }>;
+      const tableId = (data.tableId ?? data.table_id ?? "") as string;
+      const roundId = (data.roundId ?? data.round_id ?? "") as string;
+      setMainBetCounts?.({
+        tableId,
+        roundId,
+        Player: {
+          players: Number(counts.Player?.players ?? 0),
+          amount:  Number(counts.Player?.amount  ?? 0),
+        },
+        Tie: {
+          players: Number(counts.Tie?.players ?? 0),
+          amount:  Number(counts.Tie?.amount  ?? 0),
+        },
+        Banker: {
+          players: Number(counts.Banker?.players ?? 0),
+          amount:  Number(counts.Banker?.amount  ?? 0),
+        },
       });
       break;
     }
