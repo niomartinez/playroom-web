@@ -171,11 +171,12 @@ export default function BalanceBar() {
                   borderRadius: "50%",
                   backgroundColor: "transparent",
                   border: "none",
-                  transform: isSelected ? "scale(1.2)" : "scale(1)",
+                  transform: isSelected ? "scale(1.18)" : "scale(1)",
+                  transformOrigin: "center center",
                   transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease",
                   boxShadow: isSelected
-                    ? "0 0 18px rgba(255,255,255,0.55), 0 0 0 3px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.3)"
-                    : "0 2px 4px rgba(0,0,0,0.3)",
+                    ? "0 0 14px rgba(255,255,255,0.55), 0 0 0 2.5px rgba(255,255,255,0.9)"
+                    : "0 1px 3px rgba(0,0,0,0.3)",
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   padding: 0,
                   flexShrink: 0,
@@ -209,7 +210,7 @@ export default function BalanceBar() {
         backgroundColor: "#101828",
         border: "0.8px solid #364153",
         borderRadius: "0.7vw",
-        padding: "0 1vw",
+        padding: "0.6vh 1vw",
       }}
     >
       <div className="flex items-center" style={{ gap: "0.7vw" }}>
@@ -241,16 +242,17 @@ export default function BalanceBar() {
               disabled={isDisabled}
               className="rounded-full flex items-center justify-center"
               style={{
-                width: "clamp(40px, 4.8vh, 64px)",
-                height: "clamp(40px, 4.8vh, 64px)",
+                width: "clamp(40px, 4.4vh, 60px)",
+                height: "clamp(40px, 4.4vh, 60px)",
                 backgroundColor: "transparent",
                 border: "none",
                 padding: 0,
-                transform: isSelected ? "scale(1.2)" : "scale(1)",
+                transform: isSelected ? "scale(1.18)" : "scale(1)",
+                transformOrigin: "center center",
                 transition: "transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease",
                 boxShadow: isSelected
-                  ? "0 0 18px rgba(255,255,255,0.55), 0 0 0 3px rgba(255,255,255,0.9)"
-                  : "0 2px 4px rgba(0,0,0,0.3)",
+                  ? "0 0 14px rgba(255,255,255,0.55), 0 0 0 2.5px rgba(255,255,255,0.9)"
+                  : "0 1px 3px rgba(0,0,0,0.3)",
                 zIndex: isSelected ? 2 : 1,
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 opacity: isDisabled ? 0.4 : 1,
