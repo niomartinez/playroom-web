@@ -26,6 +26,7 @@ type MainBetCountsSetter = (c: SetStateAction<MainBetCounts | null>) => void;
 export function useLobbyWs() {
   const {
     token,
+    gameId,
     setBalance,
     placedBets,
     setRoundStatus,
@@ -37,8 +38,8 @@ export function useLobbyWs() {
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips });
-  settersRef.current = { token, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips };
+  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips });
+  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips };
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +61,15 @@ export function useLobbyWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
+          // Filter table-specific events by the player's table.
+          // The lobby WS is shared across every table; without this filter,
+          // a player on Table 1 would react to Table 2's RoundStarted /
+          // BettingClosed / CardDealt / RoundResult / RoundClosed.
+          const data = (msg.data ?? msg) as Record<string, unknown>;
+          const eventTableId = (data.tableId ?? data.table_id) as string | undefined;
+          if (eventTableId && s.gameId && String(eventTableId) !== String(s.gameId)) {
+            return;
+          }
           handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts);
         } catch {
           // ignore

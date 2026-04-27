@@ -13,6 +13,7 @@ type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
 
 export function useStudioWs() {
   const {
+    tableId,
     setRoundStatus,
     setCurrentRound,
     setRoads,
@@ -20,8 +21,8 @@ export function useStudioWs() {
   } = useStudio();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ setRoundStatus, setCurrentRound, setRoads, setLastUpdated });
-  settersRef.current = { setRoundStatus, setCurrentRound, setRoads, setLastUpdated };
+  const settersRef = useRef({ tableId, setRoundStatus, setCurrentRound, setRoads, setLastUpdated });
+  settersRef.current = { tableId, setRoundStatus, setCurrentRound, setRoads, setLastUpdated };
 
   useEffect(() => {
     let mounted = true;
@@ -43,6 +44,15 @@ export function useStudioWs() {
         try {
           const msg = JSON.parse(event.data);
           const s = settersRef.current;
+          // Filter table-specific events by the studio's current table.
+          // Lobby WS is shared across all tables — without this filter,
+          // a studio on Table 2 would react to Table 1's RoundStarted /
+          // BettingClosed / CardDealt / RoundResult / RoundClosed.
+          const data = (msg.data ?? msg) as Record<string, unknown>;
+          const eventTableId = (data.tableId ?? data.table_id) as string | undefined;
+          if (eventTableId && s.tableId && String(eventTableId) !== String(s.tableId)) {
+            return;
+          }
           handleStudioMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
           const now = new Date();
           s.setLastUpdated(now.toLocaleTimeString("en-US", { hour12: false }));
