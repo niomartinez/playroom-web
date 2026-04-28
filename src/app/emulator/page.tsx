@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { WS_BASE, LOBBY_API_KEY } from "@/lib/ws-config";
+import { WS_BASE } from "@/lib/ws-config";
+import { fetchLobbyTicket } from "@/lib/lobby-ticket";
 
 /* ---------- types ---------- */
 
@@ -159,9 +160,18 @@ export default function EmulatorPage() {
     let retry: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
-    const connect = () => {
+    const connect = async () => {
       if (cancelled) return;
-      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      // F-06: emulator runs inside the studio area (`/emulator/*` is in
+      // the proxy matcher), so the studio_session cookie is present and
+      // the ticket endpoint will accept it.
+      const ticket = await fetchLobbyTicket();
+      if (cancelled) return;
+      if (!ticket) {
+        retry = setTimeout(connect, 2000);
+        return;
+      }
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
       ws = new WebSocket(url);
       ws.onmessage = (event) => {
         try {

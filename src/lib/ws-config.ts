@@ -1,7 +1,5 @@
 /** WebSocket connection configuration. */
 
-import { requireClientEnv } from "./client-env";
-
 const DEFAULT_API = "https://staging-api.playroomgaming.ph";
 const DEFAULT_WS = "wss://staging-api.playroomgaming.ph";
 
@@ -12,12 +10,12 @@ export const WS_BASE =
   API_BASE.replace("https://", "wss://").replace("http://", "ws://") ||
   DEFAULT_WS;
 
-// Operator API key for WebSocket lobby auth. Must be provided via env in any
-// non-development environment — F-02 removed the hardcoded sk_live fallback.
-// F-06 will replace this browser-shipped operator key with per-session lobby
-// tickets; until then, the value still ends up in the client bundle (read-only
-// scope) and the dev fallback is a non-secret placeholder.
-export const LOBBY_API_KEY = requireClientEnv(
-  "NEXT_PUBLIC_API_KEY",
-  "dev-api-key"
-);
+// F-06: LOBBY_API_KEY (the operator's `sk_live_*` key) is no longer
+// shipped to browsers. The `/ws/lobby` connection now authenticates
+// with a short-lived ticket fetched via `POST /api/lobby-ticket`. See
+// `src/lib/lobby-ticket.ts` for the fetch helper and the WS hooks
+// (`use-lobby-ws.ts`, `use-studio-ws.ts`) for the connect flow.
+//
+// The backend still accepts `?api_key=...` as a deprecated fallback
+// for non-browser callers (operator integrations / bridge), but no
+// browser code paths read NEXT_PUBLIC_API_KEY anymore.

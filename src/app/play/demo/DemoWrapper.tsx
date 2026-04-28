@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GameProvider, useGame } from "@/lib/game-context";
-import { useLobbyWs } from "@/lib/use-lobby-ws";
 
 const DEMO_BALANCE = 10000;
 
@@ -13,7 +12,10 @@ interface TestTable {
 }
 
 function DemoConnections({ children }: { children: ReactNode }) {
-  useLobbyWs();
+  // F-06: demo mode has no `prg_session` cookie, so it cannot mint a
+  // lobby ticket. We deliberately skip the WS connection here — the
+  // demo UI is self-contained (local balance, local round state) and
+  // does not require live round events from a real table.
 
   const { setBalance } = useGame();
   const initialized = useRef(false);

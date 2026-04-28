@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useCallback, type SetStateAction } from "react";
-import { WS_BASE, LOBBY_API_KEY } from "./ws-config";
+import { useEffect, useRef, type SetStateAction } from "react";
+import { WS_BASE } from "./ws-config";
+import { fetchLobbyTicket } from "./lobby-ticket";
 import {
   useGame,
   type RoundStatus,
@@ -47,10 +48,27 @@ export function useLobbyWs() {
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    function connect() {
+    async function connect() {
       if (!mounted) return;
 
-      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      // F-06: fetch a fresh single-use ticket on every (re)connect.
+      // The previous ticket is consumed at WS-accept time on the
+      // backend, so we cannot reuse it across reconnects.
+      const ticket = await fetchLobbyTicket();
+      if (!mounted) return;
+      if (!ticket) {
+        // Treat ticket-fetch failure like a closed socket: back off
+        // and try again. The most common cause is a missing/expired
+        // session cookie, in which case the user has bigger problems
+        // than the lobby WS — but we keep retrying so a transient
+        // network blip doesn't permanently kill realtime updates.
+        const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
+        retryCount++;
+        retryTimer = setTimeout(connect, delay);
+        return;
+      }
+
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
       ws = new WebSocket(url);
 
       ws.onopen = () => {

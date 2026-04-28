@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, type SetStateAction } from "react";
-import { WS_BASE, LOBBY_API_KEY } from "./ws-config";
+import { WS_BASE } from "./ws-config";
+import { fetchLobbyTicket } from "./lobby-ticket";
 import { useStudio } from "./studio-context";
 import type { RoundStatus, CurrentRound, Roads, RoadEntry } from "./game-context";
 
@@ -30,10 +31,22 @@ export function useStudioWs() {
     let retryCount = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    function connect() {
+    async function connect() {
       if (!mounted) return;
 
-      const url = `${WS_BASE}/ws/lobby?api_key=${encodeURIComponent(LOBBY_API_KEY)}`;
+      // F-06: fetch a fresh single-use ticket on every (re)connect.
+      // Studio cookie is verified server-side in /api/lobby-ticket;
+      // if the cookie is missing/expired we get null and back off.
+      const ticket = await fetchLobbyTicket();
+      if (!mounted) return;
+      if (!ticket) {
+        const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
+        retryCount++;
+        retryTimer = setTimeout(connect, delay);
+        return;
+      }
+
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
       ws = new WebSocket(url);
 
       ws.onopen = () => {
