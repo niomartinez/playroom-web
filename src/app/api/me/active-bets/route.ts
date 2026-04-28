@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireEnv } from "@/lib/server-env";
+import { PLAYER_SESSION_COOKIE } from "@/lib/player-session";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -9,17 +10,19 @@ const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 /**
  * Proxy for GET /internal/me/active-bets?fight_id=... on the backend.
  *
- * The player's session token is forwarded via the `X-Session-Token` header.
- * The client sends it as a query param (since it already has it in the URL),
- * and we move it into a header for the backend call so the backend resolves
- * the player_id server-side without ever exposing the player UUID to the
- * client.
+ * F-10 follow-up: we no longer accept `session_token` in the query string.
+ * The token is read from the HttpOnly `prg_session` cookie (automatically
+ * sent on same-origin fetches) — this prevents the token from leaking via
+ * Vercel/CF logs, browser history, or a user copying the URL out of devtools.
+ * `X-Session-Token` is still accepted as a fallback so non-cookie callers
+ * (e.g. transitional clients) keep working.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const fightId = searchParams.get("fight_id");
   const sessionToken =
-    searchParams.get("session_token") || req.headers.get("x-session-token");
+    req.cookies.get(PLAYER_SESSION_COOKIE)?.value ||
+    req.headers.get("x-session-token");
 
   if (!fightId) {
     return NextResponse.json(

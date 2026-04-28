@@ -83,11 +83,14 @@ export function useBetting() {
       // (We deliberately do NOT roll back the visual chip stack here; it
       // clears at round end via existing logic, and the user-visible bug was
       // the AMOUNT, not the chip image.)
+      // F-10 follow-up: do NOT send session_token in the body — the
+      // HttpOnly prg_session cookie is automatically sent on this
+      // same-origin fetch, and the /api/bet proxy reads the token from
+      // there. Keeps the token out of any client-visible payload.
       fetch("/api/bet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_token: token,
           fight_id: currentRound?.roundId,
           bet_code: betCode,
           bet_amount: chipAmount,

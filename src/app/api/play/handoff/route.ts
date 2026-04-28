@@ -25,10 +25,25 @@ import {
  * (`/play/demo`) doesn't go through this path.
  *
  * Note: We use `?ret=` to receive the destination (the cleaned-up
- * /play URL with non-token params). Limiting redirects to same-origin
- * paths (must start with "/" + must NOT start with "//") prevents
- * open-redirect abuse.
+ * /play URL with non-token params). The `isSafeRet` helper enforces
+ * same-origin via `URL` parsing — the prefix checks are early rejection
+ * for known protocol-relative / backslash-prefix attacks, and the
+ * `u.origin === origin` compare is the authoritative defense against
+ * any normalization quirks browsers might apply.
  */
+function isSafeRet(ret: string, origin: string): boolean {
+  if (!ret.startsWith("/")) return false;
+  // Reject protocol-relative ("//evil") and backslash-prefixed ("/\\evil")
+  // — some browsers normalize backslashes to forward slashes pre-parse.
+  if (ret.startsWith("//") || ret.startsWith("/\\")) return false;
+  try {
+    const u = new URL(ret, origin);
+    return u.origin === origin;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const token = searchParams.get("token");
@@ -41,7 +56,7 @@ export async function GET(req: NextRequest) {
 
   // Same-origin guard: must be a path on our app, never a full URL or
   // protocol-relative URL (which the browser resolves cross-origin).
-  const safeRet = ret.startsWith("/") && !ret.startsWith("//") ? ret : "/play";
+  const safeRet = isSafeRet(ret, req.nextUrl.origin) ? ret : "/play";
 
   const dest = new URL(safeRet, req.nextUrl.origin);
   const res = NextResponse.redirect(dest, { status: 302 });

@@ -174,10 +174,12 @@ export function useStateRecovery() {
         // markers + bet totals show up again on refresh.
         if (!token) return;
 
+        // F-10 follow-up: do NOT put session_token in the query string —
+        // the HttpOnly prg_session cookie is automatically sent on this
+        // same-origin fetch, so the proxy can resolve the player from it
+        // without leaking the token via logs/history.
         const betsRes = await fetch(
-          `/api/me/active-bets?fight_id=${encodeURIComponent(
-            externalRoundId,
-          )}&session_token=${encodeURIComponent(token)}`,
+          `/api/me/active-bets?fight_id=${encodeURIComponent(externalRoundId)}`,
           { cache: "no-store" },
         );
         if (cancelled || !betsRes.ok) return;
