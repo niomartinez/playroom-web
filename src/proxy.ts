@@ -3,8 +3,12 @@ import { jwtVerify } from "jose";
 
 function getJwtSecret(envVar: string, name: string): Uint8Array {
   const secret = process.env[envVar];
-  if (!secret && process.env.NODE_ENV === "production") {
-    throw new Error(`${envVar} must be set in production`);
+  // Vercel sets NODE_ENV=production for production AND preview deploys, so
+  // gating on non-development covers preview, staging, and prod.
+  if (!secret && process.env.NODE_ENV !== "development") {
+    throw new Error(
+      `${envVar} env var is required in non-development environments`
+    );
   }
   return new TextEncoder().encode(
     secret || `playroom-${name}-secret-change-in-prod`

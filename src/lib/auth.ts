@@ -10,10 +10,27 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 
-const STUDIO_USER = process.env.STUDIO_USERNAME || "admin";
-const STUDIO_PASS = process.env.STUDIO_PASSWORD || "changeme";
+/**
+ * Resolve a required env var. In development, falls back to `devFallback`
+ * so local dev keeps working. In any non-development env (preview, staging,
+ * production — Vercel sets NODE_ENV=production for all of these), throws
+ * loudly at module load if the variable is missing.
+ */
+function requireEnv(name: string, devFallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error(
+      `${name} env var is required in non-development environments`
+    );
+  }
+  return devFallback;
+}
+
+const STUDIO_USER = requireEnv("STUDIO_USERNAME", "admin");
+const STUDIO_PASS = requireEnv("STUDIO_PASSWORD", "changeme");
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.STUDIO_JWT_SECRET || "playroom-studio-secret-change-in-prod"
+  requireEnv("STUDIO_JWT_SECRET", "playroom-studio-secret-change-in-prod")
 );
 const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
   .split(",")

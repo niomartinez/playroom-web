@@ -14,10 +14,15 @@ import { SignJWT, jwtVerify } from "jose";
 const JWT_SECRET = new TextEncoder().encode(
   (() => {
     const secret = process.env.ADMIN_JWT_SECRET;
-    if (!secret && process.env.NODE_ENV === "production") {
-      throw new Error("ADMIN_JWT_SECRET must be set in production");
+    if (secret) return secret;
+    // Vercel sets NODE_ENV=production for production AND preview deploys, so
+    // gating on non-development covers preview, staging, and prod.
+    if (process.env.NODE_ENV !== "development") {
+      throw new Error(
+        "ADMIN_JWT_SECRET env var is required in non-development environments"
+      );
     }
-    return secret || "playroom-admin-secret-change-in-prod";
+    return "playroom-admin-secret-change-in-prod";
   })()
 );
 
