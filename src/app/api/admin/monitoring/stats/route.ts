@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireEnv } from "@/lib/server-env";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://staging-api.playroomgaming.ph";
-const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
+const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 function adminHeaders(req: NextRequest): Record<string, string> {
   const backendToken = req.cookies.get("admin_backend_token")?.value || "";

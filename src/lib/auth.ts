@@ -9,23 +9,7 @@
 
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-
-/**
- * Resolve a required env var. In development, falls back to `devFallback`
- * so local dev keeps working. In any non-development env (preview, staging,
- * production — Vercel sets NODE_ENV=production for all of these), throws
- * loudly at module load if the variable is missing.
- */
-function requireEnv(name: string, devFallback: string): string {
-  const value = process.env[name];
-  if (value) return value;
-  if (process.env.NODE_ENV !== "development") {
-    throw new Error(
-      `${name} env var is required in non-development environments`
-    );
-  }
-  return devFallback;
-}
+import { requireEnv } from "@/lib/server-env";
 
 const STUDIO_USER = requireEnv("STUDIO_USERNAME", "admin");
 const STUDIO_PASS = requireEnv("STUDIO_PASSWORD", "changeme");

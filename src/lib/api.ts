@@ -1,7 +1,9 @@
 /** Backend API client for the Render-hosted Playroom API. */
 
+import { requireEnv } from "@/lib/server-env";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://staging-api.playroomgaming.ph";
-const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
+const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 /** Server-side fetch with service key auth. */
 export async function apiFetch(path: string, init?: RequestInit) {

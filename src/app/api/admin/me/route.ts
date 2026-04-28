@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { requireEnv } from "@/lib/server-env";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://staging-api.playroomgaming.ph";
-const SERVICE_KEY = process.env.API_SERVICE_KEY || "";
+const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get("admin_session")?.value;
