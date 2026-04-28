@@ -165,13 +165,17 @@ export default function EmulatorPage() {
       // F-06: emulator runs inside the studio area (`/emulator/*` is in
       // the proxy matcher), so the studio_session cookie is present and
       // the ticket endpoint will accept it.
-      const ticket = await fetchLobbyTicket();
+      const result = await fetchLobbyTicket();
       if (cancelled) return;
-      if (!ticket) {
+      if ("error" in result) {
+        // Emulator is dev-only; on a 401 the operator just needs to
+        // re-login to /studio. Don't bother with the postMessage signal
+        // (no parent iframe here), just back off and let the studio
+        // shell's session check surface the expiry.
         retry = setTimeout(connect, 2000);
         return;
       }
-      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(result.ticket)}`;
       ws = new WebSocket(url);
       ws.onmessage = (event) => {
         try {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type SetStateAction } from "react";
 import { WS_BASE } from "./ws-config";
-import { fetchLobbyTicket } from "./lobby-ticket";
+import { fetchLobbyTicket, signalSessionExpired } from "./lobby-ticket";
 import {
   useGame,
   type RoundStatus,
@@ -54,21 +54,27 @@ export function useLobbyWs() {
       // F-06: fetch a fresh single-use ticket on every (re)connect.
       // The previous ticket is consumed at WS-accept time on the
       // backend, so we cannot reuse it across reconnects.
-      const ticket = await fetchLobbyTicket();
+      const result = await fetchLobbyTicket();
       if (!mounted) return;
-      if (!ticket) {
-        // Treat ticket-fetch failure like a closed socket: back off
-        // and try again. The most common cause is a missing/expired
-        // session cookie, in which case the user has bigger problems
-        // than the lobby WS — but we keep retrying so a transient
-        // network blip doesn't permanently kill realtime updates.
+      if ("error" in result) {
+        if (result.error === "unauthorized") {
+          // F-06 follow-up (S-5): session cookie expired. Stop
+          // reconnecting forever in the background and surface the
+          // condition so the UI can prompt the player to relaunch
+          // from their operator. Without this we'd silently retry
+          // every 30s for the rest of the tab's life.
+          signalSessionExpired();
+          return;
+        }
+        // Network / 5xx: keep the existing exponential backoff. A
+        // transient blip shouldn't permanently kill realtime updates.
         const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
         retryCount++;
         retryTimer = setTimeout(connect, delay);
         return;
       }
 
-      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(result.ticket)}`;
       ws = new WebSocket(url);
 
       ws.onopen = () => {

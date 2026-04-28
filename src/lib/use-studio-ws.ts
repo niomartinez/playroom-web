@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type SetStateAction } from "react";
 import { WS_BASE } from "./ws-config";
-import { fetchLobbyTicket } from "./lobby-ticket";
+import { fetchLobbyTicket, signalSessionExpired } from "./lobby-ticket";
 import { useStudio } from "./studio-context";
 import type { RoundStatus, CurrentRound, Roads, RoadEntry } from "./game-context";
 
@@ -36,17 +36,25 @@ export function useStudioWs() {
 
       // F-06: fetch a fresh single-use ticket on every (re)connect.
       // Studio cookie is verified server-side in /api/lobby-ticket;
-      // if the cookie is missing/expired we get null and back off.
-      const ticket = await fetchLobbyTicket();
+      // a 401 means the studio session has expired and we should
+      // stop retrying so the operator UI can prompt for a relaunch.
+      const result = await fetchLobbyTicket();
       if (!mounted) return;
-      if (!ticket) {
+      if ("error" in result) {
+        if (result.error === "unauthorized") {
+          // F-06 follow-up (S-5): studio session expired — stop the
+          // forever-retry loop and dispatch the session-expired
+          // signal for the studio shell to react to.
+          signalSessionExpired();
+          return;
+        }
         const delay = Math.min(1000 * 2 ** retryCount, MAX_DELAY);
         retryCount++;
         retryTimer = setTimeout(connect, delay);
         return;
       }
 
-      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(ticket)}`;
+      const url = `${WS_BASE}/ws/lobby?ticket=${encodeURIComponent(result.ticket)}`;
       ws = new WebSocket(url);
 
       ws.onopen = () => {
