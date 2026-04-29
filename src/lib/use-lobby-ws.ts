@@ -10,7 +10,14 @@ import {
   type Roads,
   type RoadEntry,
   type MainBetCounts,
+  type RecentWin,
+  type RecentWinLine,
+  type StackedChip,
+  type FlyingChip,
 } from "./game-context";
+import { betCodeLabel } from "./bet-codes";
+import { dispatchReverseFlyToBalance } from "./chip-fly";
+import { WIN_FLASH_DURATION_MS } from "@/components/player/WinFlash";
 
 /** Max reconnection delay in ms. */
 const MAX_DELAY = 30_000;
@@ -46,11 +53,14 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
     setMainBetCounts,
     clearPlacedBets,
     clearStackedChips,
+    setRecentWin,
+    stackedChips,
+    addFlyingChip,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips });
-  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips };
+  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip });
+  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip };
 
   useEffect(() => {
     let mounted = true;
@@ -112,7 +122,7 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
               (eventTableUuid && String(eventTableUuid) === String(myId));
             if (!matches) return;
           }
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts, s.setRecentWin, () => settersRef.current.stackedChips, s.addFlyingChip);
         } catch {
           // ignore
         }
@@ -186,6 +196,9 @@ function evalDemoSideBets(
   return winners;
 }
 
+/** Module-level so we can clear a pending demo flash if a new round arrives. */
+let _demoFlashTimer: ReturnType<typeof setTimeout> | null = null;
+
 function handleMessage(
   msg: Record<string, unknown>,
   setRoundStatus: StatusSetter,
@@ -197,6 +210,11 @@ function handleMessage(
   setBalance?: (b: SetStateAction<number>) => void,
   clearStackedChips?: () => void,
   setMainBetCounts?: MainBetCountsSetter,
+  setRecentWin?: (w: RecentWin | null) => void,
+  // Stacked chips can change between message receipt and the post-flash
+  // cleanup, so we accept a getter rather than a snapshot value.
+  getStackedChips?: () => Record<string, StackedChip[]>,
+  addFlyingChip?: (chip: Omit<FlyingChip, "id" | "startedAt">) => void,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -335,31 +353,76 @@ function handleMessage(
         });
       }
 
-      // Demo mode settlement — credit winnings to local balance.
-      // Real-wallet settlement (token !== "demo") is driven by the
-      // backend RoundSettled WS event handled in use-balance-ws.ts;
-      // this branch never runs for OCMS-launched players.
+      // Demo mode settlement — credit winnings to local balance + drive
+      // the YOU WON flash + chip-fly-back animation that
+      // use-balance-ws.ts normally drives off the backend RoundSettled
+      // event. Demo has no RoundSettled (no real bets server-side), so
+      // we fan it out locally here. Real-wallet settlement
+      // (token !== "demo") is untouched — this entire branch is gated
+      // on the demo token.
       if (token === "demo" && placedBets && placedBets.length > 0 && setBalance && winner) {
         const playerCards = (playerObj.cards as string[] | undefined) ?? [];
         const bankerCards = (bankerObj.cards as string[] | undefined) ?? [];
         const sideWinners = evalDemoSideBets(playerCards, bankerCards);
         const mainOdds = DEMO_MAIN_ODDS[winner] || {};
-        let totalPayout = 0;
+        // Track per-bet payoff so we can render the win-flash lines.
+        const perBetPayoff: { betCode: string; payoff: number }[] = [];
+        let totalPayoff = 0;
         for (const bet of placedBets) {
-          // Main bet payout (multiplier already includes stake).
+          let payoff = 0;
           const mainMult = mainOdds[bet.betCode];
           if (mainMult !== undefined && mainMult > 0) {
-            totalPayout += bet.amount * mainMult;
-            continue;
+            payoff = bet.amount * mainMult;
+          } else if (sideWinners.has(bet.betCode)) {
+            payoff = bet.amount * (DEMO_SIDE_ODDS[bet.betCode] ?? 0);
           }
-          // Side bet payout when bet code wins independently of P/B/T.
-          if (sideWinners.has(bet.betCode)) {
-            const sideMult = DEMO_SIDE_ODDS[bet.betCode] ?? 0;
-            if (sideMult > 0) totalPayout += bet.amount * sideMult;
+          if (payoff > 0) {
+            totalPayoff += payoff;
+            perBetPayoff.push({ betCode: bet.betCode, payoff });
           }
         }
-        if (totalPayout > 0) {
-          setBalance((prev) => prev + totalPayout);
+
+        if (totalPayoff > 0) {
+          setBalance((prev) => prev + totalPayoff);
+
+          // Trigger the YOU WON flash + reverse-fly only when there are
+          // winners. No-win demo rounds still get the auto-clear via
+          // RoundClosed below.
+          if (setRecentWin) {
+            // Consolidate per bet code (matches use-balance-ws.ts).
+            const grouped = new Map<string, number>();
+            for (const w of perBetPayoff) {
+              grouped.set(w.betCode, (grouped.get(w.betCode) ?? 0) + w.payoff);
+            }
+            const lines: RecentWinLine[] = Array.from(grouped.entries()).map(
+              ([betCode, amount]) => ({
+                label: betCodeLabel(betCode),
+                amount,
+                betCode,
+              }),
+            );
+            const fightId = String((data.roundId ?? data.fightId ?? "") as string);
+            setRecentWin({ fightId, totalPayoff, lines });
+
+            // Schedule cleanup: clear the flash, snapshot stacks, clear
+            // them, fly the snapshot back to the balance area.
+            if (_demoFlashTimer) clearTimeout(_demoFlashTimer);
+            _demoFlashTimer = setTimeout(() => {
+              setRecentWin(null);
+              const stacks = getStackedChips ? getStackedChips() : {};
+              clearStackedChips?.();
+              if (
+                addFlyingChip &&
+                stacks &&
+                Object.keys(stacks).length > 0
+              ) {
+                dispatchReverseFlyToBalance({
+                  stackedChips: stacks,
+                  addFlyingChip,
+                });
+              }
+            }, WIN_FLASH_DURATION_MS);
+          }
         }
       }
       break;
