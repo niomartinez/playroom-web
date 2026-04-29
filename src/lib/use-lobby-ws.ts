@@ -144,12 +144,47 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
 /*  Message handling                                                    */
 /* ------------------------------------------------------------------ */
 
-/** Demo payout odds */
-const DEMO_ODDS: Record<string, Record<string, number>> = {
+/** Demo payout odds for main bets, indexed by winner outcome. */
+const DEMO_MAIN_ODDS: Record<string, Record<string, number>> = {
   P: { BAC_Player: 2, BAC_Tie: 0, BAC_Banker: 0 },
   B: { BAC_Banker: 1.95, BAC_Tie: 0, BAC_Player: 0 },
   T: { BAC_Tie: 9, BAC_Player: 1, BAC_Banker: 1 }, // tie = push on P/B
 };
+
+/** Demo payout multipliers for side bets (stake-multiplier including stake). */
+const DEMO_SIDE_ODDS: Record<string, number> = {
+  BAC_PerfectPair: 26,  // 25:1 + stake = 26x
+  BAC_EitherPair: 6,    // 5:1 + stake = 6x
+  BAC_PlayerPair: 12,   // 11:1 + stake = 12x
+  BAC_BankerPair: 12,   // 11:1 + stake = 12x
+};
+
+/**
+ * Mirrors `app/services/settlement_service.evaluate_side_bets` for demo.
+ * Cards are wire-format strings like "KH" or "TD" (rank + 1-char suit).
+ */
+function evalDemoSideBets(
+  playerCards: string[],
+  bankerCards: string[],
+): Set<string> {
+  const winners = new Set<string>();
+  const rank = (c: string) => (c ? c.slice(0, -1) : "");
+  if (playerCards.length >= 2) {
+    if (rank(playerCards[0]) === rank(playerCards[1])) {
+      winners.add("BAC_PlayerPair");
+      winners.add("BAC_EitherPair");
+    }
+    if (playerCards[0] === playerCards[1]) winners.add("BAC_PerfectPair");
+  }
+  if (bankerCards.length >= 2) {
+    if (rank(bankerCards[0]) === rank(bankerCards[1])) {
+      winners.add("BAC_BankerPair");
+      winners.add("BAC_EitherPair");
+    }
+    if (bankerCards[0] === bankerCards[1]) winners.add("BAC_PerfectPair");
+  }
+  return winners;
+}
 
 function handleMessage(
   msg: Record<string, unknown>,
@@ -300,14 +335,27 @@ function handleMessage(
         });
       }
 
-      // Demo mode settlement — credit winnings to local balance
+      // Demo mode settlement — credit winnings to local balance.
+      // Real-wallet settlement (token !== "demo") is driven by the
+      // backend RoundSettled WS event handled in use-balance-ws.ts;
+      // this branch never runs for OCMS-launched players.
       if (token === "demo" && placedBets && placedBets.length > 0 && setBalance && winner) {
-        const odds = DEMO_ODDS[winner] || {};
+        const playerCards = (playerObj.cards as string[] | undefined) ?? [];
+        const bankerCards = (bankerObj.cards as string[] | undefined) ?? [];
+        const sideWinners = evalDemoSideBets(playerCards, bankerCards);
+        const mainOdds = DEMO_MAIN_ODDS[winner] || {};
         let totalPayout = 0;
         for (const bet of placedBets) {
-          const multiplier = odds[bet.betCode];
-          if (multiplier !== undefined && multiplier > 0) {
-            totalPayout += bet.amount * multiplier;
+          // Main bet payout (multiplier already includes stake).
+          const mainMult = mainOdds[bet.betCode];
+          if (mainMult !== undefined && mainMult > 0) {
+            totalPayout += bet.amount * mainMult;
+            continue;
+          }
+          // Side bet payout when bet code wins independently of P/B/T.
+          if (sideWinners.has(bet.betCode)) {
+            const sideMult = DEMO_SIDE_ODDS[bet.betCode] ?? 0;
+            if (sideMult > 0) totalPayout += bet.amount * sideMult;
           }
         }
         if (totalPayout > 0) {
@@ -319,9 +367,18 @@ function handleMessage(
 
     case "RoundClosed":
     case "round_closed": {
-      // Round fully settled — go back to waiting for next round
+      // Round fully settled — go back to waiting for next round.
       setRoundStatus("waiting");
       clearStackedChips?.();
+      // Demo: clear bets + cards so the "WAITING FOR NEXT ROUND" state
+      // is a clean board. For real wallet, the chip-fly-back animation
+      // driven by RoundSettled (use-balance-ws.ts) clears placedBets,
+      // and the next RoundStarted clears currentRound — don't preempt
+      // either of those flows.
+      if (token === "demo") {
+        clearPlacedBets?.();
+        setCurrentRound(null);
+      }
       break;
     }
 
