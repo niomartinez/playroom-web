@@ -26,19 +26,33 @@ export type LobbyTicketResult =
   | { error: "unauthorized" }
   | { error: "network" };
 
+export interface FetchLobbyTicketOptions {
+  /** Optional table scope. */
+  tableId?: string;
+  /**
+   * Demo mode tickets bypass the cookie auth check and mint a firehose
+   * ticket (no operator scoping). Used by /play/demo where the user has
+   * no real session. Demo only — never set this in operator-launched
+   * player UI.
+   */
+  demo?: boolean;
+}
+
 export async function fetchLobbyTicket(
-  tableId?: string,
+  options: FetchLobbyTicketOptions = {},
 ): Promise<LobbyTicketResult> {
+  const { tableId, demo } = options;
+
+  const body: Record<string, unknown> = {};
+  if (tableId) body.table_id = tableId;
+  if (demo) body.role = "demo";
+
   let res: Response;
   try {
     res = await fetch("/api/lobby-ticket", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Body is optional — backend treats `table_id: undefined` as
-      // "no table scoping". We still POST a JSON body so any future
-      // CSRF middleware that requires `Content-Type: application/json`
-      // doesn't reject the request.
-      body: JSON.stringify(tableId ? { table_id: tableId } : {}),
+      body: JSON.stringify(body),
       // Same-origin: cookie is sent automatically.
       credentials: "same-origin",
       cache: "no-store",

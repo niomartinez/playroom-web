@@ -20,11 +20,21 @@ type RoadsSetter = (r: SetStateAction<Roads>) => void;
 type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
 type MainBetCountsSetter = (c: SetStateAction<MainBetCounts | null>) => void;
 
+export interface UseLobbyWsOptions {
+  /**
+   * Demo mode bypasses cookie auth when minting the lobby ticket.
+   * Used by /play/demo where the user has no real session. Default
+   * false (operator-launched player needs the cookie).
+   */
+  demo?: boolean;
+}
+
 /**
  * Connects to the lobby WebSocket and keeps GameContext in sync.
  * Reconnects automatically with exponential backoff.
  */
-export function useLobbyWs() {
+export function useLobbyWs(options: UseLobbyWsOptions = {}) {
+  const { demo = false } = options;
   const {
     token,
     gameId,
@@ -54,7 +64,7 @@ export function useLobbyWs() {
       // F-06: fetch a fresh single-use ticket on every (re)connect.
       // The previous ticket is consumed at WS-accept time on the
       // backend, so we cannot reuse it across reconnects.
-      const result = await fetchLobbyTicket();
+      const result = await fetchLobbyTicket({ demo });
       if (!mounted) return;
       if ("error" in result) {
         if (result.error === "unauthorized") {

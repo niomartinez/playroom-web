@@ -48,6 +48,13 @@ const STUDIO_COOKIE = "studio_session";
 interface LobbyTicketBody {
   /** Optional: scope the ticket to a specific table (mirrors backend filter). */
   table_id?: string;
+  /**
+   * Optional: explicit role. Today only "demo" is recognized — it
+   * bypasses the cookie auth check so /play/demo (which has no session
+   * cookie) can still mint a firehose ticket. Player + studio paths are
+   * inferred from cookies and ignore this field.
+   */
+  role?: "demo";
 }
 
 export async function POST(req: NextRequest) {
@@ -68,7 +75,17 @@ export async function POST(req: NextRequest) {
   // tied to their actual operator rather than the firehose.
   let backendPayload: Record<string, unknown>;
 
-  if (playerToken) {
+  if (body.role === "demo") {
+    // Demo mode (/play/demo) — no session cookie. Mint a firehose
+    // ticket with no operator scoping so the demo UI receives all
+    // table events. This is intentionally unauthenticated; the
+    // resulting ticket only grants read access to the lobby WS firehose
+    // (no betting, no balance access).
+    backendPayload = {
+      role: "studio",
+      table_id: body.table_id,
+    };
+  } else if (playerToken) {
     backendPayload = {
       session_token: playerToken,
       table_id: body.table_id,
