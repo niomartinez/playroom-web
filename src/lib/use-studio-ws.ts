@@ -71,8 +71,16 @@ export function useStudioWs() {
           // BettingClosed / CardDealt / RoundResult / RoundClosed.
           const data = (msg.data ?? msg) as Record<string, unknown>;
           const eventTableId = (data.tableId ?? data.table_id) as string | undefined;
-          if (eventTableId && s.tableId && String(eventTableId) !== String(s.tableId)) {
-            return;
+          const eventTableUuid = (data.tableUuid ?? data.table_uuid) as string | undefined;
+          const myId = s.tableId;
+          if (myId && (eventTableId || eventTableUuid)) {
+            // Backend emits both forms (external_game_id + UUID) so we accept on
+            // either match. The studio context stores UUID; the player context
+            // can store external_game_id depending on launch path.
+            const matches =
+              (eventTableId && String(eventTableId) === String(myId)) ||
+              (eventTableUuid && String(eventTableUuid) === String(myId));
+            if (!matches) return;
           }
           handleStudioMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
           const now = new Date();
