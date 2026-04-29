@@ -194,6 +194,7 @@ export interface GameState {
   addPlacedBet: (bet: PlacedBet) => void;
   removePlacedBet: (id: string) => void;
   clearPlacedBets: () => void;
+  cancelPlacedBets: () => void;
   addFlyingChip: (chip: Omit<FlyingChip, "id" | "startedAt">) => void;
   removeFlyingChip: (id: string) => void;
   addStackedChip: (betCode: BetCode, denom: number) => void;
@@ -273,6 +274,39 @@ export function GameProvider({
     setPlacedBets([]);
   }, []);
 
+  /**
+   * User-initiated cancel during the betting phase (the CLEAR BETS
+   * pill on the BalanceBar). Distinct from `clearPlacedBets` which is
+   * used by post-round cleanup hooks (no refund there — settlement
+   * already happened).
+   *
+   * Demo: refunds the local balance for the cancelled bets and clears
+   * the visual chip stacks so the buttons go back to empty.
+   *
+   * Real wallet: only clears local arrays. The backend has already
+   * debited via /internal/bet, so a true cancel needs a void-pending
+   * endpoint (TODO). Settlement will still fire on those bets and
+   * credit/debit normally; the user just won't see them locally
+   * until the next refresh.
+   */
+  const cancelPlacedBets = useCallback(() => {
+    if (token === "demo") {
+      setPlacedBets((current) => {
+        if (current.length > 0) {
+          const refund = current.reduce((sum, b) => sum + b.amount, 0);
+          if (refund > 0) {
+            setBalance((b) => b + refund);
+          }
+          setStackedChips({});
+        }
+        return [];
+      });
+    } else {
+      setPlacedBets([]);
+      setStackedChips({});
+    }
+  }, [token]);
+
   const addFlyingChip = useCallback(
     (chip: Omit<FlyingChip, "id" | "startedAt">) => {
       const id =
@@ -335,6 +369,7 @@ export function GameProvider({
     addPlacedBet,
     removePlacedBet,
     clearPlacedBets,
+    cancelPlacedBets,
     addFlyingChip,
     removeFlyingChip,
     addStackedChip,

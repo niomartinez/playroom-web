@@ -50,7 +50,7 @@ const BET_PANEL_STYLES = `
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
   const { live_chat_enabled } = useFeatures();
-  const { roundStatus, placedBets, clearPlacedBets } = useGame();
+  const { roundStatus, placedBets, cancelPlacedBets } = useGame();
   const [showTips, setShowTips] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
@@ -132,7 +132,7 @@ export default function PlayerLayout() {
           {/* Clear bets — only when betting is open */}
           {isBettingOpen && (
             <button
-              onClick={clearPlacedBets}
+              onClick={cancelPlacedBets}
               disabled={!hasPlacedBets}
               style={{
                 alignSelf: "flex-end",

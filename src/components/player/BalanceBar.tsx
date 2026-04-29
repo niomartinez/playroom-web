@@ -87,7 +87,7 @@ function useDisplayBalance(target: number): number {
 }
 
 export default function BalanceBar() {
-  const { balance, selectedChip, setSelectedChip, roundStatus, placedBets, clearPlacedBets } = useGame();
+  const { balance, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets } = useGame();
   const isMobile = useIsMobile();
   const displayBalance = useDisplayBalance(balance);
   const isBettingOpen = roundStatus === "betting_open";
@@ -263,7 +263,7 @@ export default function BalanceBar() {
           balance / chip flex layout. */}
       {isBettingOpen && (
         <button
-          onClick={clearPlacedBets}
+          onClick={cancelPlacedBets}
           disabled={!hasPlacedBets}
           style={{
             position: "absolute",
