@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, type JWTPayload } from "jose";
 
 function getJwtSecret(envVar: string, name: string): Uint8Array {
   const secret = process.env[envVar];
@@ -21,6 +21,32 @@ const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
   .split(",")
   .map((ip) => ip.trim())
   .filter(Boolean);
+
+/**
+ * F-08 Phase B dual-verify: studio cookies issued AFTER the cutover are
+ * signed with ADMIN_JWT_SECRET (backend-issued JWT carrying admin_id +
+ * role). Cookies issued BEFORE the cutover are signed with the legacy
+ * STUDIO_JWT_SECRET. We try the new secret first, fall back to legacy.
+ *
+ * TODO: F-08 burn-down — remove the STUDIO_JWT_SECRET branch after
+ * ~2026-05-07 (7 days post-deploy).
+ */
+async function verifyStudioCookie(
+  token: string,
+): Promise<{ payload: JWTPayload } | null> {
+  try {
+    const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET);
+    return { payload };
+  } catch {
+    // Fall through to legacy verifier.
+  }
+  try {
+    const { payload } = await jwtVerify(token, STUDIO_JWT_SECRET);
+    return { payload };
+  } catch {
+    return null;
+  }
+}
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -86,18 +112,35 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // Session check
+  // Session check (dual-verify: backend JWT first, legacy fallback).
   const token = req.cookies.get("studio_session")?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/studio/login", req.url));
   }
 
-  try {
-    await jwtVerify(token, STUDIO_JWT_SECRET);
-    return NextResponse.next();
-  } catch {
+  const verified = await verifyStudioCookie(token);
+  if (!verified) {
     return NextResponse.redirect(new URL("/studio/login", req.url));
   }
+
+  // Stamp dealer identity into the forwarded request headers so downstream
+  // route handlers + RSCs can attribute studio actions without re-verifying
+  // the JWT. Backend-issued JWTs carry `admin_id` + `role`; legacy cookies
+  // only have `role: "studio"` so dealer-id falls back to "legacy".
+  const adminId =
+    typeof verified.payload.admin_id === "string"
+      ? verified.payload.admin_id
+      : typeof verified.payload.sub === "string"
+        ? verified.payload.sub
+        : "legacy";
+  const role =
+    typeof verified.payload.role === "string" ? verified.payload.role : "studio";
+
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-dealer-id", adminId);
+  requestHeaders.set("x-dealer-role", role);
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

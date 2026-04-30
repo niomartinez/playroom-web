@@ -12,12 +12,18 @@ export async function PATCH(
 ) {
   const { tableId } = await params;
   const body = await req.json();
+  // F-08: forward the studio cookie as X-Studio-Token (optional on
+  // backend).
+  const studioToken = req.cookies.get("studio_session")?.value;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Service-Key": SERVICE_KEY,
+  };
+  if (studioToken) headers["X-Studio-Token"] = studioToken;
+
   const res = await fetch(`${API_URL}/internal/table/${tableId}`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Service-Key": SERVICE_KEY,
-    },
+    headers,
     body: JSON.stringify(body),
   });
   const data = await res.json();

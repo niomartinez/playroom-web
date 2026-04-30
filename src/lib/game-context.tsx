@@ -283,11 +283,11 @@ export function GameProvider({
    * Demo: refunds the local balance for the cancelled bets and clears
    * the visual chip stacks so the buttons go back to empty.
    *
-   * Real wallet: only clears local arrays. The backend has already
-   * debited via /internal/bet, so a true cancel needs a void-pending
-   * endpoint (TODO). Settlement will still fire on those bets and
-   * credit/debit normally; the user just won't see them locally
-   * until the next refresh.
+   * Real wallet: calls /api/bet/void to ask the backend to refund
+   * optimistically-debited bets on the active fight (transfer-mode
+   * does an atomic SQL refund; seamless-mode issues per-bet wallet
+   * /cancel calls). UI clears optimistically; on server failure the
+   * placed-bets array is restored so the player can retry.
    */
   const cancelPlacedBets = useCallback(() => {
     if (token === "demo") {
@@ -302,10 +302,41 @@ export function GameProvider({
         return [];
       });
     } else {
+      // Real wallet: ask backend to void all accepted bets on the active
+      // fight, refund through the wallet (transfer or seamless cancel).
+      const fightId = currentRound?.roundId;
+      if (!fightId) {
+        // No active round — nothing to void server-side; just clear local UI.
+        setPlacedBets([]);
+        setStackedChips({});
+        return;
+      }
+      const snapshot = placedBets;
+      // Optimistic clear so the UI feels instant.
       setPlacedBets([]);
       setStackedChips({});
+      fetch("/api/bet/void", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fight_id: String(fightId) }),
+      })
+        .then(async (r) => {
+          if (!r.ok) {
+            // Server didn't void — restore the placed-bets array so the
+            // user can see + retry. (Stack chips not restored — UX
+            // trade-off.)
+            setPlacedBets(snapshot);
+            return;
+          }
+          const data = await r.json();
+          const balanceAfter = data?.data?.balance_after;
+          if (typeof balanceAfter === "number") {
+            setBalance(balanceAfter);
+          }
+        })
+        .catch(() => setPlacedBets(snapshot));
     }
-  }, [token]);
+  }, [token, currentRound, placedBets, setBalance, setPlacedBets, setStackedChips]);
 
   const addFlyingChip = useCallback(
     (chip: Omit<FlyingChip, "id" | "startedAt">) => {

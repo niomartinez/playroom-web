@@ -24,24 +24,49 @@ const API_BASE =
 const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 // Studio cookie verification mirrors `src/proxy.ts` — same cookie name,
-// same JWT secret. We re-verify here (rather than trust that the proxy
-// already did) because:
+// dual-secret verify (F-08 Phase B). We re-verify here (rather than
+// trust that the proxy already did) because:
 //   1. /api/* routes are NOT in the proxy's `matcher`, so requests to
 //      /api/lobby-ticket bypass it entirely; a hostile client could
 //      forge a `studio_session` cookie if we didn't check.
 //   2. defense in depth: a future proxy refactor can't accidentally
 //      expose this route by widening the matcher.
-const STUDIO_JWT_SECRET = (() => {
-  const secret = process.env.STUDIO_JWT_SECRET;
+//
+// TODO: F-08 burn-down — drop the STUDIO_JWT_SECRET branch after
+// ~2026-05-07 (7 days post-deploy).
+function loadJwtSecret(envVar: string, fallback: string): Uint8Array {
+  const secret = process.env[envVar];
   if (!secret && process.env.NODE_ENV !== "development") {
     throw new Error(
-      "STUDIO_JWT_SECRET env var is required in non-development environments",
+      `${envVar} env var is required in non-development environments`,
     );
   }
-  return new TextEncoder().encode(
-    secret || "playroom-studio-secret-change-in-prod",
-  );
-})();
+  return new TextEncoder().encode(secret || fallback);
+}
+
+const STUDIO_JWT_SECRET = loadJwtSecret(
+  "STUDIO_JWT_SECRET",
+  "playroom-studio-secret-change-in-prod",
+);
+const ADMIN_JWT_SECRET = loadJwtSecret(
+  "ADMIN_JWT_SECRET",
+  "playroom-admin-secret-change-in-prod",
+);
+
+async function verifyStudioCookie(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, ADMIN_JWT_SECRET);
+    return true;
+  } catch {
+    // Fall through to legacy verifier.
+  }
+  try {
+    await jwtVerify(token, STUDIO_JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const STUDIO_COOKIE = "studio_session";
 
@@ -91,15 +116,9 @@ export async function POST(req: NextRequest) {
       table_id: body.table_id,
     };
   } else if (studioToken) {
-    // Verify the studio cookie before forwarding. If the JWT is invalid
-    // or expired, fall through to the 401 below.
-    let studioOk = false;
-    try {
-      await jwtVerify(studioToken, STUDIO_JWT_SECRET);
-      studioOk = true;
-    } catch {
-      studioOk = false;
-    }
+    // Verify the studio cookie (dual-secret) before forwarding. If
+    // neither verifier accepts it, fall through to 401.
+    const studioOk = await verifyStudioCookie(studioToken);
     if (!studioOk) {
       return NextResponse.json(
         { error_code: "1002", message: "Invalid or expired studio session" },
