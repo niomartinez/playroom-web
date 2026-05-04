@@ -74,12 +74,16 @@ interface LobbyTicketBody {
   /** Optional: scope the ticket to a specific table (mirrors backend filter). */
   table_id?: string;
   /**
-   * Optional: explicit role. Today only "demo" is recognized — it
-   * bypasses the cookie auth check so /play/demo (which has no session
-   * cookie) can still mint a firehose ticket. Player + studio paths are
-   * inferred from cookies and ignore this field.
+   * Optional explicit role.
+   *   - "demo": bypass cookie auth, mint a firehose (used by /play/demo).
+   *   - "player": only consider the player cookie. If absent, return 401.
+   *     Prevents a stale top-level studio_session from being consumed
+   *     inside a player iframe.
+   *   - "studio": only consider the studio cookie. Symmetric for safety.
+   *   - omitted: legacy auto-detect (player cookie wins, falls through
+   *     to studio). Kept for back-compat; new callers should be explicit.
    */
-  role?: "demo";
+  role?: "demo" | "player" | "studio";
 }
 
 export async function POST(req: NextRequest) {
@@ -110,14 +114,39 @@ export async function POST(req: NextRequest) {
       role: "studio",
       table_id: body.table_id,
     };
+  } else if (body.role === "player") {
+    // Strict player path: never fall through to studio cookie. If a
+    // stale top-level studio_session is sitting in the same browser
+    // it must NOT be consumed inside the player iframe.
+    if (!playerToken) {
+      return NextResponse.json(
+        { error_code: "1001", message: "Missing player session" },
+        { status: 401 },
+      );
+    }
+    backendPayload = {
+      session_token: playerToken,
+      table_id: body.table_id,
+    };
+  } else if (body.role === "studio") {
+    // Strict studio path.
+    if (!studioToken || !(await verifyStudioCookie(studioToken))) {
+      return NextResponse.json(
+        { error_code: "1002", message: "Invalid or expired studio session" },
+        { status: 401 },
+      );
+    }
+    backendPayload = {
+      role: "studio",
+      table_id: body.table_id,
+    };
   } else if (playerToken) {
+    // Legacy auto-detect (no explicit role): player cookie wins.
     backendPayload = {
       session_token: playerToken,
       table_id: body.table_id,
     };
   } else if (studioToken) {
-    // Verify the studio cookie (dual-secret) before forwarding. If
-    // neither verifier accepts it, fall through to 401.
     const studioOk = await verifyStudioCookie(studioToken);
     if (!studioOk) {
       return NextResponse.json(

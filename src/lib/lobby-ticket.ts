@@ -36,16 +36,26 @@ export interface FetchLobbyTicketOptions {
    * player UI.
    */
   demo?: boolean;
+  /**
+   * Explicit caller identity. When set to "player", the proxy will only
+   * use the player session cookie and refuse to fall through to the
+   * studio cookie. Prevents a stale top-level studio_session in the
+   * same browser from being consumed inside a player iframe (which
+   * would mint an unscoped firehose ticket and break event delivery).
+   * "studio" is symmetric.
+   */
+  role?: "player" | "studio";
 }
 
 export async function fetchLobbyTicket(
   options: FetchLobbyTicketOptions = {},
 ): Promise<LobbyTicketResult> {
-  const { tableId, demo } = options;
+  const { tableId, demo, role } = options;
 
   const body: Record<string, unknown> = {};
   if (tableId) body.table_id = tableId;
   if (demo) body.role = "demo";
+  else if (role) body.role = role;
 
   let res: Response;
   try {

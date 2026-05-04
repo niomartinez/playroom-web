@@ -74,7 +74,14 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
       // F-06: fetch a fresh single-use ticket on every (re)connect.
       // The previous ticket is consumed at WS-accept time on the
       // backend, so we cannot reuse it across reconnects.
-      const result = await fetchLobbyTicket({ demo });
+      // Explicit role="player" so the proxy never falls through to the
+      // studio cookie if a stale top-level studio session happens to
+      // be sitting in the same browser (would mint an unscoped firehose
+      // and break event delivery in the iframe).
+      const result = await fetchLobbyTicket({
+        demo,
+        role: demo ? undefined : "player",
+      });
       if (!mounted) return;
       if ("error" in result) {
         if (result.error === "unauthorized") {
