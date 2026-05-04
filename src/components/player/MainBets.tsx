@@ -165,48 +165,78 @@ export default function MainBets() {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
+                  justifyContent: "space-between",
                   width: "100%",
                   height: "100%",
-                  padding: "12px 8px",
+                  padding: "14px 10px",
                   boxSizing: "border-box",
-                  gap: 4,
                 }}
               >
-                {/* Bet name abbreviation */}
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>
+                {/* Bet name abbreviation — dominant element */}
+                <span
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 800,
+                    color: "#fff",
+                    lineHeight: 1,
+                    letterSpacing: 0.5,
+                    textShadow: "0 1px 4px rgba(0,0,0,0.35)",
+                  }}
+                >
                   {bet.abbrev}
                 </span>
 
-                {/* People icon + live unique-player count for this side */}
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <img
-                    src="/mobile-assets/people-icon.svg"
-                    alt=""
-                    style={{ width: 14, height: 14 }}
-                  />
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#fff" }}>
-                    {playerCount}
-                  </span>
-                </div>
-
-                {/* Total bet amount on this side this round */}
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>
+                {/* Total bet amount across all players — second most important */}
+                <span
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "#fff",
+                    lineHeight: 1,
+                    letterSpacing: 0.2,
+                  }}
+                >
                   {totalAmount > 0 ? formatCompact(totalAmount) : "$0"}
                 </span>
 
-                {/* Share of total players (Player+Tie+Banker) */}
-                <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>
-                  {sharePct}%
-                </span>
+                {/* Stats row: people icon + count, then share % */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <img
+                      src="/mobile-assets/people-icon.svg"
+                      alt=""
+                      style={{ width: 13, height: 13 }}
+                    />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>
+                      {playerCount}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "rgba(255,255,255,0.85)",
+                    }}
+                  >
+                    {sharePct}%
+                  </span>
+                </div>
 
                 {/* Progress bar reflects share of total players */}
                 <div
                   style={{
                     width: "100%",
-                    height: 8,
+                    height: 6,
                     borderRadius: 100,
-                    backgroundColor: "rgba(255,255,255,0.2)",
+                    backgroundColor: "rgba(255,255,255,0.22)",
                     overflow: "hidden",
                   }}
                 >

@@ -98,8 +98,8 @@ export default function SideBets() {
                 alignItems: "center",
                 justifyContent: "center",
                 textAlign: "center",
-                width: 85,
-                height: 79,
+                width: "100%",
+                minHeight: 84,
                 borderRadius: 14,
                 border: hasBet
                   ? "2px solid rgba(255,255,255,0.8)"
@@ -108,7 +108,9 @@ export default function SideBets() {
                 cursor: disabled ? "not-allowed" : "pointer",
                 opacity: disabled ? 0.5 : 1,
                 overflow: "hidden",
-                padding: 0,
+                padding: "8px 6px",
+                WebkitTapHighlightColor: "transparent",
+                boxSizing: "border-box",
               }}
             >
               <BetStackedChips betCode={bet.betCode} size={22} />
@@ -126,23 +128,35 @@ export default function SideBets() {
                   pointerEvents: "none",
                 }}
               />
-              <div style={{ position: "relative", zIndex: 1 }}>
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 2,
+                  width: "100%",
+                }}
+              >
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: 700,
                     color: "#fff",
-                    lineHeight: 1.2,
+                    lineHeight: 1.15,
+                    letterSpacing: 0.2,
                   }}
                 >
                   {bet.name}
                 </div>
                 <div
                   style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "rgba(255,255,255,0.9)",
-                    lineHeight: 1.3,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.85)",
+                    lineHeight: 1.1,
                   }}
                 >
                   {bet.odds}
@@ -151,11 +165,13 @@ export default function SideBets() {
                   <div
                     style={{
                       fontSize: 9,
-                      color: "rgba(255,255,255,0.7)",
-                      marginTop: 2,
+                      fontWeight: 600,
+                      color: "rgba(255,255,255,0.75)",
+                      marginTop: 1,
+                      letterSpacing: 0.3,
                     }}
                   >
-                    Bet placed
+                    PLACED
                   </div>
                 )}
               </div>
