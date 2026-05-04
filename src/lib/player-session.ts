@@ -28,15 +28,22 @@ export const PLAYER_SESSION_MAX_AGE_SECONDS = 4 * 60 * 60;
  *
  * - httpOnly: client JS can't read it — defense vs XSS exfil.
  * - secure: HTTPS only — staging + prod both run behind Cloudflare TLS.
- * - sameSite "lax": allows top-level iframe load + normal navigation,
- *   blocks cross-site POSTs (CSRF). The OCMS iframe is same-origin to
- *   our app domain when launched via /play, so this is fine.
+ * - sameSite "none" + partitioned: required for our cross-site iframe
+ *   embed (operator pages like OCMS at gamespv2.gpms365.net iframe
+ *   us at staging-app.playroomgaming.ph). Chrome's third-party cookie
+ *   phaseout (2024+) blocks SameSite=Lax cookies set inside a third-
+ *   party iframe; the cookie either never persists or is silently
+ *   dropped on subsequent fetches. CHIPS (Partitioned cookies) stores
+ *   the cookie per (top-level site, embedded site) pair so a session
+ *   in OCMS A doesn't bleed into OCMS B — same pattern Stripe / Auth0
+ *   / Shopify use for embedded auth.
  * - path "/": cookie is needed by every player-side route + API proxy.
  */
 export const PLAYER_SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: true,
-  sameSite: "lax" as const,
+  sameSite: "none" as const,
+  partitioned: true,
   path: "/",
   maxAge: PLAYER_SESSION_MAX_AGE_SECONDS,
 };
