@@ -83,7 +83,29 @@ export function useBalanceWs() {
               ? data.balance
               : null;
         if (balance !== null) {
-          s.setBalance(balance);
+          // Avoid the "upward flicker" when the player rapid-fires bets:
+          // each placeBet does an optimistic local debit, but the server
+          // confirmations arrive one at a time. A WS push for bet 1's
+          // post-debit balance would otherwise overwrite the local state
+          // that has ALREADY optimistically debited bets 2 and 3, causing
+          // the displayed balance to jump back up before crawling down.
+          //
+          // For known credit-direction reasons we always apply (source of
+          // truth for wins / refunds). For "debit" or unknown, take the
+          // MIN — never accept an upward jump that would lose pending
+          // optimistic state.
+          const reason = (msg.reason ?? data.reason) as string | undefined;
+          const isCreditLike =
+            reason === "credit" ||
+            reason === "settlement" ||
+            reason === "void_refund" ||
+            reason === "transfer_deposit" ||
+            reason === "transfer_withdraw";
+          if (isCreditLike) {
+            s.setBalance(balance);
+          } else {
+            s.setBalance((current) => Math.min(current, balance));
+          }
           sendToParent("balanceUpdate", { balance });
         }
 

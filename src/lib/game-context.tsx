@@ -312,9 +312,16 @@ export function GameProvider({
         return;
       }
       const snapshot = placedBets;
-      // Optimistic clear so the UI feels instant.
+      const refundAmount = snapshot.reduce((sum, b) => sum + b.amount, 0);
+      // Optimistic clear + refund so the UI feels instant. The WS
+      // BalanceUpdate from the server will arrive shortly with the
+      // canonical post-void balance and reconcile (use-balance-ws
+      // accepts credit-direction updates without conflict).
       setPlacedBets([]);
       setStackedChips({});
+      if (refundAmount > 0) {
+        setBalance((b) => b + refundAmount);
+      }
       console.info("[cancelPlacedBets] POST /api/bet/void", { fight_id: fightId });
       fetch("/api/bet/void", {
         method: "POST",
@@ -328,23 +335,26 @@ export function GameProvider({
           if (!r.ok) {
             // If the round already moved past betting (status: dealing/result),
             // the bets are still live and will settle normally — restoring the
-            // snapshot is the correct UX so the user sees their stake.
+            // snapshot AND undoing the optimistic refund is the correct UX
+            // so the user sees their stake and accurate pre-settlement balance.
             if (data?.error_code === "1007") {
               setPlacedBets(snapshot);
-              setStackedChips({});
+              if (refundAmount > 0) setBalance((b) => b - refundAmount);
               return;
             }
-            // Other failures (auth, network, etc.): also restore so the
-            // user can retry. Surface the error so it shows up in DevTools
-            // console for diagnosis.
             console.error(
               "[cancelPlacedBets] void failed",
               r.status,
               data?.message || data?.error || "(no message)",
             );
             setPlacedBets(snapshot);
+            if (refundAmount > 0) setBalance((b) => b - refundAmount);
             return;
           }
+          // Success: server response carries the canonical balance.
+          // Apply it directly to override any drift between optimistic
+          // local and server-side reality. The WS will also push the
+          // same number, but applying here is faster.
           const balanceAfter = data?.data?.balance_after;
           if (typeof balanceAfter === "number") {
             setBalance(balanceAfter);
@@ -353,6 +363,7 @@ export function GameProvider({
         .catch((err) => {
           console.error("[cancelPlacedBets] fetch threw", err);
           setPlacedBets(snapshot);
+          if (refundAmount > 0) setBalance((b) => b - refundAmount);
         });
     }
   }, [token, currentRound, placedBets, setBalance, setPlacedBets, setStackedChips]);
