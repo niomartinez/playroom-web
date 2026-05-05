@@ -315,26 +315,45 @@ export function GameProvider({
       // Optimistic clear so the UI feels instant.
       setPlacedBets([]);
       setStackedChips({});
+      console.info("[cancelPlacedBets] POST /api/bet/void", { fight_id: fightId });
       fetch("/api/bet/void", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fight_id: String(fightId) }),
+        credentials: "same-origin",
       })
         .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          console.info("[cancelPlacedBets] response", r.status, data);
           if (!r.ok) {
-            // Server didn't void — restore the placed-bets array so the
-            // user can see + retry. (Stack chips not restored — UX
-            // trade-off.)
+            // If the round already moved past betting (status: dealing/result),
+            // the bets are still live and will settle normally — restoring the
+            // snapshot is the correct UX so the user sees their stake.
+            if (data?.error_code === "1007") {
+              setPlacedBets(snapshot);
+              setStackedChips({});
+              return;
+            }
+            // Other failures (auth, network, etc.): also restore so the
+            // user can retry. Surface the error so it shows up in DevTools
+            // console for diagnosis.
+            console.error(
+              "[cancelPlacedBets] void failed",
+              r.status,
+              data?.message || data?.error || "(no message)",
+            );
             setPlacedBets(snapshot);
             return;
           }
-          const data = await r.json();
           const balanceAfter = data?.data?.balance_after;
           if (typeof balanceAfter === "number") {
             setBalance(balanceAfter);
           }
         })
-        .catch(() => setPlacedBets(snapshot));
+        .catch((err) => {
+          console.error("[cancelPlacedBets] fetch threw", err);
+          setPlacedBets(snapshot);
+        });
     }
   }, [token, currentRound, placedBets, setBalance, setPlacedBets, setStackedChips]);
 
