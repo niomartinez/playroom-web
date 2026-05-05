@@ -38,13 +38,33 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    const data = await res.json().catch(() => ({}));
+    const rawBody = await res.text();
+    let data: Record<string, unknown> = {};
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      // body wasn't JSON (likely an upstream HTML error page from Render
+      // /Cloudflare); leave data as {} and surface the raw text.
+    }
 
     if (!res.ok) {
+      console.error(
+        "[/api/bet/void] backend non-OK",
+        res.status,
+        rawBody.slice(0, 500),
+      );
       return NextResponse.json(
         {
           error_code: "PROXY_ERROR",
-          message: data.detail || data.message || data.error || "Void failed",
+          message:
+            (typeof data.message === "string" && data.message) ||
+            (typeof data.error === "string" && data.error) ||
+            (typeof data.detail === "string" && data.detail) ||
+            (Array.isArray(data.detail)
+              ? JSON.stringify(data.detail)
+              : null) ||
+            `Backend ${res.status}: ${rawBody.slice(0, 200) || "(empty body)"}`,
+          backend_status: res.status,
         },
         { status: res.status },
       );
