@@ -198,6 +198,13 @@ export interface GameState {
   addFlyingChip: (chip: Omit<FlyingChip, "id" | "startedAt">) => void;
   removeFlyingChip: (id: string) => void;
   addStackedChip: (betCode: BetCode, denom: number) => void;
+  /**
+   * Pop the most-recently-added stacked chip for a bet code. Used when
+   * a server rejection rolls back an optimistic bet — the chip-fly
+   * animation already landed a stacked chip on the button, but the bet
+   * itself didn't go through, so we remove the visible chip too.
+   */
+  popStackedChip: (betCode: BetCode) => void;
   clearStackedChips: () => void;
   setRecentWin: (w: RecentWin | null) => void;
 }
@@ -397,6 +404,21 @@ export function GameProvider({
     }));
   }, []);
 
+  const popStackedChip = useCallback((betCode: BetCode) => {
+    setStackedChips((prev) => {
+      const stack = prev[betCode];
+      if (!stack || stack.length === 0) return prev;
+      const next = stack.slice(0, -1);
+      const out = { ...prev };
+      if (next.length === 0) {
+        delete out[betCode];
+      } else {
+        out[betCode] = next;
+      }
+      return out;
+    });
+  }, []);
+
   const clearStackedChips = useCallback(() => {
     setStackedChips({});
   }, []);
@@ -434,6 +456,7 @@ export function GameProvider({
     addFlyingChip,
     removeFlyingChip,
     addStackedChip,
+    popStackedChip,
     clearStackedChips,
     setRecentWin,
   };

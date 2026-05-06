@@ -19,6 +19,7 @@ export function useBetting() {
     addPlacedBet,
     removePlacedBet,
     setBalance,
+    popStackedChip,
   } = useGame();
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -75,6 +76,11 @@ export function useBetting() {
         // Functional setter avoids stale-closure double-counting when the
         // user spams bets faster than React commits.
         setBalance((b) => b + chipAmount);
+        // Also pop the visible chip stack — the chip-fly animation already
+        // landed a marker on the bet button, but the bet itself didn't
+        // make it server-side, so the visible chip would otherwise be a
+        // ghost. Pops the most-recently-added chip for this bet code.
+        popStackedChip(betCode);
       };
 
       // Fire-and-forget — UI doesn't block on the network round-trip.
@@ -108,7 +114,7 @@ export function useBetting() {
 
       return { success: true };
     },
-    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
   );
 
   const totalBet = placedBets.reduce((sum, b) => sum + b.amount, 0);

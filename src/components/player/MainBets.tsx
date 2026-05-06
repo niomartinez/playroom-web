@@ -264,7 +264,11 @@ export default function MainBets() {
       {BETS.map((bet) => {
         const myBets = placedBets.filter((b) => b.betCode === bet.betCode);
         const myTotal = myBets.reduce((sum, b) => sum + b.amount, 0);
-        const disabled = !isBettingOpen;
+        // Match mobile: disable opposing-side button (PLAYER vs BANKER are
+        // mutually exclusive). Without this the click goes through, the
+        // chip-fly animation fires, then the server rejects with
+        // opposing_bet_exists — leaving a ghost chip on the button.
+        const disabled = !isBettingOpen || isOpposingBlocked(bet.betCode);
 
         // Live aggregate across all players (falls back to local bets in demo).
         const key = COUNTS_KEY[bet.betCode];
