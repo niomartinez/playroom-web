@@ -86,25 +86,22 @@ export function useBalanceWs() {
           // Avoid the "upward flicker" when the player rapid-fires bets:
           // each placeBet does an optimistic local debit, but the server
           // confirmations arrive one at a time. A WS push for bet 1's
-          // post-debit balance would otherwise overwrite the local state
-          // that has ALREADY optimistically debited bets 2 and 3, causing
-          // the displayed balance to jump back up before crawling down.
+          // post-debit balance would otherwise overwrite local state
+          // that has already optimistically debited bets 2 and 3, causing
+          // the displayed balance to jump up before crawling back down.
           //
-          // For known credit-direction reasons we always apply (source of
-          // truth for wins / refunds). For "debit" or unknown, take the
-          // MIN — never accept an upward jump that would lose pending
-          // optimistic state.
+          // The ONLY race we need to protect against is the debit one —
+          // every other reason (initial "connected" snapshot, settlement
+          // credit/push, void refund, operator deposit/withdraw, future
+          // unknown reasons) is server-driven and authoritative. Apply
+          // those directly. Default-apply for unknown reasons keeps us
+          // from accidentally clamping a future server-side update we
+          // forgot to enumerate.
           const reason = (msg.reason ?? data.reason) as string | undefined;
-          const isCreditLike =
-            reason === "credit" ||
-            reason === "settlement" ||
-            reason === "void_refund" ||
-            reason === "transfer_deposit" ||
-            reason === "transfer_withdraw";
-          if (isCreditLike) {
-            s.setBalance(balance);
-          } else {
+          if (reason === "debit") {
             s.setBalance((current) => Math.min(current, balance));
+          } else {
+            s.setBalance(balance);
           }
           sendToParent("balanceUpdate", { balance });
         }
