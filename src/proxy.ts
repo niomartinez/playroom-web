@@ -115,12 +115,24 @@ export async function proxy(req: NextRequest) {
   // Session check (dual-verify: backend JWT first, legacy fallback).
   const token = req.cookies.get("studio_session")?.value;
   if (!token) {
-    return NextResponse.redirect(new URL("/studio/login", req.url));
+    const loginUrl = new URL("/studio/login", req.url);
+    // Preserve the path the user originally requested so login can send
+    // them back (e.g. /emulator → /studio/login?next=/emulator → /emulator).
+    if (pathname !== "/studio") {
+      loginUrl.searchParams.set("next", pathname + req.nextUrl.search);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   const verified = await verifyStudioCookie(token);
   if (!verified) {
-    return NextResponse.redirect(new URL("/studio/login", req.url));
+    const loginUrl = new URL("/studio/login", req.url);
+    // Preserve the path the user originally requested so login can send
+    // them back (e.g. /emulator → /studio/login?next=/emulator → /emulator).
+    if (pathname !== "/studio") {
+      loginUrl.searchParams.set("next", pathname + req.nextUrl.search);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   // Stamp dealer identity into the forwarded request headers so downstream
