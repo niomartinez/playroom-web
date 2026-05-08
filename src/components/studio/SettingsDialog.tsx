@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStudio } from "@/lib/studio-context";
 import { clientFetch } from "@/lib/api";
-import { useAngelEye } from "@/lib/use-angel-eye";
 
 interface TableOption {
   id: string;
@@ -19,7 +18,7 @@ interface SettingsDialogProps {
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const studio = useStudio();
-  const angelEye = useAngelEye();
+  const angelEye = studio.angelEye;
 
   /* ---- Local form state ---- */
   const [tables, setTables] = useState<TableOption[]>([]);
