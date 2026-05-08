@@ -4,11 +4,11 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
   type ReactNode,
   type SetStateAction,
 } from "react";
-import type { RoadEntry, Roads, RoundStatus, CurrentRound } from "./game-context";
+import type { Roads, RoundStatus, CurrentRound } from "./game-context";
+import { useAngelEye, type UseAngelEyeReturn } from "./use-angel-eye";
 
 /* ------------------------------------------------------------------ */
 /*  Studio-specific state                                              */
@@ -33,6 +33,12 @@ export interface StudioState {
   currentRound: CurrentRound | null;
   roads: Roads;
   lastUpdated: string; // HH:MM:SS timestamp of last event
+
+  /* Angel Eye shoe — single instance, shared by SettingsDialog (connect/
+     disconnect/status UI) and DealingDialog (subscribes to card events).
+     Lives on the provider so the serial connection persists across
+     dialog open/close. */
+  angelEye: UseAngelEyeReturn;
 
   /* Setters */
   setTableId: (id: string) => void;
@@ -90,6 +96,7 @@ export function StudioProvider({
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
   const [lastUpdated, setLastUpdated] = useState("--:--:--");
+  const angelEye = useAngelEye();
 
   const value: StudioState = {
     tableId,
@@ -103,6 +110,7 @@ export function StudioProvider({
     currentRound,
     roads,
     lastUpdated,
+    angelEye,
     setTableId,
     setTableName,
     setDealerName,

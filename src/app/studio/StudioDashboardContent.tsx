@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StudioHeader from "@/components/studio/StudioHeader";
 import StudioFooter from "@/components/studio/StudioFooter";
 import BeadRoad from "@/components/studio/BeadRoad";
@@ -9,11 +9,21 @@ import DerivedRoad from "@/components/studio/DerivedRoad";
 import ScorePanel from "@/components/studio/ScorePanel";
 import RoundControls from "@/components/studio/RoundControls";
 import ManualInputDialog from "@/components/studio/ManualInputDialog";
+import DealingDialog from "@/components/studio/DealingDialog";
 import { useStudio } from "@/lib/studio-context";
 
 export default function StudioDashboardContent() {
   const [manualInputOpen, setManualInputOpen] = useState(false);
+  const [dealingOpen, setDealingOpen] = useState(false);
   const studio = useStudio();
+
+  // Auto-open the live verification modal as soon as betting closes.
+  // Dealer can hide it, but it pops back open if they re-enter dealing.
+  useEffect(() => {
+    if (studio.roundStatus === "dealing" && !manualInputOpen) {
+      setDealingOpen(true);
+    }
+  }, [studio.roundStatus, manualInputOpen]);
 
   return (
     <div
@@ -88,6 +98,15 @@ export default function StudioDashboardContent() {
         open={manualInputOpen}
         onClose={() => setManualInputOpen(false)}
         gameId={studio.tableId}
+      />
+
+      <DealingDialog
+        open={dealingOpen}
+        onClose={() => setDealingOpen(false)}
+        onSwitchToManual={() => {
+          setDealingOpen(false);
+          setManualInputOpen(true);
+        }}
       />
     </div>
   );
