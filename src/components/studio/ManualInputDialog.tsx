@@ -232,7 +232,10 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
 
   if (!open) return null;
 
-  const usedCards = new Set([...playerCards, ...bankerCards]);
+  // NOTE: we deliberately do NOT disable a card just because it's already
+  // been entered in this round. Baccarat is dealt from a shoe of 6-8 decks
+  // so the same rank+suit (e.g. AS) can absolutely appear twice in the same
+  // hand. Disabling it forced dealers to mis-enter physical-shoe cards.
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -371,18 +374,16 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
               {SUITS.map((suit) =>
                 RANKS.map((rank) => {
                   const cardCode = `${rank}${suit.code}`;
-                  const isUsed = usedCards.has(cardCode);
                   return (
                     <button
                       key={cardCode}
                       onClick={() => addCard(cardCode)}
-                      disabled={isUsed}
-                      className="rounded text-center font-bold transition-colors disabled:opacity-20 hover:opacity-80"
+                      className="rounded text-center font-bold transition-colors hover:opacity-80"
                       style={{
                         fontSize: "clamp(9px, 1vw, 12px)",
                         padding: "4px 2px",
-                        backgroundColor: isUsed ? "#111" : "#1a1a1a",
-                        border: `1px solid ${isUsed ? "#222" : "#333"}`,
+                        backgroundColor: "#1a1a1a",
+                        border: "1px solid #333",
                         color: suit.color,
                       }}
                     >
