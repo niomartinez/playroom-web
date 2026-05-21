@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useReducer } from "react";
 import { clientFetch } from "@/lib/api";
+import { useStudio } from "@/lib/studio-context";
 import {
   RANKS,
   SUITS,
@@ -137,6 +138,7 @@ interface ManualInputDialogProps {
 }
 
 export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }: ManualInputDialogProps) {
+  const studio = useStudio();
   const [state, dispatch] = useReducer(dealReducer, {
     playerCards: [],
     bankerCards: [],
@@ -144,6 +146,10 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // When server says "no active round" but our local state thinks one
+  // exists (post-refresh divergence), surface a recovery affordance so
+  // the dealer isn't stuck.
+  const [stateDiverged, setStateDiverged] = useState(false);
 
   const { playerCards, bankerCards, currentSide } = state;
 
@@ -216,12 +222,24 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
       });
 
       if (res && typeof res === "object" && "error" in res) {
-        setError(String(res.error));
+        const msg = String(res.error);
+        setError(msg);
+        // If the server says no active round exists but our studio UI
+        // is showing a non-waiting status, the two have diverged
+        // (typical after a refresh during dealing/result). Show the
+        // dealer a recovery button instead of silently failing.
+        if (
+          msg.toLowerCase().includes("no active round") &&
+          studio.roundStatus !== "waiting"
+        ) {
+          setStateDiverged(true);
+        }
         return;
       }
 
       onSubmitted?.();
       dispatch({ type: "CLEAR" });
+      setStateDiverged(false);
       onClose();
     } catch {
       setError("Failed to submit round. Please try again.");
@@ -400,6 +418,22 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
         {error && (
           <div className="px-6 py-1">
             <p className="text-xs text-red-400">{error}</p>
+            {stateDiverged && (
+              <button
+                onClick={() => {
+                  studio.setRoundStatus("waiting");
+                  studio.setCurrentRound(null);
+                  setStateDiverged(false);
+                  setError("");
+                  dispatch({ type: "CLEAR" });
+                  onClose();
+                }}
+                className="mt-2 rounded-lg px-3 py-2 text-xs font-bold"
+                style={{ backgroundColor: "#f0b100", color: "#000" }}
+              >
+                RESET STATE — round was already closed on server. Click to enable NEW ROUND.
+              </button>
+            )}
           </div>
         )}
 

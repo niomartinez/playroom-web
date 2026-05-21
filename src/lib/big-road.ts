@@ -88,14 +88,13 @@ export function buildBigRoadColumns(
 
   // Phase 1: build the *unbounded* set of columns from outcomes.
   //
-  // Tie handling note: per spec, ties stack on the last non-Tie cell as
-  // a counter and ALSO break the current streak so the next same-side
-  // outcome starts a new column (per the verification example
-  // `[B,B,P,P,P,B,T,T,B]` -> `[B(2), P(3), B(1) ties=2, B(1)]`).
+  // Standard baccarat Big Road rule: ties stack on the last non-Tie cell
+  // as a green slash, but they DO NOT break the streak. The next same-side
+  // outcome continues DOWN in the same column. e.g. [B,B,T,B] renders as
+  // one column [B, B(ties=1), B] — not two columns.
   const columns: BigRoadColumn[] = [];
   let leadingTies = 0;
   let lastRowIdx = -1;
-  let streakBrokenByTie = false;
 
   for (const raw of outcomes) {
     const side = normalize(raw);
@@ -107,17 +106,16 @@ export function buildBigRoadColumns(
         continue;
       }
       // Stack on the most recent occupied cell of the last column.
+      // Does NOT break the streak — the next same-side outcome will
+      // continue this column.
       const cell = lastCol.cells[lastRowIdx];
       if (cell) cell.ties += 1;
-      streakBrokenByTie = true;
       continue;
     }
 
     const lastCol = columns[columns.length - 1];
     const sameSide = lastCol && lastCol.outcome === side;
-    if (!lastCol || !sameSide || streakBrokenByTie) {
-      // New column on side switch, first-ever non-Tie event, or after
-      // a tie has interrupted the previous streak.
+    if (!lastCol || !sameSide) {
       const newCol: BigRoadColumn = {
         outcome: side,
         cells: makeEmptyCells(rows),
@@ -125,7 +123,6 @@ export function buildBigRoadColumns(
       newCol.cells[0] = { hasOutcome: true, ties: 0 };
       columns.push(newCol);
       lastRowIdx = 0;
-      streakBrokenByTie = false;
       continue;
     }
 
@@ -213,22 +210,9 @@ export function appendOutcome(
   }
 
   const last = next[next.length - 1];
-
-  // Detect whether the previous outcome was a tie -- in that case the
-  // streak is considered broken and the next same-side outcome starts
-  // a new column (mirrors buildBigRoadColumns semantics).
-  let priorWasTie = false;
-  if (last) {
-    for (let i = last.cells.length - 1; i >= 0; i--) {
-      if (last.cells[i].hasOutcome) {
-        priorWasTie = last.cells[i].ties > 0;
-        break;
-      }
-    }
-  }
-
   const sameSide = !!last && last.outcome === side;
-  if (!last || !sameSide || priorWasTie) {
+  // Ties do NOT break streaks per standard baccarat Big Road rules.
+  if (!last || !sameSide) {
     const col: BigRoadColumn = {
       outcome: side,
       cells: makeEmptyCells(rows),
