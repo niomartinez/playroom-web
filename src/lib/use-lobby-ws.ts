@@ -129,7 +129,7 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
               (eventTableUuid && String(eventTableUuid) === String(myId));
             if (!matches) return;
           }
-          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts, s.setRecentWin, () => settersRef.current.stackedChips, s.addFlyingChip);
+          handleMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.clearPlacedBets, s.token, s.placedBets, s.setBalance, s.clearStackedChips, s.setMainBetCounts, s.setRecentWin, () => settersRef.current.stackedChips, s.addFlyingChip, s.gameId);
         } catch {
           // ignore
         }
@@ -222,6 +222,7 @@ function handleMessage(
   // cleanup, so we accept a getter rather than a snapshot value.
   getStackedChips?: () => Record<string, StackedChip[]>,
   addFlyingChip?: (chip: Omit<FlyingChip, "id" | "startedAt">) => void,
+  myGameId?: string | null,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -467,8 +468,16 @@ function handleMessage(
 
     case "lobby_state":
     case "LobbyState": {
-      // Full snapshot -- populate roads from history
-      const history = (data.history ?? data.results ?? []) as Array<Record<string, unknown>>;
+      // The lobby snapshot carries per-table data keyed by tableId,
+      // PLUS a flattened "history" / "round_status" that only reflects
+      // the first table the backend happened to iterate. We must pick
+      // OUR table or the player ends up with another table's state
+      // (e.g., "waiting" from table 1 while their own table is
+      // betting_open — leaving isBettingOpen=false so bets are rejected
+      // client-side with "Betting is closed").
+      const tables = (data.tables ?? {}) as Record<string, Record<string, unknown>>;
+      const myTable = myGameId ? tables[String(myGameId)] : undefined;
+      const history = ((myTable?.history ?? data.history ?? data.results) ?? []) as Array<Record<string, unknown>>;
       const entries: RoadEntry[] = history.map((h) => ({
         result: ((h.winner as string)?.charAt(0).toUpperCase() ?? "T") as "P" | "B" | "T",
         playerPair: h.player_pair as boolean | undefined,
@@ -490,8 +499,8 @@ function handleMessage(
         ties,
       });
 
-      // Set round status from snapshot
-      const status = data.round_status ?? data.roundStatus;
+      // Round status from OUR table, not the first one.
+      const status = myTable?.round_status ?? data.round_status ?? data.roundStatus;
       if (typeof status === "string") {
         setRoundStatus(status as RoundStatus);
       }

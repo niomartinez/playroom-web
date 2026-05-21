@@ -82,7 +82,7 @@ export function useStudioWs() {
               (eventTableUuid && String(eventTableUuid) === String(myId));
             if (!matches) return;
           }
-          handleStudioMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads);
+          handleStudioMessage(msg, s.setRoundStatus, s.setCurrentRound, s.setRoads, s.tableId);
           const now = new Date();
           s.setLastUpdated(now.toLocaleTimeString("en-US", { hour12: false }));
         } catch {
@@ -121,6 +121,7 @@ function handleStudioMessage(
   setRoundStatus: StatusSetter,
   setCurrentRound: RoundSetter,
   setRoads: RoadsSetter,
+  myTableId: string | null,
 ) {
   const type = msg.type as string | undefined;
   const data = (msg.data ?? msg) as Record<string, unknown>;
@@ -219,7 +220,14 @@ function handleStudioMessage(
 
     case "lobby_state":
     case "LobbyState": {
-      const history = (data.history ?? data.results ?? []) as Array<Record<string, unknown>>;
+      // Use OUR table's history from the keyed per-table map. The
+      // flat `data.history` reflects only the FIRST table iterated on
+      // the backend — would wipe a table 2 dealer's roads on refresh
+      // if the first iterated table was empty (or just show table 1's
+      // history on table 2's screen).
+      const tables = (data.tables ?? {}) as Record<string, Record<string, unknown>>;
+      const myTable = myTableId ? tables[String(myTableId)] : undefined;
+      const history = ((myTable?.history ?? data.history ?? data.results) ?? []) as Array<Record<string, unknown>>;
       const entries: RoadEntry[] = history.map((h) => ({
         result: ((h.winner as string)?.charAt(0).toUpperCase() ?? "T") as "P" | "B" | "T",
         playerPair: h.player_pair as boolean | undefined,

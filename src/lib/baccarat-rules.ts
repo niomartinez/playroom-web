@@ -72,12 +72,19 @@ export function baccaratNeedsThird(
   const playerDraws = ps <= 5;
 
   if (!playerDraws) {
-    const bDraws = bs <= 5;
+    // When player stands on 6/7, banker draws on 0-5 and stands on 6-9.
+    // After banker takes the third card, the hand is complete — previous
+    // version didn't account for banker already having drawn and kept
+    // returning handComplete=false, leaving the Submit button disabled.
+    const bShouldDraw = bs <= 5;
+    const bAlreadyDrew = bankerCards.length >= 3;
+    const bStillNeeds = bShouldDraw && !bAlreadyDrew;
     return {
-      playerDraws: false, bankerDraws: bDraws,
+      playerDraws: false,
+      bankerDraws: bStillNeeds,
       isNatural: false,
-      handComplete: !bDraws,
-      status: "Player stands" + (bDraws ? "; Banker must draw" : ""),
+      handComplete: !bShouldDraw || bAlreadyDrew,
+      status: bStillNeeds ? "Player stands; Banker must draw" : "Hand complete",
     };
   }
 
