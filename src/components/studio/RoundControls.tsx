@@ -218,7 +218,7 @@ export default function RoundControls() {
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs" style={{ color: "#6a7282" }}>Bet window:</span>
         <div className="flex items-center gap-1">
-          {[10, 15, 20, 25, 30].map((t) => (
+          {[10, 16, 20, 25, 30].map((t) => (
             <button
               key={t}
               onClick={() => studio.setBettingTime(t)}

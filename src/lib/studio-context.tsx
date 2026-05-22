@@ -90,7 +90,7 @@ export function StudioProvider({
   const [dealerName, setDealerName] = useState(initialDealerName);
   const [lang, setLang] = useState(initialLang);
   const [soundEnabled, setSoundEnabled] = useState(initialSoundEnabled);
-  const [bettingTime, setBettingTime] = useState(15);
+  const [bettingTime, setBettingTime] = useState(16);
   const [tableStatus, setTableStatus] = useState<TableStatus>("open");
   const [roundStatus, setRoundStatus] = useState<RoundStatus>("waiting");
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);

@@ -5,6 +5,7 @@ import { GameProvider } from "@/lib/game-context";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 import { useBalanceWs } from "@/lib/use-balance-ws";
 import { useStateRecovery } from "@/lib/use-state-recovery";
+import { useIdleKick } from "@/lib/use-idle-kick";
 import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 
 /* ------------------------------------------------------------------ */
@@ -17,6 +18,8 @@ function GameConnections({ children }: { children: ReactNode }) {
   // One-shot fetch on mount: rehydrates round state + this player's
   // placed bets if they refresh during a live round.
   useStateRecovery();
+  // Kick back to operator's lobby after 3 consecutive idle rounds.
+  useIdleKick();
 
   /* Send gameReady on mount, listen for parent commands */
   useEffect(() => {
