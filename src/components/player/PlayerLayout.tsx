@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
-import { useFeatures } from "@/lib/use-features";
 import { useGame } from "@/lib/game-context";
 import PlayerHeader from "./PlayerHeader";
 import ChipSelector from "./ChipSelector";
@@ -14,7 +13,6 @@ import BalanceBar from "./BalanceBar";
 import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import MobileActionBar from "./MobileActionBar";
-import MobileTipPanel from "./MobileTipPanel";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
 
@@ -49,9 +47,7 @@ const BET_PANEL_STYLES = `
 
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
-  const { live_chat_enabled } = useFeatures();
   const { roundStatus, placedBets, cancelPlacedBets } = useGame();
-  const [showTips, setShowTips] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -147,20 +143,14 @@ export default function PlayerLayout() {
           <MainBets />
         </div>
 
-        {/* Action Bar — Tip + Live Chat (below the fold; secondary actions) */}
+        {/* Action Bar — Live Chat only (tips removed) */}
         <MobileActionBar
-          onTipPress={() => { setShowTips((v) => !v); setShowChat(false); }}
-          onChatPress={live_chat_enabled ? () => { setShowChat((v) => !v); setShowTips(false); } : undefined}
-          chatEnabled={live_chat_enabled}
+          onChatPress={() => setShowChat((v) => !v)}
+          chatEnabled
         />
 
-        {/* Tip panel overlay */}
-        {showTips && (
-          <MobileTipPanel onClose={() => setShowTips(false)} />
-        )}
-
-        {/* Live Chat overlay — gated by feature flag */}
-        {live_chat_enabled && showChat && (
+        {/* Live Chat overlay */}
+        {showChat && (
           <div style={{ padding: "0 19px" }}>
             <LiveChat mobile />
           </div>
@@ -194,7 +184,7 @@ export default function PlayerLayout() {
       <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
         <DealVisualizer />
         <ChipSelector />
-        {live_chat_enabled && <LiveChat />}
+        <LiveChat />
       </div>
 
       <div
