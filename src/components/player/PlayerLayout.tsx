@@ -94,7 +94,60 @@ export default function PlayerLayout() {
           <DealVisualizer />
         </div>
 
-        {/* Action Bar — Tip + Live Chat */}
+        {/* Roadmap — moved ABOVE the bet panel so the road is the first
+            thing the player sees after the video stream. Players asked for
+            this hierarchy because the road is what they consult before
+            betting; previously they had to scroll past the bet buttons. */}
+        <div style={{ padding: "8px 19px 0 19px" }}>
+          <RoadmapPanel />
+        </div>
+
+        {/* Bet panel — wraps Balance + Side Bets + Main Bets so the pulse outlines the whole area */}
+        <div
+          className={panelClass}
+          style={{
+            margin: "10px 19px 12px 19px",
+            padding: 10,
+            borderRadius: 16,
+            border: "1.5px solid rgba(54, 65, 83, 0.6)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+          }}
+        >
+          <BalanceBar />
+
+          {/* Clear bets — only when betting is open */}
+          {isBettingOpen && (
+            <button
+              onClick={cancelPlacedBets}
+              disabled={!hasPlacedBets}
+              style={{
+                alignSelf: "flex-end",
+                padding: "6px 12px",
+                borderRadius: 10,
+                background: "rgba(0,0,0,0.55)",
+                border: "1px solid rgba(208,135,0,0.3)",
+                color: hasPlacedBets ? "#f0b100" : "rgba(240,177,0,0.4)",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 0.6,
+                cursor: hasPlacedBets ? "pointer" : "not-allowed",
+                opacity: hasPlacedBets ? 1 : 0.55,
+                transition: "opacity 0.15s ease, color 0.15s ease",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              CLEAR BETS
+            </button>
+          )}
+
+          <SideBets />
+          <MainBets />
+        </div>
+
+        {/* Action Bar — Tip + Live Chat (below the fold; secondary actions) */}
         <MobileActionBar
           onTipPress={() => { setShowTips((v) => !v); setShowChat(false); }}
           onChatPress={live_chat_enabled ? () => { setShowChat((v) => !v); setShowTips(false); } : undefined}
@@ -113,57 +166,7 @@ export default function PlayerLayout() {
           </div>
         )}
 
-        {/* Bet panel — wraps Balance + Side Bets + Main Bets so the pulse outlines the whole area */}
-        <div
-          className={panelClass}
-          style={{
-            margin: "16px 19px 24px 19px",
-            padding: 12,
-            borderRadius: 16,
-            border: "1.5px solid rgba(54, 65, 83, 0.6)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-            transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-          }}
-        >
-          <BalanceBar />
-
-          {/* Clear bets — only when betting is open */}
-          {isBettingOpen && (
-            <button
-              onClick={cancelPlacedBets}
-              disabled={!hasPlacedBets}
-              style={{
-                alignSelf: "flex-end",
-                padding: "8px 14px",
-                borderRadius: 10,
-                background: "rgba(0,0,0,0.55)",
-                border: "1px solid rgba(208,135,0,0.3)",
-                color: hasPlacedBets ? "#f0b100" : "rgba(240,177,0,0.4)",
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                opacity: hasPlacedBets ? 1 : 0.55,
-                transition: "opacity 0.15s ease, color 0.15s ease",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              CLEAR BETS
-            </button>
-          )}
-
-          <SideBets />
-          <MainBets />
-        </div>
-
-        {/* Roadmap */}
-        <div style={{ padding: "0 19px" }}>
-          <RoadmapPanel />
-        </div>
-
-        {/* Score Cards */}
+        {/* Score Cards — below the fold */}
         <div style={{ padding: "0 19px", marginTop: 16, marginBottom: 24 }}>
           <BaccaratTable />
         </div>
