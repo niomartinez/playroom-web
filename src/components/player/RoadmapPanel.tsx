@@ -85,95 +85,71 @@ export default function RoadmapPanel() {
           </div>
         </div>
 
-        {/* Score Summary Bar */}
+        {/* Single row: Next Prediction (left) + Standings (right). */}
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
+            alignItems: "center",
+            justifyContent: "space-between",
             gap: 8,
           }}
         >
-          {[
-            { label: "P", bg: "#2b7fff", count: roads.playerWins },
-            { label: "T", bg: "#00c950", count: roads.ties },
-            { label: "B", bg: "#fb2c36", count: roads.bankerWins },
-          ].map((s) => (
-            <div
-              key={s.label}
-              style={{
-                backgroundColor: s.bg,
-                borderRadius: 999,
-                padding: "3px 12px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <span>{s.label}:</span>
-              <span>{s.count}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Next Prediction Row */}
-        <div>
-          <div
-            style={{
-              fontSize: 12,
-              color: "#99A1AF",
-              marginBottom: 4,
-            }}
-          >
-            Next Prediction
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 10,
-            }}
-          >
-            {[
-              { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
-              { label: "T", bg: "#00c950", border: "#05df72", pct: tPct },
-              { label: "B", bg: "#fb2c36", border: "#ff6467", pct: bPct },
-            ].map((p) => (
-              <div
-                key={p.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
+          {/* Left: Next Prediction */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, color: "#99A1AF", fontWeight: 500 }}>Next</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {[
+                { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
+                { label: "T", bg: "#00c950", border: "#05df72", pct: tPct },
+                { label: "B", bg: "#fb2c36", border: "#ff6467", pct: bPct },
+              ].map((p) => (
                 <div
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    backgroundColor: p.bg,
-                    border: `1.6px solid ${p.border}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  key={p.label}
+                  style={{ display: "flex", alignItems: "center", gap: 2 }}
                 >
-                  <span
+                  <div
                     style={{
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 10,
+                      width: 14,
+                      height: 14,
+                      borderRadius: "50%",
+                      backgroundColor: p.bg,
+                      border: `1.2px solid ${p.border}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    {p.label}
-                  </span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: 8 }}>{p.label}</span>
+                  </div>
+                  <span style={{ color: "#99a1af", fontSize: 10 }}>{p.pct}%</span>
                 </div>
-                <span style={{ color: "#99a1af", fontSize: 12 }}>
-                  {p.pct}%
-                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: P / T / B standings */}
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            {[
+              { label: "P", bg: "#2b7fff", count: roads.playerWins },
+              { label: "T", bg: "#00c950", count: roads.ties },
+              { label: "B", bg: "#fb2c36", count: roads.bankerWins },
+            ].map((s) => (
+              <div
+                key={s.label}
+                style={{
+                  backgroundColor: s.bg,
+                  borderRadius: 999,
+                  padding: "2px 8px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                <span>{s.label}:</span>
+                <span>{s.count}</span>
               </div>
             ))}
           </div>

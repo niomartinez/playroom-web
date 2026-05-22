@@ -127,7 +127,7 @@ export default function MainBets() {
               disabled={disabled}
               style={{
                 position: "relative",
-                height: 120,
+                height: 96,
                 borderRadius: 14,
                 border: `1.6px solid ${bet.mobileBorder}`,
                 background: bet.mobileGradient,
@@ -168,19 +168,19 @@ export default function MainBets() {
                   justifyContent: "space-between",
                   width: "100%",
                   height: "100%",
-                  padding: "10px 8px",
+                  padding: "8px 6px",
                   boxSizing: "border-box",
                 }}
               >
                 {/* Bet name abbreviation — dominant element */}
                 <span
                   style={{
-                    fontSize: 26,
+                    fontSize: 20,
                     fontWeight: 800,
                     color: "#fff",
                     lineHeight: 1,
-                    letterSpacing: 0.5,
-                    textShadow: "0 1px 4px rgba(0,0,0,0.35)",
+                    letterSpacing: 0.4,
+                    textShadow: "0 1px 3px rgba(0,0,0,0.35)",
                   }}
                 >
                   {bet.abbrev}
@@ -189,7 +189,7 @@ export default function MainBets() {
                 {/* Total bet amount across all players — second most important */}
                 <span
                   style={{
-                    fontSize: 17,
+                    fontSize: 13,
                     fontWeight: 700,
                     color: "#fff",
                     lineHeight: 1,
@@ -206,22 +206,22 @@ export default function MainBets() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     width: "100%",
-                    gap: 6,
+                    gap: 4,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                     <img
                       src="/mobile-assets/people-icon.svg"
                       alt=""
-                      style={{ width: 13, height: 13 }}
+                      style={{ width: 10, height: 10 }}
                     />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#fff" }}>
                       {playerCount}
                     </span>
                   </div>
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: 10,
                       fontWeight: 600,
                       color: "rgba(255,255,255,0.85)",
                     }}
@@ -234,7 +234,7 @@ export default function MainBets() {
                 <div
                   style={{
                     width: "100%",
-                    height: 6,
+                    height: 4,
                     borderRadius: 100,
                     backgroundColor: "rgba(255,255,255,0.22)",
                     overflow: "hidden",

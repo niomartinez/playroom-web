@@ -124,34 +124,34 @@ export default function BalanceBar() {
           backgroundColor: "#101828",
           border: "0.8px solid #364153",
           borderRadius: 14,
-          padding: 16,
+          padding: 10,
           width: "100%",
           boxSizing: "border-box",
         }}
       >
-        {/* Top section: icon + balance */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        {/* Top section: icon + balance — compact, single row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <img
             src="/mobile-assets/balance-icon.png"
             alt="Balance"
-            style={{ width: 20, height: 20, flexShrink: 0 }}
+            style={{ width: 16, height: 16, flexShrink: 0 }}
           />
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 400, color: "#99A1AF", lineHeight: 1.2 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 400, color: "#99A1AF" }}>
               Balance
-            </div>
-            <div
+            </span>
+            <span
               style={{
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: 700,
                 color: "#ffffff",
-                lineHeight: 1.2,
+                lineHeight: 1,
                 fontVariantNumeric: "tabular-nums",
                 fontFeatureSettings: '"tnum"',
               }}
             >
               {formatted}
-            </div>
+            </span>
           </div>
         </div>
 
@@ -177,8 +177,8 @@ export default function BalanceBar() {
                 }}
                 disabled={isDisabled}
                 style={{
-                  width: 46,
-                  height: 46,
+                  width: 38,
+                  height: 38,
                   borderRadius: "50%",
                   backgroundColor: "transparent",
                   border: "none",
@@ -205,8 +205,8 @@ export default function BalanceBar() {
                   src={chip.src}
                   alt={`${chip.value} chip`}
                   style={{
-                    width: 46,
-                    height: 46,
+                    width: 38,
+                    height: 38,
                     display: "block",
                     borderRadius: "50%",
                     transform: "translateY(2px)",
