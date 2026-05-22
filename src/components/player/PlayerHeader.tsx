@@ -75,18 +75,18 @@ export default function PlayerHeader() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          height: 80,
-          padding: "0 19px",
+          height: 48,
+          padding: "0 14px",
           background: "rgba(16, 24, 40, 0.95)",
           borderBottom: "1px solid #364153",
         }}
       >
         {/* Left: Logo */}
         <button onClick={handleBack} style={{ cursor: "pointer", background: "none", border: "none", padding: 0, zIndex: 1 }}>
-          <img src="/logo.png" alt="Play Room Gaming" style={{ height: 32, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Play Room Gaming" style={{ height: 22, objectFit: "contain" }} />
         </button>
 
-        {/* Center: LIVE badge + "Live Baccarat" — absolutely centered */}
+        {/* Center: LIVE badge + Table label — absolutely centered, single row */}
         <div
           style={{
             position: "absolute",
@@ -94,39 +94,38 @@ export default function PlayerHeader() {
             top: "50%",
             transform: "translate(-50%, -50%)",
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            gap: 4,
+            gap: 8,
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 5,
               background: "rgba(251, 44, 54, 0.15)",
               border: "1px solid rgba(251, 44, 54, 0.4)",
               borderRadius: 999,
-              padding: "4px 12px",
+              padding: "2px 8px",
             }}
           >
             <span
               style={{
-                width: 8,
-                height: 8,
+                width: 6,
+                height: 6,
                 borderRadius: "50%",
                 backgroundColor: "#FB2C36",
                 animation: "live-pulse 2.4s ease-in-out infinite",
                 boxShadow: "0 0 6px rgba(251,44,54,0.4)",
               }}
             />
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#ffffff" }}>LIVE</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: 0.4 }}>LIVE</span>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 400, color: "#99A1AF" }}>Live Baccarat</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: "#99A1AF" }}>Live Baccarat</span>
         </div>
 
         {/* Right: Round number */}
-        <span style={{ fontSize: 16, fontWeight: 500, color: "#ffffff", zIndex: 1 }}>{roundLabel}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff", zIndex: 1 }}>{roundLabel}</span>
       </header>
     );
   }
