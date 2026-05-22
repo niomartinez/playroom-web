@@ -55,10 +55,10 @@ export default function RoadmapPanel() {
           backgroundColor: "#101828",
           border: "0.8px solid #364153",
           borderRadius: 14,
-          padding: 12,
+          padding: 8,
           display: "flex",
           flexDirection: "column",
-          gap: 10,
+          gap: 6,
         }}
       >
         {/* Big Road Grid */}

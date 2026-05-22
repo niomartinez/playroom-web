@@ -99,7 +99,7 @@ export default function SideBets() {
                 justifyContent: "center",
                 textAlign: "center",
                 width: "100%",
-                minHeight: 84,
+                minHeight: 68,
                 borderRadius: 14,
                 border: hasBet
                   ? "2px solid rgba(255,255,255,0.8)"

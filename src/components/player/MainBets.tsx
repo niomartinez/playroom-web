@@ -127,7 +127,7 @@ export default function MainBets() {
               disabled={disabled}
               style={{
                 position: "relative",
-                height: 155,
+                height: 120,
                 borderRadius: 14,
                 border: `1.6px solid ${bet.mobileBorder}`,
                 background: bet.mobileGradient,
@@ -168,14 +168,14 @@ export default function MainBets() {
                   justifyContent: "space-between",
                   width: "100%",
                   height: "100%",
-                  padding: "14px 10px",
+                  padding: "10px 8px",
                   boxSizing: "border-box",
                 }}
               >
                 {/* Bet name abbreviation — dominant element */}
                 <span
                   style={{
-                    fontSize: 32,
+                    fontSize: 26,
                     fontWeight: 800,
                     color: "#fff",
                     lineHeight: 1,
