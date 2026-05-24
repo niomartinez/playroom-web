@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame } from "@/lib/game-context";
 import PlayerHeader from "./PlayerHeader";
-import ChipSelector from "./ChipSelector";
 import LiveChat from "./LiveChat";
 import SideBets from "./SideBets";
 import MainBets from "./MainBets";
@@ -183,7 +182,6 @@ export default function PlayerLayout() {
 
       <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
         <DealVisualizer />
-        <ChipSelector />
         <LiveChat />
       </div>
 
