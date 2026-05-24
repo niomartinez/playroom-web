@@ -42,7 +42,7 @@ interface ActiveBet {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-const STANDARD_DENOMS = [1000, 500, 100, 50, 25, 10];
+const STANDARD_DENOMS = [500000, 100000, 25000, 5000, 1000, 500, 250, 50];
 
 /**
  * Pick a chip denomination that visually represents `amount`.
