@@ -211,7 +211,6 @@ export default function BalanceBar() {
                     height: 38,
                     display: "block",
                     borderRadius: "50%",
-                    transform: "translateY(2px)",
                     pointerEvents: "none",
                   }}
                 />
@@ -336,7 +335,6 @@ export default function BalanceBar() {
                   height: "100%",
                   display: "block",
                   borderRadius: "50%",
-                  transform: "translateY(2px)",
                   pointerEvents: "none",
                 }}
               />
