@@ -5,12 +5,14 @@ import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 
 const CHIPS = [
-  { value: 10, src: "/mobile-assets/chip-10.png" },
-  { value: 25, src: "/mobile-assets/chip-25.png" },
   { value: 50, src: "/mobile-assets/chip-50.png" },
-  { value: 100, src: "/mobile-assets/chip-100.png" },
+  { value: 250, src: "/mobile-assets/chip-250.png" },
   { value: 500, src: "/mobile-assets/chip-500.png" },
   { value: 1000, src: "/mobile-assets/chip-1000.png" },
+  { value: 5000, src: "/mobile-assets/chip-5000.png" },
+  { value: 25000, src: "/mobile-assets/chip-25000.png" },
+  { value: 100000, src: "/mobile-assets/chip-100000.png" },
+  { value: 500000, src: "/mobile-assets/chip-500000.png" },
 ];
 
 /** Post-settlement odometer crawl on the balance number (wins + losses). */
