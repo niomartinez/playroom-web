@@ -208,12 +208,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     return cleanup;
   }, [webrtcUrl, hlsUrl]);
 
-  // If we have no stream URLs OR both paths failed, surface the parent's
-  // fallback (DealVisualizer card placeholder).
-  if (state === "fallback") {
-    return <div className="absolute inset-0">{fallback}</div>;
-  }
-
+  // Always render the <video> element so videoRef stays bound. Stream URLs
+  // arrive async (DemoWrapper / useStateRecovery fetch), so if we conditionally
+  // unmount the video tag while waiting, the next useEffect tick fires with
+  // videoRef.current === null and the WHEP/HLS handshake silently never runs.
+  // Instead, keep the video mounted and overlay the fallback when needed.
   return (
     <div className="absolute inset-0 w-full h-full bg-black">
       <video
@@ -222,7 +221,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         muted
         autoPlay
         className="w-full h-full object-cover"
+        style={{ display: state === "fallback" ? "none" : "block" }}
       />
+      {state === "fallback" && (
+        <div className="absolute inset-0">{fallback}</div>
+      )}
       {state === "connecting" && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
