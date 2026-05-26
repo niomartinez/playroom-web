@@ -28,6 +28,13 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [lang, setLang] = useState(studio.lang);
   const [soundEnabled, setSoundEnabled] = useState(studio.soundEnabled);
   const [loading, setLoading] = useState(false);
+  // Per-table video latency calibration. Loaded from /api/tables/{id}/state
+  // when a table is selected; saved via PATCH /api/studio/table/{id}. The
+  // player UI delays CardDealt / RoundResult / RoundClosed by this many ms
+  // so animations match the live video feed.
+  const [videoDelayMs, setVideoDelayMs] = useState<string>("0");
+  const [videoDelaySaving, setVideoDelaySaving] = useState(false);
+  const [videoDelaySavedAt, setVideoDelaySavedAt] = useState<number | null>(null);
 
   /* ---- Extended settings (Galaxy Club parity) ---- */
   const ls = typeof window !== "undefined" ? localStorage : null;
@@ -76,6 +83,27 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       setSoundEnabled(studio.soundEnabled);
     }
   }, [open, studio.tableId, studio.tableName, studio.dealerName, studio.lang, studio.soundEnabled, fetchTables]);
+
+  // Fetch current video_delay_ms whenever the selected table changes. We
+  // re-read from /state (vs caching on the tables list) because delay is
+  // a per-table calibration value, not part of the lightweight list view.
+  useEffect(() => {
+    if (!open || !selectedTableId) return;
+    let cancelled = false;
+    clientFetch(`/api/tables/${encodeURIComponent(selectedTableId)}/state`)
+      .then((json) => {
+        if (cancelled) return;
+        const ms = json?.data?.table?.video_delay_ms ?? 0;
+        setVideoDelayMs(String(ms));
+        setVideoDelaySavedAt(null);
+      })
+      .catch(() => {
+        if (!cancelled) setVideoDelayMs("0");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedTableId]);
 
   /* ---- Create new table ---- */
   const handleCreateTable = async () => {
@@ -153,6 +181,26 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setSelectedTableId(id);
     const found = tables.find((t) => t.id === id);
     setSelectedTableName(found?.name ?? "");
+  };
+
+  /* ---- Save video_delay_ms (independent of main Save — this is a
+         calibration knob the dealer tweaks live during a joint test) ---- */
+  const handleSaveVideoDelay = async () => {
+    if (!selectedTableId) return;
+    const parsed = Math.max(0, Math.min(5000, Math.round(Number(videoDelayMs) || 0)));
+    setVideoDelayMs(String(parsed));
+    setVideoDelaySaving(true);
+    try {
+      await clientFetch(`/api/studio/table/${selectedTableId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ video_delay_ms: parsed }),
+      });
+      setVideoDelaySavedAt(Date.now());
+    } catch {
+      // silent — input still shows the attempted value, user can retry
+    } finally {
+      setVideoDelaySaving(false);
+    }
   };
 
   if (!open) return null;
@@ -314,6 +362,45 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 border: "1px solid rgba(208,135,0,0.2)",
               }}
             />
+          </div>
+
+          {/* Video Delay calibration — saved independently */}
+          <div>
+            <label className="block text-xs font-medium text-[#99a1af] mb-1">
+              Video Delay (ms)
+              <span className="ml-2 text-[10px] text-[#6a7282] font-normal">
+                lines up card/result animations with the live video
+              </span>
+            </label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min={0}
+                max={5000}
+                step={50}
+                value={videoDelayMs}
+                onChange={(e) => setVideoDelayMs(e.target.value)}
+                disabled={!selectedTableId || videoDelaySaving}
+                className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none"
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.6)",
+                  border: "1px solid rgba(208,135,0,0.2)",
+                }}
+              />
+              <button
+                onClick={handleSaveVideoDelay}
+                disabled={!selectedTableId || videoDelaySaving}
+                className="rounded-lg px-3 py-2 text-xs font-semibold text-black disabled:opacity-40"
+                style={{ backgroundColor: "#f0b100" }}
+              >
+                {videoDelaySaving ? "Saving..." : "Apply"}
+              </button>
+            </div>
+            <p className="text-[10px] text-[#6a7282] mt-1">
+              {videoDelaySavedAt
+                ? "Saved — players will use the new delay on the next round."
+                : "Range 0–5000. Typical WebRTC delay: 400–900ms. Set during the joint latency test."}
+            </p>
           </div>
 
           {/* Language Toggle */}
