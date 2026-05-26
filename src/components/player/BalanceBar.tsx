@@ -230,10 +230,10 @@ export default function BalanceBar() {
         border: "0.8px solid #364153",
         borderRadius: "0.7vw",
         padding: "0.6vh 1vw",
-        position: "relative",
+        gap: "0.5vw",
       }}
     >
-      <div className="flex items-center" style={{ gap: "0.7vw" }}>
+      <div className="flex items-center flex-shrink-0" style={{ gap: "0.7vw" }}>
         <img
           src="/mobile-assets/balance-icon.png"
           alt="Balance"
@@ -246,9 +246,6 @@ export default function BalanceBar() {
             className="font-bold text-white"
             style={{
               fontSize: "clamp(18px, 2.4vh, 30px)",
-              // Tabular figures keep every digit the same width while the
-              // odometer crawls, so the row layout doesn't jiggle and shake
-              // CLEAR BETS / chips on every animated tick.
               fontVariantNumeric: "tabular-nums",
               fontFeatureSettings: '"tnum"',
             }}
@@ -258,19 +255,12 @@ export default function BalanceBar() {
         </div>
       </div>
 
-      {/* CLEAR BETS pill — pinned to the geometric center of the bar so
-          it doesn't slide when the balance number's width changes during
-          the odometer crawl. Out of flow so it has zero effect on the
-          balance / chip flex layout. */}
       {isBettingOpen && (
         <button
           onClick={cancelPlacedBets}
           disabled={!hasPlacedBets}
+          className="flex-shrink-0"
           style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
             padding: "0.4vh 1vw",
             borderRadius: 999,
             background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
@@ -285,7 +275,6 @@ export default function BalanceBar() {
               : "none",
             transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
             whiteSpace: "nowrap",
-            zIndex: 3,
           }}
         >
           CLEAR BETS
