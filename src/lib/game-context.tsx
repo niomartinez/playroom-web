@@ -163,6 +163,16 @@ export interface GameState {
   /* Table info */
   tableName: string;
   dealerName: string;
+  /** WHEP endpoint for primary low-latency WebRTC playback. Null = no live stream. */
+  webrtcUrl: string | null;
+  /** HLS endpoint for fallback playback when WebRTC fails. */
+  hlsUrl: string | null;
+  /**
+   * Per-table compensation (ms) for the lag between the round-event WS
+   * messages and the visible video. Card-reveal UI delays this many ms
+   * so it lines up with what the player sees on the stream.
+   */
+  videoDelayMs: number;
 
   /* Live state */
   balance: number;
@@ -183,6 +193,9 @@ export interface GameState {
   recentWin: RecentWin | null;
 
   /* Setters — accept direct values or functional updaters */
+  setWebrtcUrl: (u: string | null) => void;
+  setHlsUrl: (u: string | null) => void;
+  setVideoDelayMs: (ms: number) => void;
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
@@ -242,6 +255,9 @@ export function GameProvider({
 }: GameProviderProps) {
   const [tableName, setTableName] = useState("");
   const [dealerName, setDealerName] = useState("");
+  const [webrtcUrl, setWebrtcUrl] = useState<string | null>(null);
+  const [hlsUrl, setHlsUrl] = useState<string | null>(null);
+  const [videoDelayMs, setVideoDelayMs] = useState(0);
   const [balance, setBalance] = useState(0);
 
   useEffect(() => {
@@ -431,6 +447,12 @@ export function GameProvider({
     cashierUrl,
     tableName,
     dealerName,
+    webrtcUrl,
+    hlsUrl,
+    videoDelayMs,
+    setWebrtcUrl,
+    setHlsUrl,
+    setVideoDelayMs,
     balance,
     roundStatus,
     currentRound,

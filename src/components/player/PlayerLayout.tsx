@@ -11,6 +11,7 @@ import BaccaratTable from "./BaccaratTable";
 import BalanceBar from "./BalanceBar";
 import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
+import VideoPlayer from "./VideoPlayer";
 import MobileActionBar from "./MobileActionBar";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
@@ -46,7 +47,7 @@ const BET_PANEL_STYLES = `
 
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
-  const { roundStatus, placedBets, cancelPlacedBets } = useGame();
+  const { roundStatus, placedBets, cancelPlacedBets, webrtcUrl, hlsUrl } = useGame();
   const [showChat, setShowChat] = useState(false);
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -86,7 +87,11 @@ export default function PlayerLayout() {
             flexShrink: 0,
           }}
         >
-          <DealVisualizer />
+          <VideoPlayer
+            webrtcUrl={webrtcUrl}
+            hlsUrl={hlsUrl}
+            fallback={<DealVisualizer />}
+          />
         </div>
 
         {/* Roadmap — moved ABOVE the bet panel so the road is the first
@@ -181,7 +186,11 @@ export default function PlayerLayout() {
       <PlayerHeader />
 
       <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
-        <DealVisualizer />
+        <VideoPlayer
+          webrtcUrl={webrtcUrl}
+          hlsUrl={hlsUrl}
+          fallback={<DealVisualizer />}
+        />
         <LiveChat />
       </div>
 
