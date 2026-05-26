@@ -19,7 +19,7 @@ function DemoConnections({ children }: { children: ReactNode }) {
   // cannot place real bets or touch real balances.
   useLobbyWs({ demo: true });
 
-  const { setBalance } = useGame();
+  const { setBalance, gameId, setWebrtcUrl, setHlsUrl, setVideoDelayMs } = useGame();
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -28,6 +28,26 @@ function DemoConnections({ children }: { children: ReactNode }) {
       setBalance(DEMO_BALANCE);
     }
   }, [setBalance]);
+
+  // Demo skips the real state-recovery flow (token === "demo" bypass),
+  // but we still want the VideoPlayer to find the stream URLs for the
+  // selected TEST table. One-shot fetch on gameId change.
+  useEffect(() => {
+    if (!gameId) return;
+    let cancelled = false;
+    fetch(`/api/tables/${encodeURIComponent(gameId)}/state`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((json) => {
+        if (cancelled || !json || json.error_code !== "0") return;
+        const t = json.data?.table;
+        if (!t) return;
+        setWebrtcUrl(t.webrtc_url ?? null);
+        setHlsUrl(t.hls_url ?? null);
+        setVideoDelayMs(t.video_delay_ms ?? 0);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [gameId, setWebrtcUrl, setHlsUrl, setVideoDelayMs]);
 
   return <>{children}</>;
 }
