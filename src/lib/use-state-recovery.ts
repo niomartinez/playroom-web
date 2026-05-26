@@ -21,7 +21,14 @@ interface BackendFight {
 }
 
 interface TableStatePayload {
-  table: { id: string; external_game_id: string; name: string };
+  table: {
+    id: string;
+    external_game_id: string;
+    name: string;
+    webrtc_url?: string | null;
+    hls_url?: string | null;
+    video_delay_ms?: number | null;
+  };
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
   main_bet_counts: Record<
@@ -88,6 +95,9 @@ export function useStateRecovery() {
     setMainBetCounts,
     addStackedChip,
     addPlacedBet,
+    setWebrtcUrl,
+    setHlsUrl,
+    setVideoDelayMs,
   } = useGame();
 
   useEffect(() => {
@@ -109,6 +119,13 @@ export function useStateRecovery() {
 
         const payload = stateJson.data as TableStatePayload | undefined;
         if (!payload) return;
+
+        // Hydrate per-table stream config so the VideoPlayer can connect.
+        // These are independent of fight state — set them whether or not
+        // a round is live.
+        setWebrtcUrl(payload.table?.webrtc_url ?? null);
+        setHlsUrl(payload.table?.hls_url ?? null);
+        setVideoDelayMs(payload.table?.video_delay_ms ?? 0);
 
         const fight = payload.fight;
         if (!fight) {
