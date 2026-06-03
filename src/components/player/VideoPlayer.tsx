@@ -28,10 +28,72 @@ interface VideoPlayerProps {
 
 type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 
+const VOLUME_STORAGE_KEY = "prg_player_volume";
+const MUTED_STORAGE_KEY = "prg_player_muted";
+
+/** Read persisted audio preferences (volume 0-1, muted bool). */
+function loadAudioPrefs(): { volume: number; muted: boolean } {
+  if (typeof window === "undefined") return { volume: 1, muted: true };
+  const v = Number(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+  const m = window.localStorage.getItem(MUTED_STORAGE_KEY);
+  return {
+    volume: Number.isFinite(v) && v >= 0 && v <= 1 ? v : 1,
+    // Default muted until the player explicitly unmutes — browser autoplay
+    // policy rejects unmuted autoplay without a user gesture, and we don't
+    // want a startup audio blast surprising the dealer's headset feedback.
+    muted: m === null ? true : m === "true",
+  };
+}
+
 export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [state, setState] = useState<PlaybackState>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [muted, setMuted] = useState<boolean>(true);
+  const [volume, setVolume] = useState<number>(1);
+  const [showVolume, setShowVolume] = useState(false);
+
+  // Hydrate persisted prefs on first mount only — re-running on every render
+  // would clobber user changes.
+  useEffect(() => {
+    const prefs = loadAudioPrefs();
+    setMuted(prefs.muted);
+    setVolume(prefs.volume);
+  }, []);
+
+  // Push state changes onto the underlying <video>. Separate effect from the
+  // stream connection so toggling mute doesn't re-negotiate WebRTC.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = muted;
+    video.volume = volume;
+  }, [muted, volume]);
+
+  const handleToggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MUTED_STORAGE_KEY, String(next));
+    }
+    // Unmuting in response to a click counts as a user gesture, so play()
+    // will succeed even if the stream was previously muted-autoplay.
+    if (!next) videoRef.current?.play().catch(() => undefined);
+  };
+
+  const handleVolumeChange = (v: number) => {
+    setVolume(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
+    }
+    // Moving the slider from 0 implies the player wants audio — auto-unmute.
+    if (v > 0 && muted) {
+      setMuted(false);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(MUTED_STORAGE_KEY, "false");
+      }
+    }
+  };
 
   useEffect(() => {
     if (!webrtcUrl && !hlsUrl) {
@@ -208,21 +270,87 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     return cleanup;
   }, [webrtcUrl, hlsUrl]);
 
-  // If we have no stream URLs OR both paths failed, surface the parent's
-  // fallback (DealVisualizer card placeholder).
-  if (state === "fallback") {
-    return <div className="absolute inset-0">{fallback}</div>;
-  }
-
+  // Always render the <video> element so videoRef stays bound. Stream URLs
+  // arrive async (DemoWrapper / useStateRecovery fetch), so if we conditionally
+  // unmount the video tag while waiting, the next useEffect tick fires with
+  // videoRef.current === null and the WHEP/HLS handshake silently never runs.
+  // Instead, keep the video mounted and overlay the fallback when needed.
   return (
     <div className="absolute inset-0 w-full h-full bg-black">
       <video
         ref={videoRef}
         playsInline
-        muted
         autoPlay
+        // Initial muted attr satisfies autoplay policy; the muted state
+        // controlled effect above takes over once the user touches the
+        // volume controls.
+        muted
         className="w-full h-full object-cover"
+        style={{ display: state === "fallback" ? "none" : "block" }}
       />
+      {state === "fallback" && (
+        <div className="absolute inset-0">{fallback}</div>
+      )}
+
+      {/* Audio controls — only shown when actually playing the stream */}
+      {(state === "playing" || state === "connecting") && (
+        <div
+          className="absolute z-10"
+          style={{ bottom: 12, right: 12, display: "flex", alignItems: "center", gap: 6 }}
+          onMouseEnter={() => setShowVolume(true)}
+          onMouseLeave={() => setShowVolume(false)}
+        >
+          {showVolume && (
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(e) => handleVolumeChange(Number(e.target.value))}
+              aria-label="Volume"
+              style={{
+                width: 80,
+                accentColor: "#f0b100",
+                cursor: "pointer",
+              }}
+            />
+          )}
+          <button
+            onClick={handleToggleMute}
+            aria-label={muted ? "Unmute" : "Mute"}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "rgba(0,0,0,0.65)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              color: "#fff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            {muted || volume === 0 ? (
+              // Muted icon
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+            ) : (
+              // Speaker icon
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
       {state === "connecting" && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div

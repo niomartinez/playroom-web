@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import {
+  RoundCards,
+  resultColor,
+  statusToBadge,
+  betStatusBadge,
+} from "@/components/round/round-display";
 import { useToast } from "@/lib/toast-context";
 
 interface Bet {
@@ -41,72 +47,6 @@ interface RoundDetail {
   bets: Bet[];
   bet_count: number;
   total_wagered: number;
-}
-
-/* Card display helpers */
-const SUIT_SYMBOLS: Record<string, string> = {
-  H: "\u2665",
-  D: "\u2666",
-  C: "\u2663",
-  S: "\u2660",
-};
-const SUIT_COLORS: Record<string, string> = {
-  H: "#fb2c36",
-  D: "#fb2c36",
-  C: "#ffffff",
-  S: "#ffffff",
-};
-
-function CardDisplay({ card }: { card: string }) {
-  const rank = card.slice(0, -1);
-  const suit = card.slice(-1).toUpperCase();
-  const symbol = SUIT_SYMBOLS[suit] || suit;
-  const color = SUIT_COLORS[suit] || "#ffffff";
-
-  return (
-    <div
-      className="inline-flex flex-col items-center justify-center rounded-lg text-sm font-bold"
-      style={{
-        width: 48,
-        height: 68,
-        backgroundColor: "#ffffff",
-        border: "1px solid rgba(0,0,0,0.15)",
-        color,
-        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-      }}
-    >
-      <span className="text-base leading-none">{rank}</span>
-      <span className="text-lg leading-none">{symbol}</span>
-    </div>
-  );
-}
-
-function statusToBadge(status: string): "active" | "inactive" | "pending" | "error" {
-  switch (status) {
-    case "settled":
-      return "active";
-    case "voided":
-    case "cancelled":
-      return "error";
-    case "betting_open":
-    case "dealing":
-      return "pending";
-    default:
-      return "inactive";
-  }
-}
-
-function betStatusBadge(status: string): "active" | "inactive" | "pending" | "error" {
-  switch (status) {
-    case "settled":
-      return "active";
-    case "voided":
-      return "error";
-    case "accepted":
-      return "pending";
-    default:
-      return "inactive";
-  }
 }
 
 export default function RoundDetailPage() {
@@ -178,15 +118,6 @@ export default function RoundDetailPage() {
 
   const canVoid = !["settled", "settling", "voided"].includes(round.status);
 
-  const resultColor =
-    round.result === "Banker"
-      ? "#fb2c36"
-      : round.result === "Player"
-        ? "#2b7fff"
-        : round.result === "Tie"
-          ? "#00bc7d"
-          : "#6a7282";
-
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back link */}
@@ -241,7 +172,7 @@ export default function RoundDetailPage() {
           </div>
           <div>
             <span style={{ color: "#6a7282" }}>Result</span>
-            <p className="mt-0.5 font-semibold" style={{ color: resultColor }}>
+            <p className="mt-0.5 font-semibold" style={{ color: resultColor(round.result) }}>
               {round.result || "\u2014"}
             </p>
           </div>
@@ -265,70 +196,12 @@ export default function RoundDetailPage() {
       </div>
 
       {/* Cards visualization */}
-      {(round.player_cards || round.banker_cards) && (
-        <div
-          className="rounded-xl p-6"
-          style={{
-            backgroundColor: "#171717",
-            border: "1px solid rgba(208,135,0,0.2)",
-          }}
-        >
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider mb-4"
-            style={{ color: "#d08700" }}
-          >
-            Cards
-          </h2>
-          <div className="grid grid-cols-2 gap-6">
-            {/* Player hand */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-semibold" style={{ color: "#2b7fff" }}>
-                  Player
-                </span>
-                <span
-                  className="inline-flex items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    backgroundColor: "#2b7fff",
-                  }}
-                >
-                  {round.player_score ?? "?"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {round.player_cards?.map((card, i) => (
-                  <CardDisplay key={i} card={card} />
-                ))}
-              </div>
-            </div>
-            {/* Banker hand */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-semibold" style={{ color: "#fb2c36" }}>
-                  Banker
-                </span>
-                <span
-                  className="inline-flex items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    backgroundColor: "#fb2c36",
-                  }}
-                >
-                  {round.banker_score ?? "?"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {round.banker_cards?.map((card, i) => (
-                  <CardDisplay key={i} card={card} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <RoundCards
+        playerCards={round.player_cards}
+        bankerCards={round.banker_cards}
+        playerScore={round.player_score}
+        bankerScore={round.banker_score}
+      />
 
       {/* Bets summary + table */}
       <div

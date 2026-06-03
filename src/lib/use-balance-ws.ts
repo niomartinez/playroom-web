@@ -34,6 +34,7 @@ export function useBalanceWs() {
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    videoDelayMs,
   } = useGame();
 
   // Refs avoid stale closures inside ws.onmessage without forcing reconnects.
@@ -43,6 +44,7 @@ export function useBalanceWs() {
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    videoDelayMs,
   });
   settersRef.current = {
     setBalance,
@@ -50,6 +52,7 @@ export function useBalanceWs() {
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    videoDelayMs,
   };
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -74,13 +77,44 @@ export function useBalanceWs() {
         const s = settersRef.current;
         const type = msg.type as string | undefined;
         const data = (msg.data ?? msg) as Record<string, unknown>;
+        const reason = (msg.reason ?? data.reason) as string | undefined;
+
+        // Video sync: settlement credits and the RoundSettled win-flash event
+        // both correspond to "dealer announces the winner" on the live video.
+        // Delay them by videoDelayMs so the balance crawl / YOU WON overlay
+        // don't fire before the player sees the result on the stream.
+        //
+        // We deliberately do NOT delay reason === "debit" updates (bet placement
+        // optimistic confirmations) or other balance changes (deposits etc.) —
+        // those are unrelated to dealer actions on video.
+        const isVideoSynced =
+          type === "RoundSettled" || reason === "credit";
+        const delay = s.videoDelayMs;
+        if (isVideoSynced && delay > 0) {
+          setTimeout(() => apply(msg, type, data, reason), delay);
+        } else {
+          apply(msg, type, data, reason);
+        }
+      } catch {
+        // ignore malformed messages
+      }
+    };
+
+    function apply(
+      msg: Record<string, unknown>,
+      type: string | undefined,
+      data: Record<string, unknown>,
+      reason: string | undefined,
+    ) {
+      try {
+        const s = settersRef.current;
 
         // BalanceUpdate (or bare {balance: x})
         const balance =
           typeof msg.balance === "number"
-            ? msg.balance
+            ? (msg.balance as number)
             : typeof data.balance === "number"
-              ? data.balance
+              ? (data.balance as number)
               : null;
         if (balance !== null) {
           // Avoid the "upward flicker" when the player rapid-fires bets:
@@ -97,7 +131,6 @@ export function useBalanceWs() {
           // those directly. Default-apply for unknown reasons keeps us
           // from accidentally clamping a future server-side update we
           // forgot to enumerate.
-          const reason = (msg.reason ?? data.reason) as string | undefined;
           if (reason === "debit") {
             s.setBalance((current) => Math.min(current, balance));
           } else {
