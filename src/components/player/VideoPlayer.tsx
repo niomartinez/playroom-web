@@ -175,7 +175,10 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         };
         pc.onconnectionstatechange = () => {
           if (cancelled || !pc) return;
-          if (pc.connectionState === "connected") setState("playing");
+          if (pc.connectionState === "connected") {
+            setState("playing");
+            setErrorMsg(null);
+          }
           if (
             pc.connectionState === "failed" ||
             pc.connectionState === "disconnected"
@@ -241,7 +244,15 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       // Native HLS (Safari).
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = hlsUrl;
-        video.addEventListener("loadeddata", () => !cancelled && setState("playing"), { once: true });
+        video.addEventListener(
+          "loadeddata",
+          () => {
+            if (cancelled) return;
+            setState("playing");
+            setErrorMsg(null);
+          },
+          { once: true },
+        );
         video.addEventListener(
           "error",
           () => {
@@ -271,7 +282,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           if (cancelled) return;
           video.play().catch(() => undefined);
         });
-        hls.on(Hls.Events.LEVEL_LOADED, () => !cancelled && setState("playing"));
+        hls.on(Hls.Events.LEVEL_LOADED, () => {
+          if (cancelled) return;
+          setState("playing");
+          setErrorMsg(null);
+        });
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (cancelled) return;
           if (data.fatal) {
@@ -288,8 +303,10 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     };
 
     // Keep showing the current frame (or fallback) while reconnecting —
-    // only show "Connecting…" on the first attempt so retries are silent.
+    // only show "Connecting…" on the first attempt; retries show the
+    // smaller "Reconnecting…" pill driven by `attempt` instead.
     if (attempt === 0) setState("connecting");
+    setErrorMsg(null);
     void (async () => {
       const wrtcOk = await tryWebRTC();
       if (!wrtcOk && !cancelled) {
@@ -322,30 +339,16 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         <div className="absolute inset-0">{fallback}</div>
       )}
 
-      {/* Audio controls — only shown when actually playing the stream */}
+      {/* Audio controls — only shown when actually playing the stream.
+          Bottom-LEFT: the chat panel docks to the right edge (z-20) and
+          covers anything placed bottom-right when expanded. */}
       {(state === "playing" || state === "connecting") && (
         <div
           className="absolute z-10"
-          style={{ bottom: 12, right: 12, display: "flex", alignItems: "center", gap: 6 }}
+          style={{ bottom: 12, left: 12, display: "flex", alignItems: "center", gap: 6 }}
           onMouseEnter={() => setShowVolume(true)}
           onMouseLeave={() => setShowVolume(false)}
         >
-          {showVolume && (
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={muted ? 0 : volume}
-              onChange={(e) => handleVolumeChange(Number(e.target.value))}
-              aria-label="Volume"
-              style={{
-                width: 80,
-                accentColor: "#f0b100",
-                cursor: "pointer",
-              }}
-            />
-          )}
           <button
             onClick={handleToggleMute}
             aria-label={muted ? "Unmute" : "Mute"}
@@ -378,6 +381,22 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
               </svg>
             )}
           </button>
+          {showVolume && (
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(e) => handleVolumeChange(Number(e.target.value))}
+              aria-label="Volume"
+              style={{
+                width: 80,
+                accentColor: "#f0b100",
+                cursor: "pointer",
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -398,8 +417,43 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           </div>
         </div>
       )}
-      {errorMsg && (
-        <div className="absolute bottom-2 left-2 right-2 text-[10px] text-red-300 bg-black/60 rounded px-2 py-1">
+
+      {/* Retry indicator — shown while the auto-reconnect loop is trying
+          to recover a dropped/not-yet-started stream. */}
+      {attempt > 0 && state !== "playing" && state !== "connecting" && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 14px",
+              borderRadius: 999,
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}
+          >
+            <span
+              aria-hidden
+              className="animate-spin"
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.3)",
+                borderTopColor: "#f0b100",
+              }}
+            />
+            Reconnecting to live stream…
+          </div>
+        </div>
+      )}
+
+      {errorMsg && state !== "playing" && (
+        <div className="absolute top-2 left-2 inline-block max-w-[60%] text-[10px] text-red-300 bg-black/60 rounded px-2 py-1 pointer-events-none">
           {errorMsg}
         </div>
       )}
