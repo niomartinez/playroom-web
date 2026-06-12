@@ -39,7 +39,10 @@ function StudioLoginForm() {
     });
 
     if (res.ok) {
-      router.push(next);
+      // Re-attach the URL hash so deep links like /studio/guide#streaming-setup
+      // survive the login round-trip (the proxy's ?next= carries only the path;
+      // the browser keeps the fragment on this page's URL).
+      router.push(`${next}${window.location.hash}`);
     } else {
       const data = await res.json();
       setError(data.error || "Login failed");
