@@ -64,13 +64,18 @@ export default function UsersPage() {
 
   async function handleCreate() {
     if (!newEmail.trim() || !newPassword || !newDisplayName.trim()) return;
+    const id = newEmail.trim();
+    if (id.length < 3 || /\s/.test(id)) {
+      toast({ type: "error", message: "Username must be at least 3 characters with no spaces" });
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: newEmail.trim(),
+          email: id,
           password: newPassword,
           display_name: newDisplayName.trim(),
           role: newRole,
@@ -161,7 +166,7 @@ export default function UsersPage() {
 
   const columns: Column<AdminUser>[] = [
     { key: "display_name", label: "Name", sortable: true },
-    { key: "email", label: "Email" },
+    { key: "email", label: "Username / Email" },
     {
       key: "role",
       label: "Role",
@@ -240,8 +245,8 @@ export default function UsersPage() {
         saving={saving}
       >
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Email</label>
-          <input type="email" placeholder="admin@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
+          <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Username / Email</label>
+          <input type="text" placeholder="username or admin@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
         </div>
         <div>
