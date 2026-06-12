@@ -19,6 +19,11 @@ import Hls from "hls.js";
  * The component is intentionally dumb about table state — it just
  * renders whatever stream URLs it's given. The `/play` page reads
  * those URLs from `/internal/tables/{id}/state` and passes them in.
+ *
+ * Reconnection: any failure that lands us in fallback (publisher not
+ * started yet, MediaMTX restart, network blip) schedules a silent
+ * retry of the whole WHEP → HLS sequence, so the video recovers on
+ * its own when the stream comes back — no page refresh needed.
  */
 interface VideoPlayerProps {
   webrtcUrl: string | null;
@@ -30,6 +35,9 @@ type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 
 const VOLUME_STORAGE_KEY = "prg_player_volume";
 const MUTED_STORAGE_KEY = "prg_player_muted";
+
+/** How long to wait before re-attempting a failed/ended stream connection. */
+const RECONNECT_DELAY_MS = 6000;
 
 /** Read persisted audio preferences (volume 0-1, muted bool). */
 function loadAudioPrefs(): { volume: number; muted: boolean } {
@@ -52,6 +60,9 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   const [muted, setMuted] = useState<boolean>(true);
   const [volume, setVolume] = useState<number>(1);
   const [showVolume, setShowVolume] = useState(false);
+  // Bumped to re-run the connection effect after a failure. Monotonic —
+  // every retry tears down the previous attempt via the effect cleanup.
+  const [attempt, setAttempt] = useState(0);
 
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
@@ -106,11 +117,23 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     let cancelled = false;
     let pc: RTCPeerConnection | null = null;
     let hls: Hls | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Schedule a fresh connection attempt after a failure. Idempotent per
+    // effect run — only one timer is ever pending, and cleanup cancels it.
+    const scheduleRetry = () => {
+      if (cancelled || retryTimer) return;
+      retryTimer = setTimeout(() => setAttempt((a) => a + 1), RECONNECT_DELAY_MS);
+    };
 
     // Track ALL cleanup so a fast unmount during async negotiation
     // doesn't leak peer connections or HLS workers.
     const cleanup = () => {
       cancelled = true;
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
       if (pc) {
         pc.getSenders().forEach((s) => s.track?.stop());
         pc.close();
@@ -212,6 +235,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       }
       if (!hlsUrl) {
         setState("fallback");
+        scheduleRetry();
         return;
       }
       // Native HLS (Safari).
@@ -224,6 +248,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
             if (cancelled) return;
             setErrorMsg("HLS stream unavailable");
             setState("fallback");
+            scheduleRetry();
           },
           { once: true },
         );
@@ -252,14 +277,19 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           if (data.fatal) {
             setErrorMsg(`HLS error: ${data.details}`);
             setState("fallback");
+            scheduleRetry();
           }
         });
         return;
       }
       setState("fallback");
+      // No MSE support, but WHEP may still recover on a later attempt.
+      if (webrtcUrl) scheduleRetry();
     };
 
-    setState("connecting");
+    // Keep showing the current frame (or fallback) while reconnecting —
+    // only show "Connecting…" on the first attempt so retries are silent.
+    if (attempt === 0) setState("connecting");
     void (async () => {
       const wrtcOk = await tryWebRTC();
       if (!wrtcOk && !cancelled) {
@@ -268,7 +298,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     })();
 
     return cleanup;
-  }, [webrtcUrl, hlsUrl]);
+  }, [webrtcUrl, hlsUrl, attempt]);
 
   // Always render the <video> element so videoRef stays bound. Stream URLs
   // arrive async (DemoWrapper / useStateRecovery fetch), so if we conditionally
