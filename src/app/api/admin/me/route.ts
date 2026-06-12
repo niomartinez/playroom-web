@@ -30,8 +30,10 @@ export async function GET(req: NextRequest) {
         },
       });
       if (res.ok) {
-        const data = await res.json();
-        return NextResponse.json(data);
+        const raw = await res.json();
+        // Backend wraps in BaseResponse { error_code, message, data: {...} } —
+        // returning the wrapper made the UI fall back to role "viewer".
+        return NextResponse.json(raw.data || raw);
       }
     } catch {
       // Fall through to local payload
