@@ -107,20 +107,34 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
             <div className="step"><span className="step-num">3</span><span className="step-text">Open <strong>Settings</strong> (gear icon, top-right) — set your <strong>dealer name</strong> and select the <strong>table</strong></span></div>
             <div className="step"><span className="step-num">4</span><span className="step-text">In Settings, scroll to <strong>Angel Eye Shoe</strong> — click <strong>"Connect Shoe"</strong> and select the serial port</span></div>
             <div className="step"><span className="step-num">5</span><span className="step-text">Click <strong>Save</strong> — your name will appear in the player UI</span></div>
-            <div className="step"><span className="step-num">6</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream — see <strong>Section 2: Streaming Setup</strong> below for the exact settings</span></div>
 
             <div className="info">You only need to grant serial port permission once per session. If Chrome asks &quot;Allow this site to access a serial port?&quot; — click Allow.</div>
 
-            <h3>2. Dealing a Round</h3>
+            <h3>2. Streaming Setup (OBS)</h3>
+            <p>Full reference with screenshots and troubleshooting: <code>STREAMING_OBS_HANDOFF.md</code> (ask Nio for a copy). The short version:</p>
+
+            <div className="step"><span className="step-num">1</span><span className="step-text">OBS → Settings → Stream → Service: <strong>WHIP</strong></span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text">Server: <code>https://stream.playroomgaming.ph/studio1/whip</code> (or <code>/studio2/whip</code> for Table 2)</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Bearer Token: <code>studio1:&lt;publish password&gt;</code> — the <code>studio1:</code> prefix before the password is <strong>required</strong>. Password is in 1Password (ask Nio).</span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text">Output (Advanced): CBR <strong>6000 Kbps</strong>, Keyframe Interval <strong>2s</strong>, <strong>B Frames: 0</strong> (x264: add <code>bframes=0</code> in the options field)</span></div>
+            <div className="step"><span className="step-num">5</span><span className="step-text">Video: 1920×1080, 30 FPS. Click <strong>Start Streaming</strong> — indicator turns green within ~3s</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text">Verify on the player page — video appears within ~5 seconds</span></div>
+
+            <div className="warn">B-frames MUST be 0 — otherwise players see black video with no error anywhere. This is the #1 streaming mistake.</div>
+            <div className="info">WHIP carries your microphone audio to players. If OBS can&apos;t connect via WHIP (network blocks UDP), fall back to RTMP: Server <code>rtmp://stream.playroomgaming.ph:1935</code>, Stream Key <code>studio1?user=studio1&amp;pass=&lt;password&gt;</code> — but players then get video only, no audio. Tell Nio.</div>
+
+            <h3>3. Dealing a Round</h3>
 
             <div className="step"><span className="step-num">1</span><span className="step-text">Click <strong>"NEW ROUND"</strong> — betting opens, players see countdown timer</span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text"><strong>Wait for countdown</strong> — DO NOT deal cards yet. Players are placing bets.</span></div>
-            <div className="step"><span className="step-num">3</span><span className="step-text">Countdown hits 0 — <strong>"NO MORE BETS"</strong> appears. Bets are locked.</span></div>
-            <div className="step"><span className="step-num">4</span><span className="step-text"><strong>Deal cards through the shoe</strong> — Player 1, Banker 1, Player 2, Banker 2, then third cards if rules require</span></div>
-            <div className="step"><span className="step-num">5</span><span className="step-text"><strong>Result is automatic</strong> — shoe reads result, bets settle, roads update</span></div>
-            <div className="step"><span className="step-num">6</span><span className="step-text">Click <strong>"NEW ROUND"</strong> again for the next round</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Countdown hits 0 — <strong>"NO MORE BETS"</strong> appears. Bets are locked, and the <strong>card verification screen</strong> opens automatically.</span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text"><strong>Deal cards through the shoe</strong> — Player 1, Banker 1, Player 2, Banker 2, then third cards if rules require. Each card appears on the verification screen as the shoe reads it — and on player screens, timed to match the live video.</span></div>
+            <div className="step"><span className="step-num">5</span><span className="step-text"><strong>Check the cards on screen against the table.</strong> Misread? Tap the wrong slot and pick the correct card — player screens update too.</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text">Click <strong>"Confirm &amp; Settle"</strong> — result is recorded, bets settle, roads update</span></div>
+            <div className="step"><span className="step-num">7</span><span className="step-text">Click <strong>"NEW ROUND"</strong> again for the next round</span></div>
 
-            <h3>3. Table Controls</h3>
+            <h3>4. Table Controls</h3>
 
             <table>
               <thead><tr><th>Button</th><th>When to Use</th><th>What Happens</th></tr></thead>
@@ -132,10 +146,18 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
               </tbody>
             </table>
 
-            <h3>4. Betting Window</h3>
-            <p>The betting window duration is configurable (10s, 15s, 20s, 25s, 30s). Use the buttons at the bottom of the Round Controls panel. Takes effect on the next round.</p>
+            <h3>5. Betting Window</h3>
+            <p>The betting window duration is configurable (10s, 16s, 20s, 25s, 30s — default 16s). Use the buttons at the bottom of the Round Controls panel. Takes effect on the next round.</p>
 
-            <h3>5. Manual Input (Fallback)</h3>
+            <h3>6. Video Delay (Card Sync)</h3>
+            <p>Cards and results are delayed by the table&apos;s <strong>Video Delay</strong> so they appear on player screens at the same moment the action shows on the video stream (the video takes ~1–2 seconds to reach viewers; card data would otherwise arrive first).</p>
+            <ol>
+              <li>Settings → <strong>Video Delay (ms)</strong> — preset to <strong>1100</strong>, usually close</li>
+              <li>To fine-tune: watch a player screen next to the table while dealing — if the card flips on screen <strong>before</strong> it shows on video, increase the value; if <strong>after</strong>, decrease</li>
+              <li>Click Apply — takes effect immediately, no refresh needed</li>
+            </ol>
+
+            <h3>7. Manual Input (Fallback)</h3>
             <p>If the Angel Eye shoe malfunctions or a card isn&apos;t read correctly:</p>
             <ol>
               <li>Click the <strong>"Manual Input"</strong> button (bottom-right)</li>
@@ -145,7 +167,7 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
             </ol>
             <div className="warn">Manual input should only be used when the shoe fails. Normal dealing should always go through the shoe.</div>
 
-            <h3>6. Testing with Emulator (No Hardware)</h3>
+            <h3>8. Testing with Emulator (No Hardware)</h3>
             <p>When no physical shoe is available, use the Emulator page:</p>
             <ol>
               <li>Open <code>/emulator</code> in a separate tab</li>
@@ -155,7 +177,7 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
               <li>Result auto-settles, all clients return to waiting</li>
             </ol>
 
-            <h3>7. Shift Change</h3>
+            <h3>9. Shift Change</h3>
             <ol>
               <li>Current dealer: Click <strong>PAUSE TABLE</strong> (wait for current round to finish)</li>
               <li>Current dealer: Log out</li>
@@ -163,7 +185,7 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
               <li>Click <strong>NEW ROUND</strong> to begin</li>
             </ol>
 
-            <h3>8. Troubleshooting</h3>
+            <h3>10. Troubleshooting</h3>
 
             <table>
               <thead><tr><th>Issue</th><th>Solution</th></tr></thead>
@@ -171,12 +193,14 @@ export default function UserManualDialog({ open, onClose }: UserManualDialogProp
                 <tr><td>Shoe shows "Disconnected"</td><td>Check USB cable. Click "Connect Shoe" and re-select port. Try different USB port.</td></tr>
                 <tr><td>Wrong card read</td><td>Re-slide card. If persistent, use Manual Input for that round.</td></tr>
                 <tr><td>"Browser Not Supported"</td><td>Use Chrome or Edge (not Safari/Firefox). Must be HTTPS.</td></tr>
-                <tr><td>Video stream lag</td><td>Check upload bandwidth (need 15+ Mbps). Lower quality in OBS.</td></tr>
+                <tr><td>Players report BLACK video</td><td>OBS B-frames must be 0 — see Section 2. Apply, Stop Streaming, Start Streaming.</td></tr>
+                <tr><td>Cards on player screens out of sync with video</td><td>Settings &rarr; Video Delay (ms) — see Section 6.</td></tr>
+                <tr><td>Video stream lag</td><td>Check upload bandwidth (need 15+ Mbps). Lower bitrate in OBS (6000 &rarr; 4000 Kbps).</td></tr>
                 <tr><td>Page frozen</td><td>Refresh (F5). Reconnect shoe. In-progress round is preserved on server.</td></tr>
               </tbody>
             </table>
 
-            <h3>9. Emergency Procedures</h3>
+            <h3>11. Emergency Procedures</h3>
             <p><strong>Power outage:</strong> All bets preserved in database. Log back in, reconnect shoe, resume table.</p>
             <p><strong>Internet disconnection:</strong> Players auto-reconnect. Video resumes. No bets lost.</p>
             <p><strong>Angel Eye failure:</strong> Switch to Manual Input for remaining rounds. Contact hardware support.</p>
