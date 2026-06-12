@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,20 +14,25 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (res.ok) {
-      router.push("/admin");
-    } else {
-      const data = await res.json();
-      setError(data.error || "Login failed");
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Wire field stays `email` for backend compatibility; it accepts
+        // either a username or an email address.
+        body: JSON.stringify({ email: identifier.trim(), password }),
+      });
+      if (res.ok) {
+        router.push("/admin");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.error === "string" ? data.error : "Login failed");
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -65,22 +70,28 @@ export default function AdminLogin() {
 
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 rounded px-3 py-2 text-center">
-            {error}
+            {typeof error === "string" ? error : "Login failed"}
           </p>
         )}
 
         <div>
           <label
+            htmlFor="admin-identifier"
             className="block text-xs font-medium mb-1"
             style={{ color: "#99a1af" }}
           >
-            Email
+            Username or Email
           </label>
           <input
-            type="email"
-            placeholder="admin@playroom.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="admin-identifier"
+            type="text"
+            placeholder="SuperAdmin or admin@example.com"
+            autoComplete="username"
+            autoFocus
+            spellCheck={false}
+            autoCapitalize="none"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
@@ -92,14 +103,17 @@ export default function AdminLogin() {
 
         <div>
           <label
+            htmlFor="admin-password"
             className="block text-xs font-medium mb-1"
             style={{ color: "#99a1af" }}
           >
             Password
           </label>
           <input
+            id="admin-password"
             type="password"
             placeholder="Enter password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition"
