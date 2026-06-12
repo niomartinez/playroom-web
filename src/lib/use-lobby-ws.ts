@@ -330,6 +330,21 @@ function handleMessage(
       break;
     }
 
+    case "HandReset":
+    case "hand_reset": {
+      // Angel Eye re-deal / studio correction: wipe the provisional hand.
+      // Mirrors the correction the viewer is watching on video. The
+      // authoritative hand still arrives with RoundResult.
+      const eventRoundId = (data.roundId ?? data.round_id) as string | undefined;
+      setCurrentRound((prev) => {
+        if (!prev) return prev;
+        if (eventRoundId && String(prev.roundId) !== String(eventRoundId)) return prev;
+        if (prev.winner) return prev;
+        return { ...prev, playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 };
+      });
+      break;
+    }
+
     case "RoundResult":
     case "round_result": {
       setRoundStatus("result");
