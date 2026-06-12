@@ -40,24 +40,11 @@ export interface UseLobbyWsOptions {
  * Connects to the lobby WebSocket and keeps GameContext in sync.
  * Reconnects automatically with exponential backoff.
  */
-/**
- * Events that correspond to a visible dealer action on the live video
- * feed. These are delayed client-side by `videoDelayMs` so the UI
- * animation lines up with what the player sees on the stream.
- *
- * Must NOT include RoundStarted, BettingClosed, MainBetCounts — those
- * are timer/state-driven, not video-driven, and delaying them would
- * cause real bugs (e.g. accepting bets after dealer says "no more bets"
- * on video).
- */
-const VIDEO_SYNCED_EVENT_TYPES: ReadonlySet<string> = new Set([
-  "CardDealt",
-  "card_dealt",
-  "RoundResult",
-  "round_result",
-  "RoundClosed",
-  "round_closed",
-]);
+// NOTE on video sync: CardDealt / RoundResult / RoundClosed are already
+// delayed SERVER-side by the table's `video_delay_ms` (see backend
+// `broadcast_video_synced`). Do not delay them again here — doing both
+// double-applies the calibration (bug fixed 2026-06-12). Balance-WS
+// events are the opposite: only delayed client-side (use-balance-ws).
 
 export function useLobbyWs(options: UseLobbyWsOptions = {}) {
   const { demo = false } = options;
@@ -75,12 +62,11 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
     setRecentWin,
     stackedChips,
     addFlyingChip,
-    videoDelayMs,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip, videoDelayMs });
-  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip, videoDelayMs };
+  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip });
+  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip };
 
   useEffect(() => {
     let mounted = true;
@@ -149,19 +135,8 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
               (eventTableUuid && String(eventTableUuid) === String(myId));
             if (!matches) return;
           }
-          const apply = () => {
-            // Re-read settersRef inside the closure so a delayed callback
-            // sees the latest setters (e.g. roundStatus changed since enqueue).
-            const cur = settersRef.current;
-            handleMessage(msg, cur.setRoundStatus, cur.setCurrentRound, cur.setRoads, cur.clearPlacedBets, cur.token, cur.placedBets, cur.setBalance, cur.clearStackedChips, cur.setMainBetCounts, cur.setRecentWin, () => settersRef.current.stackedChips, cur.addFlyingChip, cur.gameId);
-          };
-          const type = msg.type as string | undefined;
-          const delay = s.videoDelayMs;
-          if (type && delay > 0 && VIDEO_SYNCED_EVENT_TYPES.has(type)) {
-            setTimeout(apply, delay);
-          } else {
-            apply();
-          }
+          const cur = settersRef.current;
+          handleMessage(msg, cur.setRoundStatus, cur.setCurrentRound, cur.setRoads, cur.clearPlacedBets, cur.token, cur.placedBets, cur.setBalance, cur.clearStackedChips, cur.setMainBetCounts, cur.setRecentWin, () => settersRef.current.stackedChips, cur.addFlyingChip, cur.gameId);
         } catch {
           // ignore
         }
@@ -351,6 +326,21 @@ function handleMessage(
           };
         }
         return prev;
+      });
+      break;
+    }
+
+    case "HandReset":
+    case "hand_reset": {
+      // Angel Eye re-deal / studio correction: wipe the provisional hand.
+      // Mirrors the correction the viewer is watching on video. The
+      // authoritative hand still arrives with RoundResult.
+      const eventRoundId = (data.roundId ?? data.round_id) as string | undefined;
+      setCurrentRound((prev) => {
+        if (!prev) return prev;
+        if (eventRoundId && String(prev.roundId) !== String(eventRoundId)) return prev;
+        if (prev.winner) return prev;
+        return { ...prev, playerCards: [], bankerCards: [], playerScore: 0, bankerScore: 0 };
       });
       break;
     }

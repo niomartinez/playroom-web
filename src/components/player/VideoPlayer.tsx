@@ -19,6 +19,11 @@ import Hls from "hls.js";
  * The component is intentionally dumb about table state — it just
  * renders whatever stream URLs it's given. The `/play` page reads
  * those URLs from `/internal/tables/{id}/state` and passes them in.
+ *
+ * Reconnection: any failure that lands us in fallback (publisher not
+ * started yet, MediaMTX restart, network blip) schedules a silent
+ * retry of the whole WHEP → HLS sequence, so the video recovers on
+ * its own when the stream comes back — no page refresh needed.
  */
 interface VideoPlayerProps {
   webrtcUrl: string | null;
@@ -30,6 +35,9 @@ type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 
 const VOLUME_STORAGE_KEY = "prg_player_volume";
 const MUTED_STORAGE_KEY = "prg_player_muted";
+
+/** How long to wait before re-attempting a failed/ended stream connection. */
+const RECONNECT_DELAY_MS = 6000;
 
 /** Read persisted audio preferences (volume 0-1, muted bool). */
 function loadAudioPrefs(): { volume: number; muted: boolean } {
@@ -52,6 +60,9 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   const [muted, setMuted] = useState<boolean>(true);
   const [volume, setVolume] = useState<number>(1);
   const [showVolume, setShowVolume] = useState(false);
+  // Bumped to re-run the connection effect after a failure. Monotonic —
+  // every retry tears down the previous attempt via the effect cleanup.
+  const [attempt, setAttempt] = useState(0);
 
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
@@ -106,11 +117,66 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     let cancelled = false;
     let pc: RTCPeerConnection | null = null;
     let hls: Hls | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let stallTimer: ReturnType<typeof setInterval> | null = null;
+
+    const stopStallWatchdog = () => {
+      if (stallTimer) {
+        clearInterval(stallTimer);
+        stallTimer = null;
+      }
+    };
+
+    /**
+     * WebRTC can report "connected" while zero media flows — e.g. a
+     * privacy extension blocking UDP after the handshake, or a zombie
+     * publisher holding the path with no frames. The player then shows
+     * black forever with no error to react to. Watch decoded-frame
+     * progress; if it stalls for 3 checks (~9s), drop to HLS (TCP),
+     * which survives UDP blocking — and from there the normal
+     * fallback/retry chain takes over.
+     */
+    const startStallWatchdog = () => {
+      if (stallTimer) return;
+      let lastFrames = -1;
+      let stalledChecks = 0;
+      stallTimer = setInterval(() => {
+        if (cancelled) return;
+        const q = video.getVideoPlaybackQuality?.();
+        const frames = q?.totalVideoFrames ?? -1;
+        if (frames < 0) return; // API unavailable — can't measure
+        if (frames === lastFrames) {
+          stalledChecks++;
+          if (stalledChecks >= 3) {
+            console.warn(
+              "[VideoPlayer] WebRTC connected but no frames decoding — falling back to HLS",
+            );
+            stopStallWatchdog();
+            void tryHls();
+          }
+        } else {
+          stalledChecks = 0;
+          lastFrames = frames;
+        }
+      }, 3000);
+    };
+
+    // Schedule a fresh connection attempt after a failure. Idempotent per
+    // effect run — only one timer is ever pending, and cleanup cancels it.
+    const scheduleRetry = () => {
+      if (cancelled || retryTimer) return;
+      retryTimer = setTimeout(() => setAttempt((a) => a + 1), RECONNECT_DELAY_MS);
+    };
 
     // Track ALL cleanup so a fast unmount during async negotiation
     // doesn't leak peer connections or HLS workers.
     const cleanup = () => {
       cancelled = true;
+      stopStallWatchdog();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
       if (pc) {
         pc.getSenders().forEach((s) => s.track?.stop());
         pc.close();
@@ -152,7 +218,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         };
         pc.onconnectionstatechange = () => {
           if (cancelled || !pc) return;
-          if (pc.connectionState === "connected") setState("playing");
+          if (pc.connectionState === "connected") {
+            setState("playing");
+            setErrorMsg(null);
+            startStallWatchdog();
+          }
           if (
             pc.connectionState === "failed" ||
             pc.connectionState === "disconnected"
@@ -206,24 +276,35 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
      */
     const tryHls = async (): Promise<void> => {
       if (cancelled) return;
+      stopStallWatchdog();
       if (pc) {
         pc.close();
         pc = null;
       }
       if (!hlsUrl) {
         setState("fallback");
+        scheduleRetry();
         return;
       }
       // Native HLS (Safari).
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = hlsUrl;
-        video.addEventListener("loadeddata", () => !cancelled && setState("playing"), { once: true });
+        video.addEventListener(
+          "loadeddata",
+          () => {
+            if (cancelled) return;
+            setState("playing");
+            setErrorMsg(null);
+          },
+          { once: true },
+        );
         video.addEventListener(
           "error",
           () => {
             if (cancelled) return;
             setErrorMsg("HLS stream unavailable");
             setState("fallback");
+            scheduleRetry();
           },
           { once: true },
         );
@@ -246,20 +327,31 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           if (cancelled) return;
           video.play().catch(() => undefined);
         });
-        hls.on(Hls.Events.LEVEL_LOADED, () => !cancelled && setState("playing"));
+        hls.on(Hls.Events.LEVEL_LOADED, () => {
+          if (cancelled) return;
+          setState("playing");
+          setErrorMsg(null);
+        });
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (cancelled) return;
           if (data.fatal) {
             setErrorMsg(`HLS error: ${data.details}`);
             setState("fallback");
+            scheduleRetry();
           }
         });
         return;
       }
       setState("fallback");
+      // No MSE support, but WHEP may still recover on a later attempt.
+      if (webrtcUrl) scheduleRetry();
     };
 
-    setState("connecting");
+    // Keep showing the current frame (or fallback) while reconnecting —
+    // only show "Connecting…" on the first attempt; retries show the
+    // smaller "Reconnecting…" pill driven by `attempt` instead.
+    if (attempt === 0) setState("connecting");
+    setErrorMsg(null);
     void (async () => {
       const wrtcOk = await tryWebRTC();
       if (!wrtcOk && !cancelled) {
@@ -268,7 +360,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     })();
 
     return cleanup;
-  }, [webrtcUrl, hlsUrl]);
+  }, [webrtcUrl, hlsUrl, attempt]);
 
   // Always render the <video> element so videoRef stays bound. Stream URLs
   // arrive async (DemoWrapper / useStateRecovery fetch), so if we conditionally
@@ -285,37 +377,25 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         // controlled effect above takes over once the user touches the
         // volume controls.
         muted
-        className="w-full h-full object-cover"
+        // object-contain: never crop the dealer feed — the full 1080p frame
+        // is always visible, letter/pillarboxed over the black backdrop.
+        className="w-full h-full object-contain"
         style={{ display: state === "fallback" ? "none" : "block" }}
       />
       {state === "fallback" && (
         <div className="absolute inset-0">{fallback}</div>
       )}
 
-      {/* Audio controls — only shown when actually playing the stream */}
+      {/* Audio controls — only shown when actually playing the stream.
+          Bottom-LEFT: the chat panel docks to the right edge (z-20) and
+          covers anything placed bottom-right when expanded. */}
       {(state === "playing" || state === "connecting") && (
         <div
           className="absolute z-10"
-          style={{ bottom: 12, right: 12, display: "flex", alignItems: "center", gap: 6 }}
+          style={{ bottom: 12, left: 12, display: "flex", alignItems: "center", gap: 6 }}
           onMouseEnter={() => setShowVolume(true)}
           onMouseLeave={() => setShowVolume(false)}
         >
-          {showVolume && (
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={muted ? 0 : volume}
-              onChange={(e) => handleVolumeChange(Number(e.target.value))}
-              aria-label="Volume"
-              style={{
-                width: 80,
-                accentColor: "#f0b100",
-                cursor: "pointer",
-              }}
-            />
-          )}
           <button
             onClick={handleToggleMute}
             aria-label={muted ? "Unmute" : "Mute"}
@@ -348,6 +428,22 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
               </svg>
             )}
           </button>
+          {showVolume && (
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(e) => handleVolumeChange(Number(e.target.value))}
+              aria-label="Volume"
+              style={{
+                width: 80,
+                accentColor: "#f0b100",
+                cursor: "pointer",
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -368,8 +464,44 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           </div>
         </div>
       )}
-      {errorMsg && (
-        <div className="absolute bottom-2 left-2 right-2 text-[10px] text-red-300 bg-black/60 rounded px-2 py-1">
+
+      {/* Retry indicator — shown while the auto-reconnect loop is trying
+          to recover a dropped/not-yet-started stream. Top-anchored: the
+          DealVisualizer fallback owns the center with its WAITING banner. */}
+      {attempt > 0 && state !== "playing" && state !== "connecting" && (
+        <div className="absolute top-3 inset-x-0 flex justify-center pointer-events-none">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 14px",
+              borderRadius: 999,
+              background: "rgba(0,0,0,0.6)",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: 0.5,
+            }}
+          >
+            <span
+              aria-hidden
+              className="animate-spin"
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.3)",
+                borderTopColor: "#f0b100",
+              }}
+            />
+            Reconnecting to live stream…
+          </div>
+        </div>
+      )}
+
+      {errorMsg && state !== "playing" && (
+        <div className="absolute top-2 left-2 inline-block max-w-[60%] text-[10px] text-red-300 bg-black/60 rounded px-2 py-1 pointer-events-none">
           {errorMsg}
         </div>
       )}
