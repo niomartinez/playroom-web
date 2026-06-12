@@ -39,6 +39,23 @@ function monthStartISO(): string {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
 
+/* CSV export helpers */
+function csvEscape(v: string | number): string {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ReportsPage() {
   const [dateFrom, setDateFrom] = useState(daysAgoISO(7));
   const [dateTo, setDateTo] = useState(todayISO());
@@ -92,6 +109,28 @@ export default function ReportsPage() {
 
   function fmt(n: number): string {
     return n.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  }
+
+  function exportCsv() {
+    const rows: (string | number)[][] = [
+      ["Play Room Gaming — GGR Report"],
+      ["Period", `${dateFrom} to ${dateTo}`],
+      [],
+      ["Summary"],
+      ["Total Wagered", "Total Payout", "GGR", "Bets", "Rounds"],
+      summary
+        ? [summary.total_wagered, summary.total_payout, summary.ggr, summary.bet_count, summary.round_count]
+        : ["-", "-", "-", "-", "-"],
+      [],
+      ["By Operator"],
+      ["Operator", "Wagered", "Payout", "GGR", "Bets"],
+      ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count]),
+      [],
+      ["By Table"],
+      ["Table", "Wagered", "Payout", "GGR", "Bets"],
+      ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count]),
+    ];
+    downloadCsv(`ggr-report_${dateFrom}_${dateTo}.csv`, rows);
   }
 
   const breakdownData = activeTab === "operator" ? byOperator : byTable;
@@ -165,6 +204,15 @@ export default function ReportsPage() {
               This Month
             </button>
           </div>
+
+          <button
+            onClick={exportCsv}
+            disabled={loading || !summary}
+            className="ml-auto rounded-lg px-4 py-2 text-xs font-bold transition hover:brightness-110 disabled:opacity-40"
+            style={{ backgroundColor: "#f0b100", color: "#000" }}
+          >
+            Export CSV
+          </button>
         </div>
       </div>
 
