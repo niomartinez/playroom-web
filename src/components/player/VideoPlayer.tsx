@@ -118,6 +118,48 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     let pc: RTCPeerConnection | null = null;
     let hls: Hls | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let stallTimer: ReturnType<typeof setInterval> | null = null;
+
+    const stopStallWatchdog = () => {
+      if (stallTimer) {
+        clearInterval(stallTimer);
+        stallTimer = null;
+      }
+    };
+
+    /**
+     * WebRTC can report "connected" while zero media flows — e.g. a
+     * privacy extension blocking UDP after the handshake, or a zombie
+     * publisher holding the path with no frames. The player then shows
+     * black forever with no error to react to. Watch decoded-frame
+     * progress; if it stalls for 3 checks (~9s), drop to HLS (TCP),
+     * which survives UDP blocking — and from there the normal
+     * fallback/retry chain takes over.
+     */
+    const startStallWatchdog = () => {
+      if (stallTimer) return;
+      let lastFrames = -1;
+      let stalledChecks = 0;
+      stallTimer = setInterval(() => {
+        if (cancelled) return;
+        const q = video.getVideoPlaybackQuality?.();
+        const frames = q?.totalVideoFrames ?? -1;
+        if (frames < 0) return; // API unavailable — can't measure
+        if (frames === lastFrames) {
+          stalledChecks++;
+          if (stalledChecks >= 3) {
+            console.warn(
+              "[VideoPlayer] WebRTC connected but no frames decoding — falling back to HLS",
+            );
+            stopStallWatchdog();
+            void tryHls();
+          }
+        } else {
+          stalledChecks = 0;
+          lastFrames = frames;
+        }
+      }, 3000);
+    };
 
     // Schedule a fresh connection attempt after a failure. Idempotent per
     // effect run — only one timer is ever pending, and cleanup cancels it.
@@ -130,6 +172,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     // doesn't leak peer connections or HLS workers.
     const cleanup = () => {
       cancelled = true;
+      stopStallWatchdog();
       if (retryTimer) {
         clearTimeout(retryTimer);
         retryTimer = null;
@@ -178,6 +221,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           if (pc.connectionState === "connected") {
             setState("playing");
             setErrorMsg(null);
+            startStallWatchdog();
           }
           if (
             pc.connectionState === "failed" ||
@@ -232,6 +276,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
      */
     const tryHls = async (): Promise<void> => {
       if (cancelled) return;
+      stopStallWatchdog();
       if (pc) {
         pc.close();
         pc = null;
