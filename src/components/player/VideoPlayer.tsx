@@ -377,7 +377,9 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         // controlled effect above takes over once the user touches the
         // volume controls.
         muted
-        className="w-full h-full object-cover"
+        // object-contain: never crop the dealer feed — the full 1080p frame
+        // is always visible, letter/pillarboxed over the black backdrop.
+        className="w-full h-full object-contain"
         style={{ display: state === "fallback" ? "none" : "block" }}
       />
       {state === "fallback" && (
