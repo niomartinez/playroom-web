@@ -419,9 +419,10 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       )}
 
       {/* Retry indicator — shown while the auto-reconnect loop is trying
-          to recover a dropped/not-yet-started stream. */}
+          to recover a dropped/not-yet-started stream. Top-anchored: the
+          DealVisualizer fallback owns the center with its WAITING banner. */}
       {attempt > 0 && state !== "playing" && state !== "connecting" && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute top-3 inset-x-0 flex justify-center pointer-events-none">
           <div
             style={{
               display: "flex",
