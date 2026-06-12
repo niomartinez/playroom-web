@@ -38,7 +38,7 @@ const TOC: TocItem[] = [
   { id: "video-delay", num: 6, title: "Video Delay (Card Sync)", keywords: ["sync", "delay", "latency", "calibration", "1100", "cards early", "cards late", "video"] },
   { id: "manual-input", num: 7, title: "Manual Input (Fallback)", keywords: ["manual", "fallback", "shoe broken", "card picker", "override"] },
   { id: "emulator", num: 8, title: "Testing with Emulator", keywords: ["emulator", "test", "no hardware", "demo", "fake cards"] },
-  { id: "shift-change", num: 9, title: "Shift Change", keywords: ["shift", "handover", "dealer change", "logout", "pause"] },
+  { id: "shift-change", num: 9, title: "Shift Change & Accounts", keywords: ["shift", "handover", "dealer change", "logout", "log out", "pause", "password", "change password", "reset password", "account", "forgot"] },
   { id: "troubleshooting", num: 10, title: "Troubleshooting", keywords: ["black video", "disconnected", "wrong card", "browser not supported", "lag", "frozen", "not working", "broken", "issue", "problem"] },
   { id: "emergency", num: 11, title: "Emergency Procedures", keywords: ["power outage", "internet down", "disconnect", "failure", "emergency", "outage"] },
 ];
@@ -470,7 +470,7 @@ export default function GuideContent() {
           <Section item={TOC[5]}>
             <p>Cards and results are delayed by the table&apos;s <strong>Video Delay</strong> so they appear on player screens at the same moment the action shows on the video stream (the video takes ~1–2 seconds to reach viewers; card data would otherwise arrive first).</p>
             <ol>
-              <li>Settings → <strong>Video Delay (ms)</strong> — preset to <strong>1100</strong>, usually close</li>
+              <li>Settings (gear icon, top-right) → <strong>Video Delay (ms)</strong>, directly under the Dealer Name field — preset to <strong>1100</strong>, usually close. Select a table first or the field is disabled.</li>
               <li>To fine-tune: watch a player screen next to the table while dealing — if the card flips on screen <strong>before</strong> it shows on video, increase the value; if <strong>after</strong>, decrease</li>
               <li>Click Apply — takes effect immediately, no refresh needed</li>
             </ol>
@@ -501,10 +501,12 @@ export default function GuideContent() {
           <Section item={TOC[8]}>
             <ol>
               <li>Current dealer: Click <strong>PAUSE TABLE</strong> (wait for current round to finish)</li>
-              <li>Current dealer: Log out</li>
+              <li>Current dealer: <strong>Log out</strong> (door icon, top-right of the studio header)</li>
               <li>New dealer: Log in → Connect Shoe → RESUME TABLE</li>
               <li>Click <strong>NEW ROUND</strong> to begin</li>
             </ol>
+            <p><strong>Accounts:</strong> one account per table (<code>dealer.table1</code>, <code>dealer.table2</code>) — set the on-screen dealer name in Settings, no separate account needed per person. Usernames are not case-sensitive.</p>
+            <p><strong>Passwords:</strong> change your own under Settings → <strong>Account</strong> (needs your current password). Forgot it? The supervisor logs in as <code>SuperAdmin</code> and resets it from the same Account section.</p>
           </Section>
 
           <Section item={TOC[9]}>

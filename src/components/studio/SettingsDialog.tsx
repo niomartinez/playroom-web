@@ -403,6 +403,9 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             </p>
           </div>
 
+          {/* Account: password management */}
+          <AccountSection />
+
           {/* Language Toggle */}
           <div>
             <label className="block text-xs font-medium text-[#99a1af] mb-1">
@@ -592,6 +595,158 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  Account section — change own password; superadmin resets others    */
+/* ------------------------------------------------------------------ */
+
+function AccountSection() {
+  const [role, setRole] = useState("");
+  useEffect(() => {
+    setRole(localStorage.getItem("studioRole") || "");
+  }, []);
+
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const [resetUser, setResetUser] = useState("");
+  const [resetPw, setResetPw] = useState("");
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+  const [resetSaving, setResetSaving] = useState(false);
+
+  const inputStyle = {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    border: "1px solid rgba(208,135,0,0.2)",
+  } as const;
+
+  const changePassword = async () => {
+    setPwSaving(true);
+    setPwMsg(null);
+    try {
+      const res = await fetch("/api/studio/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_password: curPw, new_password: newPw }),
+      });
+      const data = await res.json();
+      if (res.ok && String(data.error_code ?? "0") === "0") {
+        setPwMsg("Password changed.");
+        setCurPw("");
+        setNewPw("");
+      } else {
+        setPwMsg(data.message || "Could not change password.");
+      }
+    } catch {
+      setPwMsg("Network error — try again.");
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    setResetSaving(true);
+    setResetMsg(null);
+    try {
+      const res = await fetch("/api/studio/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: resetUser, new_password: resetPw }),
+      });
+      const data = await res.json();
+      if (res.ok && String(data.error_code ?? "0") === "0") {
+        setResetMsg(data.message || "Password reset.");
+        setResetUser("");
+        setResetPw("");
+      } else {
+        setResetMsg(data.message || "Could not reset password.");
+      }
+    } catch {
+      setResetMsg("Network error — try again.");
+    } finally {
+      setResetSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 rounded-lg p-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="text-xs font-bold uppercase tracking-wider" style={{ color: "#d08700" }}>
+        Account
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-[#99a1af] mb-1">
+          Change my password
+        </label>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            type="password"
+            placeholder="Current password"
+            value={curPw}
+            onChange={(e) => setCurPw(e.target.value)}
+            className="flex-1 min-w-[140px] rounded-lg px-3 py-2 text-sm text-white outline-none"
+            style={inputStyle}
+          />
+          <input
+            type="password"
+            placeholder="New password (min 8)"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            className="flex-1 min-w-[140px] rounded-lg px-3 py-2 text-sm text-white outline-none"
+            style={inputStyle}
+          />
+          <button
+            onClick={() => void changePassword()}
+            disabled={pwSaving || !curPw || newPw.length < 8}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-black disabled:opacity-40"
+            style={{ backgroundColor: "#f0b100" }}
+          >
+            {pwSaving ? "Saving..." : "Change"}
+          </button>
+        </div>
+        {pwMsg && <p className="text-[11px] mt-1" style={{ color: pwMsg === "Password changed." ? "#7ddfb0" : "#fb8080" }}>{pwMsg}</p>}
+      </div>
+
+      {role === "superadmin" && (
+        <div>
+          <label className="block text-xs font-medium text-[#99a1af] mb-1">
+            Reset a dealer&apos;s password
+            <span className="ml-2 text-[10px] text-[#6a7282] font-normal">superadmin only</span>
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              type="text"
+              placeholder="Username (e.g. dealer.table1)"
+              value={resetUser}
+              onChange={(e) => setResetUser(e.target.value)}
+              className="flex-1 min-w-[140px] rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              placeholder="New password (min 8)"
+              value={resetPw}
+              onChange={(e) => setResetPw(e.target.value)}
+              className="flex-1 min-w-[140px] rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+            <button
+              onClick={() => void resetPassword()}
+              disabled={resetSaving || !resetUser || resetPw.length < 8}
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-black disabled:opacity-40"
+              style={{ backgroundColor: "#f0b100" }}
+            >
+              {resetSaving ? "Saving..." : "Reset"}
+            </button>
+          </div>
+          {resetMsg && <p className="text-[11px] mt-1" style={{ color: resetMsg.startsWith("Password reset") ? "#7ddfb0" : "#fb8080" }}>{resetMsg}</p>}
+        </div>
+      )}
     </div>
   );
 }

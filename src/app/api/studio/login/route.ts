@@ -74,18 +74,22 @@ export async function POST(req: NextRequest) {
     // we only need `exp` to align cookie max-age). decodeJwt does not
     // throw a verify error; it only checks shape.
     let maxAge = DEFAULT_MAX_AGE;
+    let role: string | undefined;
+    let displayName: string | undefined;
     try {
       const claims = decodeJwt(backendToken);
       if (typeof claims.exp === "number") {
         const ttl = claims.exp - Math.floor(Date.now() / 1000);
         if (ttl > 0) maxAge = ttl;
       }
+      if (typeof claims.role === "string") role = claims.role;
+      if (typeof claims.display_name === "string") displayName = claims.display_name;
     } catch {
       // Bad JWT shape — fall back to default 12h. The proxy will still
       // verify the signature on every request.
     }
 
-    const response = NextResponse.json({ ok: true, source: "backend" });
+    const response = NextResponse.json({ ok: true, source: "backend", role, displayName });
     response.cookies.set(COOKIE_NAME, backendToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
