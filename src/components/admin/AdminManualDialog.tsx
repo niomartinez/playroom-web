@@ -24,17 +24,20 @@ function handlePrint() {
 }
 
 const SECTIONS = [
-  { id: "overview", title: "1. Dashboard Overview" },
-  { id: "operators", title: "2. Operators" },
-  { id: "tables", title: "3. Tables" },
-  { id: "rounds", title: "4. Rounds" },
-  { id: "players", title: "5. Players" },
-  { id: "users", title: "6. Admin Users" },
-  { id: "settings", title: "7. Settings" },
-  { id: "monitoring", title: "8. Monitoring" },
-  { id: "studio", title: "9. Studio Dealer Guide" },
-  { id: "player-ui", title: "10. Player UI" },
-  { id: "emulator", title: "11. Emulator" },
+  { id: "signin", title: "1. Signing In" },
+  { id: "overview", title: "2. Dashboard Overview" },
+  { id: "operators", title: "3. Operators" },
+  { id: "tables", title: "4. Tables" },
+  { id: "rounds", title: "5. Rounds" },
+  { id: "players", title: "6. Players" },
+  { id: "reports", title: "7. Reports" },
+  { id: "users", title: "8. Admin Users" },
+  { id: "settings", title: "9. Settings" },
+  { id: "monitoring", title: "10. Monitoring" },
+  { id: "audit", title: "11. Audit Log" },
+  { id: "studio", title: "12. Studio Dealer Guide" },
+  { id: "player-ui", title: "13. Player UI" },
+  { id: "emulator", title: "14. Emulator" },
 ];
 
 export default function AdminManualDialog({ open, onClose }: AdminManualDialogProps) {
@@ -148,8 +151,19 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
             `}</style>
 
             <div className="admin-manual" id="admin-manual-content">
-              {/* Section 1: Dashboard */}
-              <h2 id="manual-overview">1. Dashboard Overview</h2>
+              {/* Section 1: Signing In */}
+              <h2 id="manual-signin">1. Signing In</h2>
+              <p>Open <code>/admin/login</code> and enter your <strong>username or email</strong> plus your password. Admin accounts are the same rotated logins used by the studio — for example <code>SuperAdmin</code>. Usernames are case-insensitive.</p>
+              <ul>
+                <li><strong>Username or email</strong> — either works; the field accepts a plain username (no <code>@</code> required)</li>
+                <li><strong>Sessions last 12 hours</strong> — after that you&apos;ll be returned to the login page</li>
+                <li><strong>Logout</strong> — the door icon in the top-right header</li>
+              </ul>
+              <div className="warn">Dealer accounts (e.g. <code>dealer.table1</code>) are <strong>not</strong> allowed in the admin panel — they sign in at the studio instead. Attempting to log in returns &quot;Account is not authorized for admin panel access.&quot;</div>
+              <div className="tip">Forgot a password? A Super Admin can reset any account from the studio Settings → Account panel (no email needed).</div>
+
+              {/* Section 2: Dashboard */}
+              <h2 id="manual-overview">2. Dashboard Overview</h2>
               <p>The admin dashboard shows real-time platform stats:</p>
               <ul>
                 <li><strong>Active Tables</strong> — tables currently open for play</li>
@@ -159,8 +173,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               </ul>
               <p>The dashboard also shows recent rounds, active table status, and quick links to common actions.</p>
 
-              {/* Section 2: Operators */}
-              <h2 id="manual-operators">2. Operators</h2>
+              {/* Section 3: Operators */}
+              <h2 id="manual-operators">3. Operators</h2>
               <p>Operators are B2B customers who integrate your baccarat games into their casino platform.</p>
 
               <h3>Creating an Operator</h3>
@@ -180,8 +194,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               </ul>
               <div className="warn">Regenerating an API key is irreversible. The operator must update their integration immediately.</div>
 
-              {/* Section 3: Tables */}
-              <h2 id="manual-tables">3. Tables</h2>
+              {/* Section 4: Tables */}
+              <h2 id="manual-tables">4. Tables</h2>
               <p>Tables represent individual baccarat game instances.</p>
 
               <h3>Creating a Table</h3>
@@ -205,8 +219,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               <h3>Stream Configuration</h3>
               <p>Each table can have a live video stream. Set the <strong>Stream URL</strong> and <strong>Stream Key</strong> in the table detail page. The studio dealer starts the stream via OBS.</p>
 
-              {/* Section 4: Rounds */}
-              <h2 id="manual-rounds">4. Rounds</h2>
+              {/* Section 5: Rounds */}
+              <h2 id="manual-rounds">5. Rounds</h2>
               <p>Each round represents one baccarat hand. Rounds progress through these states:</p>
               <table>
                 <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
@@ -228,8 +242,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               <h3>Filtering Rounds</h3>
               <p>Filter by table, status, and date range. Click a round to see card details, individual bets, and settlement info.</p>
 
-              {/* Section 5: Players */}
-              <h2 id="manual-players">5. Players</h2>
+              {/* Section 6: Players */}
+              <h2 id="manual-players">6. Players</h2>
               <p>Players are end-users authenticated through their operator. Each player has a balance managed by the operator&apos;s wallet system.</p>
 
               <h3>Player Detail</h3>
@@ -243,8 +257,33 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               <p>Use <strong>Kick Player</strong> to revoke all active tokens and disconnect the player. They must re-authenticate through their operator to rejoin.</p>
               <div className="tip">Use kick when a player reports a compromised session or when investigating suspicious activity.</div>
 
-              {/* Section 6: Admin Users */}
-              <h2 id="manual-users">6. Admin Users</h2>
+              {/* Section 7: Reports */}
+              <h2 id="manual-reports">7. Reports</h2>
+              <p>The reports page is the GGR (Gross Gaming Revenue) dashboard — the primary tool for monitoring operator activity and revenue.</p>
+
+              <h3>Date Range</h3>
+              <p>Pick a <strong>From</strong> and <strong>To</strong> date, or use a preset: <strong>Today</strong>, <strong>7 Days</strong>, <strong>30 Days</strong>, <strong>This Month</strong>. All figures recalculate for the selected window.</p>
+
+              <h3>Summary Cards</h3>
+              <table>
+                <thead><tr><th>Metric</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Total Wagered</strong></td><td>Sum of all valid bets placed</td></tr>
+                  <tr><td><strong>Total Payout</strong></td><td>Sum of all winnings paid out</td></tr>
+                  <tr><td><strong>GGR</strong></td><td>Wagered minus payout — green is house profit, red is house loss</td></tr>
+                  <tr><td><strong>Bets / Rounds</strong></td><td>Count of settled bets and rounds in the window</td></tr>
+                </tbody>
+              </table>
+
+              <h3>Breakdown Tabs</h3>
+              <p>Switch between <strong>By Operator</strong> and <strong>By Table</strong> to see wagered, payout, GGR, and bet count per operator (e.g. OCMS Philippines) or per table, with a totals row at the bottom.</p>
+
+              <h3>Export CSV</h3>
+              <p>Click <strong>Export CSV</strong> to download the current report — summary plus both breakdowns — as a spreadsheet file named with the date range (e.g. <code>ggr-report_2026-06-01_2026-06-13.csv</code>). Opens cleanly in Excel or Google Sheets for sharing with finance or an operator.</p>
+              <div className="tip">To report on a single operator, switch to the By Operator tab before exporting — every operator&apos;s row is included in the CSV.</div>
+
+              {/* Section 8: Admin Users */}
+              <h2 id="manual-users">8. Admin Users</h2>
               <p>Admin users have access to this panel. Three roles are available:</p>
               <table>
                 <thead><tr><th>Role</th><th>Access</th></tr></thead>
@@ -257,13 +296,14 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
 
               <h3>Managing Users</h3>
               <ul>
-                <li><strong>Create</strong> — email, display name, password, role</li>
+                <li><strong>Create</strong> — username (or email), display name, password, role. A username works as the login identifier; it must be at least 3 characters with no spaces.</li>
                 <li><strong>Edit</strong> — change name, role, or reset password</li>
                 <li><strong>Deactivate</strong> — blocks login (does not delete)</li>
               </ul>
+              <p>Only Super Admins can manage admin users. The <code>dealer</code> accounts listed here sign in at the studio, not this panel.</p>
 
-              {/* Section 7: Settings */}
-              <h2 id="manual-settings">7. Settings</h2>
+              {/* Section 9: Settings */}
+              <h2 id="manual-settings">9. Settings</h2>
 
               <h3>General Settings</h3>
               <ul>
@@ -281,8 +321,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               </ul>
               <div className="warn">Force-closing tables should only be used in emergencies. Players in active rounds will have their bets refunded.</div>
 
-              {/* Section 8: Monitoring */}
-              <h2 id="manual-monitoring">8. Monitoring</h2>
+              {/* Section 10: Monitoring */}
+              <h2 id="manual-monitoring">10. Monitoring</h2>
               <p>The monitoring page shows system health:</p>
               <ul>
                 <li><strong>Wallet Errors</strong> — failed debit/credit operations (24h and total)</li>
@@ -292,8 +332,20 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               </ul>
               <div className="tip">If wallet errors spike, check the operator&apos;s wallet URL and ensure their service is responsive.</div>
 
-              {/* Section 9: Studio Guide */}
-              <h2 id="manual-studio">9. Studio Dealer Guide</h2>
+              {/* Section 11: Audit Log */}
+              <h2 id="manual-audit">11. Audit Log</h2>
+              <p>The audit log records every administrative action — who changed what, and when. Use it to trace configuration changes and account management.</p>
+              <ul>
+                <li><strong>Action</strong> — what happened (e.g. create operator, update config, deactivate user)</li>
+                <li><strong>Entity</strong> — the object affected (operator, table, admin user, config key)</li>
+                <li><strong>Admin</strong> — which admin performed it, with their IP address</li>
+                <li><strong>Before / After</strong> — expand a row to see the old and new values side by side</li>
+              </ul>
+              <p>Filter by action type or entity type to narrow the list; results are paginated.</p>
+              <div className="tip">The audit log is the first place to look when a setting or account &quot;changed by itself&quot; — it will show who actually did it.</div>
+
+              {/* Section 12: Studio Guide */}
+              <h2 id="manual-studio">12. Studio Dealer Guide</h2>
               <p>The studio interface is used by dealers to run live baccarat games.</p>
 
               <h3>Starting a Shift</h3>
@@ -310,15 +362,16 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
                 <li>Click <strong>NEW ROUND</strong> — betting countdown starts</li>
                 <li>Wait for countdown to finish — &quot;NO MORE BETS&quot;</li>
                 <li>Deal cards through the Angel Eye shoe</li>
-                <li>Result is automatic — bets settle, roads update</li>
+                <li>Review the result on the verification screen, then click <strong>Confirm &amp; Settle</strong> — bets settle, roads update</li>
                 <li>Click <strong>NEW ROUND</strong> again</li>
               </ol>
+              <p>The full, searchable dealer guide lives at <code>/studio/guide</code> (streaming setup, betting windows, video sync, credentials).</p>
 
               <h3>Manual Input</h3>
               <p>If the shoe malfunctions, use the Manual Input button to enter cards by hand. The system enforces baccarat third-card rules.</p>
 
-              {/* Section 10: Player UI */}
-              <h2 id="manual-player-ui">10. Player UI</h2>
+              {/* Section 13: Player UI */}
+              <h2 id="manual-player-ui">13. Player UI</h2>
               <p>The player UI is an iframe-embeddable game interface that operators embed in their casino platforms.</p>
 
               <h3>How It Works</h3>
@@ -332,8 +385,8 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               <h3>Demo Mode</h3>
               <p>Access <code>/play/demo</code> to test the player UI without authentication. Uses a mock wallet with a demo balance.</p>
 
-              {/* Section 11: Emulator */}
-              <h2 id="manual-emulator">11. Emulator</h2>
+              {/* Section 14: Emulator */}
+              <h2 id="manual-emulator">14. Emulator</h2>
               <p>The emulator replaces the Angel Eye shoe for testing. Use it when no physical hardware is available.</p>
 
               <h3>Testing Flow</h3>
