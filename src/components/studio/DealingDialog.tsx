@@ -10,8 +10,12 @@
  * once via the existing /api/studio/manual-deal endpoint, which deals,
  * sets the result, and triggers settlement in one POST.
  *
- * Player UI does NOT see cards before settlement — they have the live
- * video feed of the physical deal. They only need the result.
+ * Each shoe card (and each dealer correction) also fires a provisional
+ * card-preview broadcast so the player UI card flip lands in sync with
+ * the live video (delayed server-side by the table's video_delay_ms).
+ * Previews are display-only; settlement still runs solely off the
+ * Confirm & Settle submit, and the player UI reconciles its provisional
+ * hand against the authoritative cards on RoundResult.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -77,6 +81,26 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
     }
   }, [open]);
 
+  // Fire-and-forget provisional display event so the player UI card flip
+  // lands in sync with the live video (backend delays by video_delay_ms).
+  // Broadcast-only — Confirm & Settle stays the authoritative submit, and
+  // the player UI reconciles against the cards carried on RoundResult.
+  const pushPreview = useCallback(
+    (side: Side, card: string, pc: string[], bc: string[]) => {
+      void clientFetch("/api/studio/card-preview", {
+        method: "POST",
+        body: JSON.stringify({
+          game_id: studio.tableId,
+          side,
+          card,
+          player_cards: pc.filter(Boolean),
+          banker_cards: bc.filter(Boolean),
+        }),
+      }).catch(() => undefined);
+    },
+    [studio.tableId],
+  );
+
   // Subscribe to Angel Eye card_dealt events while the modal is open.
   // Cards fill in the next free slot for the side the shoe reports.
   useEffect(() => {
@@ -88,9 +112,12 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
       } else if (event.side === "banker") {
         setBankerCards((prev) => (prev.length >= 3 ? prev : [...prev, event.card]));
       }
+      // The parser carries the full running hands — pass them through so
+      // the player UI replaces state idempotently.
+      pushPreview(event.side, event.card, event.playerCards, event.bankerCards);
     });
     return unsubscribe;
-  }, [open, angelEye]);
+  }, [open, angelEye, pushPreview]);
 
   // Auto-close once the round is no longer in dealing phase (settled / waiting).
   useEffect(() => {
@@ -105,22 +132,42 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
     [playerCards, bankerCards],
   );
 
-  const setCardAt = useCallback((slot: SlotKey, card: string) => {
-    const setter = slot.side === "player" ? setPlayerCards : setBankerCards;
-    setter((prev) => {
-      const copy = [...prev];
+  const setCardAt = useCallback(
+    (slot: SlotKey, card: string) => {
+      const base = slot.side === "player" ? playerCards : bankerCards;
+      const copy = [...base];
       while (copy.length < slot.index) copy.push("");
       copy[slot.index] = card;
-      return copy.filter((c, i) => c || i < slot.index);
-    });
-    setEditing(null);
-  }, []);
+      const next = copy.filter((c, i) => c || i < slot.index);
+      (slot.side === "player" ? setPlayerCards : setBankerCards)(next);
+      setEditing(null);
+      // Dealer corrected a misread — push the corrected hand so the player
+      // UI mirrors the fix (same correction is visible on video anyway).
+      pushPreview(
+        slot.side,
+        card,
+        slot.side === "player" ? next : playerCards,
+        slot.side === "banker" ? next : bankerCards,
+      );
+    },
+    [playerCards, bankerCards, pushPreview],
+  );
 
-  const clearSlot = useCallback((slot: SlotKey) => {
-    const setter = slot.side === "player" ? setPlayerCards : setBankerCards;
-    setter((prev) => prev.slice(0, slot.index));
-    setEditing(null);
-  }, []);
+  const clearSlot = useCallback(
+    (slot: SlotKey) => {
+      const setter = slot.side === "player" ? setPlayerCards : setBankerCards;
+      setter((prev) => prev.slice(0, slot.index));
+      setEditing(null);
+      // Slot cleared — wipe the player UI's provisional hand; the corrected
+      // cards re-push as the dealer fills slots, and RoundResult reconciles
+      // at settle regardless.
+      void clientFetch("/api/studio/card-preview", {
+        method: "POST",
+        body: JSON.stringify({ game_id: studio.tableId, reset: true }),
+      }).catch(() => undefined);
+    },
+    [studio.tableId],
+  );
 
   const info = useMemo(
     () => baccaratNeedsThird(playerCards, bankerCards),
