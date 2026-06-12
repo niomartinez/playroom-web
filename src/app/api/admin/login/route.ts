@@ -31,7 +31,10 @@ function detailToMessage(errData: unknown): string {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   // Proxy to backend admin login endpoint
   let backendRes: Response;

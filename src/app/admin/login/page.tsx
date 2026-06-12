@@ -28,9 +28,9 @@ export default function AdminLogin() {
       }
       const data = await res.json().catch(() => ({}));
       setError(typeof data.error === "string" ? data.error : "Login failed");
+      setLoading(false);
     } catch {
       setError("Network error — please try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -70,7 +70,7 @@ export default function AdminLogin() {
 
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 rounded px-3 py-2 text-center">
-            {typeof error === "string" ? error : "Login failed"}
+            {error}
           </p>
         )}
 
