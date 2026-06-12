@@ -141,23 +141,38 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       let lastFrames = -1;
       let stalledChecks = 0;
       stallTimer = setInterval(() => {
-        if (cancelled) return;
-        const q = video.getVideoPlaybackQuality?.();
-        const frames = q?.totalVideoFrames ?? -1;
-        if (frames < 0) return; // API unavailable — can't measure
-        if (frames === lastFrames) {
-          stalledChecks++;
-          if (stalledChecks >= 3) {
-            console.warn(
-              "[VideoPlayer] WebRTC connected but no frames decoding — falling back to HLS",
-            );
-            stopStallWatchdog();
-            void tryHls();
-          }
-        } else {
-          stalledChecks = 0;
-          lastFrames = frames;
-        }
+        if (cancelled || !pc) return;
+        // Read framesDecoded from WebRTC stats, NOT from
+        // video.getVideoPlaybackQuality(): WebKit/iOS never advances the
+        // playback-quality counters for MediaStream sources, which made
+        // this watchdog kill healthy connections on iPhone every ~9s.
+        void pc
+          .getStats()
+          .then((stats) => {
+            if (cancelled || !pc || !stallTimer) return;
+            let frames = -1;
+            stats.forEach((report) => {
+              const r = report as { type?: string; kind?: string; framesDecoded?: number };
+              if (r.type === "inbound-rtp" && r.kind === "video" && typeof r.framesDecoded === "number") {
+                frames = r.framesDecoded;
+              }
+            });
+            if (frames < 0) return; // stat unavailable — never false-positive
+            if (frames === lastFrames) {
+              stalledChecks++;
+              if (stalledChecks >= 3) {
+                console.warn(
+                  "[VideoPlayer] WebRTC connected but no frames decoding — falling back to HLS",
+                );
+                stopStallWatchdog();
+                void tryHls();
+              }
+            } else {
+              stalledChecks = 0;
+              lastFrames = frames;
+            }
+          })
+          .catch(() => undefined);
       }, 3000);
     };
 
@@ -280,6 +295,13 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       if (pc) {
         pc.close();
         pc = null;
+      }
+      // Detach any WebRTC MediaStream before attaching HLS: srcObject
+      // takes precedence over src per spec, so a dead stream left here
+      // makes the HLS fallback render permanent black with no errors.
+      if (video.srcObject) {
+        (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
+        video.srcObject = null;
       }
       if (!hlsUrl) {
         setState("fallback");
