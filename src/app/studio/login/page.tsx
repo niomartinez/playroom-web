@@ -41,16 +41,36 @@ function StudioLoginForm() {
     if (res.ok) {
       // Persist the role so role-gated UI (superadmin password reset in
       // Settings) can render without exposing the httpOnly JWT.
+      // Wrapped in try/catch: some in-app browsers (Messenger/Telegram
+      // webviews, private mode) throw on localStorage access, which would
+      // otherwise abort the handler and strand the user on this page after
+      // a successful login. The role write is non-essential — navigate
+      // regardless.
       const data = await res.json().catch(() => ({}));
-      if (data?.role) localStorage.setItem("studioRole", data.role);
-      else localStorage.removeItem("studioRole");
+      try {
+        if (data?.role) localStorage.setItem("studioRole", data.role);
+        else localStorage.removeItem("studioRole");
+      } catch {
+        /* storage unavailable in this browser — role UI gracefully hides */
+      }
       // Re-attach the URL hash so deep links like /studio/guide#streaming-setup
       // survive the login round-trip (the proxy's ?next= carries only the path;
       // the browser keeps the fragment on this page's URL).
-      router.push(`${next}${window.location.hash}`);
+      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      router.push(`${next}${hash}`);
     } else {
-      const data = await res.json();
-      setError(data.error || "Login failed");
+      const data = await res.json().catch(() => ({}));
+      // Coerce to a string no matter what the API returns. Rendering a
+      // non-string error object as a React child throws React error #31
+      // and crashes the whole login page (seen in prod on failed logins).
+      const raw = data?.error ?? data?.message;
+      const msg =
+        typeof raw === "string"
+          ? raw
+          : typeof raw?.message === "string"
+            ? raw.message
+            : "Invalid username or password";
+      setError(msg);
     }
     setLoading(false);
   }

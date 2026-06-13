@@ -59,9 +59,19 @@ export async function POST(req: NextRequest) {
         backendToken = token;
       }
     } else {
+      // FastAPI wraps HTTPException bodies as { detail: { error_code, message } }.
+      // Pull the STRING message out of that envelope — NOT the whole `detail`
+      // object, which previously leaked through and was rendered as a React
+      // child on the login page (React error #31 → full page crash on any
+      // failed login). Coerce defensively so `message` is always a string.
+      const detail = data?.detail;
+      const rawMessage =
+        data?.message ??
+        (typeof detail === "object" && detail !== null ? detail.message : detail) ??
+        data?.error;
       backendError = {
-        error_code: data?.error_code,
-        message: data?.message || data?.detail || data?.error,
+        error_code: data?.error_code ?? (typeof detail === "object" && detail !== null ? detail.error_code : undefined),
+        message: typeof rawMessage === "string" ? rawMessage : undefined,
       };
     }
   } catch {

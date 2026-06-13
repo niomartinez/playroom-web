@@ -31,14 +31,24 @@ export default function StudioWrapper({ children }: { children: ReactNode }) {
   } | null>(null);
 
   useEffect(() => {
-    // Read persisted config from localStorage
-    const tableId = localStorage.getItem("selectedTableId") || "";
-    const tableName = localStorage.getItem("selectedTableName") || "";
-    const dealerName = localStorage.getItem("dealerName") || "";
-    const lang = localStorage.getItem("studioLang") || "EN";
-    const soundEnabled = localStorage.getItem("studioSound") !== "off";
-
-    setConfig({ tableId, tableName, dealerName, lang, soundEnabled });
+    // Read persisted config from localStorage. Wrapped in try/catch: some
+    // in-app browsers (Messenger/Telegram webviews, private mode) throw on
+    // localStorage access. Without this guard the throw aborts the effect,
+    // setConfig never runs, and the page hangs forever on "Loading studio…".
+    // Fall back to defaults so the studio still opens.
+    let cfg = { tableId: "", tableName: "", dealerName: "", lang: "EN", soundEnabled: true };
+    try {
+      cfg = {
+        tableId: localStorage.getItem("selectedTableId") || "",
+        tableName: localStorage.getItem("selectedTableName") || "",
+        dealerName: localStorage.getItem("dealerName") || "",
+        lang: localStorage.getItem("studioLang") || "EN",
+        soundEnabled: localStorage.getItem("studioSound") !== "off",
+      };
+    } catch {
+      /* storage unavailable — use defaults; dealer can set table in Settings */
+    }
+    setConfig(cfg);
   }, []);
 
   // Show nothing until localStorage is read (prevents hydration mismatch)
