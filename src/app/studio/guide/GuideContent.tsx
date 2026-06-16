@@ -209,19 +209,39 @@ function CredentialsPanel() {
       </div>
 
       {(mode === "prompt" || mode === "loading") && (
-        <div className="mt-4 flex items-center gap-2 flex-wrap">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void reveal();
+          }}
+          className="mt-4 flex items-center gap-2 flex-wrap"
+        >
+          {/* Hidden username target: gives the browser's password manager a field to
+              pair with the password, so it stops hijacking the sidebar search box. */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            tabIndex={-1}
+            aria-hidden="true"
+            readOnly
+            value="studio"
+            style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+          />
           <input
             type="password"
+            name="studio-password"
+            id="studio-password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void reveal()}
             placeholder="Your studio password"
             autoFocus
             className="rounded-lg px-3 py-2 text-sm text-white outline-none"
             style={{ backgroundColor: "rgba(0,0,0,0.4)", border: "1px solid rgba(208,135,0,0.3)", minWidth: 220 }}
           />
           <button
-            onClick={() => void reveal()}
+            type="submit"
             disabled={mode === "loading" || !password}
             className="rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80 disabled:opacity-40"
             style={{ backgroundColor: GOLD, color: "#000" }}
@@ -229,6 +249,7 @@ function CredentialsPanel() {
             {mode === "loading" ? "Checking…" : "Confirm"}
           </button>
           <button
+            type="button"
             onClick={hide}
             className="rounded-lg px-3 py-2 text-xs font-semibold"
             style={{ color: "#6a7282" }}
@@ -236,7 +257,7 @@ function CredentialsPanel() {
             Cancel
           </button>
           {error && <div className="w-full text-xs" style={{ color: "#fb8080" }}>{error}</div>}
-        </div>
+        </form>
       )}
 
       {mode === "revealed" && (
@@ -342,7 +363,10 @@ export default function GuideContent() {
           <div className="sticky" style={{ top: 70 }}>
             <div className="relative mb-3">
               <input
-                type="text"
+                type="search"
+                name="guide-search"
+                id="guide-search"
+                autoComplete="off"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search the guide…"
