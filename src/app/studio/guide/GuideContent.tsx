@@ -108,6 +108,238 @@ function Section({ item, children }: { item: TocItem; children: React.ReactNode 
 }
 
 /* ------------------------------------------------------------------ */
+/*  Environment-aware links                                             */
+/* ------------------------------------------------------------------ */
+
+/** Link to a page in THIS app. The relative href resolves to the current
+ *  origin, so it points at staging when viewed on staging and at prod
+ *  when viewed on prod — no hardcoded host. */
+function AppLink({ path, children }: { path: string; children: React.ReactNode }) {
+  return (
+    <a href={path} target="_blank" rel="noopener noreferrer" style={{ color: GOLD }}>
+      {children}
+    </a>
+  );
+}
+
+/** Link to the backend API host, derived from the current host
+ *  (app.* → api.*, staging-app.* → staging-api.*). Computed on the
+ *  client; falls back to the relative path until mounted. */
+function ApiLink({ path, children }: { path: string; children: React.ReactNode }) {
+  const [href, setHref] = useState(path);
+  useEffect(() => {
+    try {
+      const { protocol, host } = window.location;
+      setHref(`${protocol}//${host.replace("app.", "api.")}${path}`);
+    } catch {
+      /* keep relative fallback */
+    }
+  }, [path]);
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: GOLD }}>
+      {children}
+    </a>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Accuracy sign-off — interactive, persisted to this browser          */
+/* ------------------------------------------------------------------ */
+
+const SIGNOFF_CASES = [
+  "TC-01 Player win",
+  "TC-02 Banker win + commission",
+  "TC-03 Tie",
+  "TC-04 Push on tie",
+  "TC-05 Player draws 3rd",
+  "TC-06 Banker-7 invalid-draw block",
+  "TC-07 Side bet (pair)",
+  "TC-08 Loss path",
+  "TC-09 Opposing-bet block",
+  "TC-10 Mis-read correction",
+  "10-round loop clean",
+  "Stream stayed in sync",
+  "Console clean (no red / no 500)",
+];
+
+const SIGNOFF_KEY = "studioAccuracySignoff.v1";
+
+type SignoffStatus = "" | "pass" | "fail";
+interface SignoffState {
+  meta: { date: string; env: string; dealer: string; method: string };
+  rows: Record<string, { status: SignoffStatus; notes: string }>;
+}
+
+function emptySignoff(): SignoffState {
+  const rows: SignoffState["rows"] = {};
+  SIGNOFF_CASES.forEach((c) => {
+    rows[c] = { status: "", notes: "" };
+  });
+  return { meta: { date: "", env: "", dealer: "", method: "" }, rows };
+}
+
+const signoffInput: React.CSSProperties = {
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 6,
+  color: "#d1d5db",
+  padding: "6px 8px",
+  fontSize: 13,
+  width: "100%",
+  boxSizing: "border-box",
+};
+
+function StatusToggle({ active, color, label, onClick }: { active: boolean; color: string; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "4px 12px",
+        borderRadius: 6,
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer",
+        border: `1px solid ${color}`,
+        background: active ? color : "transparent",
+        color: active ? "#0a0a0a" : color,
+        opacity: active ? 1 : 0.65,
+        transition: "all 0.12s",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SignOffChecklist() {
+  const [state, setState] = useState<SignoffState>(emptySignoff);
+  const [loaded, setLoaded] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // Load saved results once on mount (tolerates a stale/partial payload).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SIGNOFF_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<SignoffState>;
+        const base = emptySignoff();
+        base.meta = { ...base.meta, ...(parsed.meta || {}) };
+        SIGNOFF_CASES.forEach((c) => {
+          const r = parsed.rows?.[c];
+          if (r) base.rows[c] = { status: r.status ?? "", notes: r.notes ?? "" };
+        });
+        setState(base);
+      }
+    } catch {
+      /* ignore corrupt payload */
+    }
+    setLoaded(true);
+  }, []);
+
+  // Auto-save on every change once the initial load is done.
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(SIGNOFF_KEY, JSON.stringify(state));
+      setSavedAt(new Date().toLocaleTimeString());
+    } catch {
+      /* storage may be unavailable (private mode) */
+    }
+  }, [state, loaded]);
+
+  const setMeta = (k: keyof SignoffState["meta"], v: string) =>
+    setState((s) => ({ ...s, meta: { ...s.meta, [k]: v } }));
+  const setStatus = (c: string, status: SignoffStatus) =>
+    setState((s) => ({
+      ...s,
+      rows: { ...s.rows, [c]: { ...s.rows[c], status: s.rows[c].status === status ? "" : status } },
+    }));
+  const setNotes = (c: string, notes: string) =>
+    setState((s) => ({ ...s, rows: { ...s.rows, [c]: { ...s.rows[c], notes } } }));
+  const clearAll = () => {
+    if (typeof window !== "undefined" && !window.confirm("Clear all saved sign-off results on this device?")) return;
+    setState(emptySignoff());
+  };
+  const copyResults = () => {
+    const m = state.meta;
+    const lines = [
+      "Accuracy sign-off",
+      `Date: ${m.date || "—"}  ·  Env: ${m.env || "—"}  ·  Dealer: ${m.dealer || "—"}  ·  Deal: ${m.method || "—"}`,
+      "",
+      ...SIGNOFF_CASES.map((c) => {
+        const r = state.rows[c];
+        const mark = r.status === "pass" ? "[PASS]" : r.status === "fail" ? "[FAIL]" : "[ -- ]";
+        return `${mark} ${c}${r.notes ? "  — " + r.notes : ""}`;
+      }),
+    ];
+    void navigator.clipboard.writeText(lines.join("\n"));
+  };
+
+  const passed = SIGNOFF_CASES.filter((c) => state.rows[c].status === "pass").length;
+  const failed = SIGNOFF_CASES.filter((c) => state.rows[c].status === "fail").length;
+  const pending = SIGNOFF_CASES.length - passed - failed;
+
+  const btn: React.CSSProperties = {
+    padding: "5px 12px",
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    border: "1px solid rgba(208,135,0,0.3)",
+    background: "rgba(208,135,0,0.12)",
+    color: GOLD,
+  };
+
+  return (
+    <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16, margin: "12px 0", background: "rgba(255,255,255,0.015)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 14 }}>
+        <input style={signoffInput} placeholder="Date" value={state.meta.date} onChange={(e) => setMeta("date", e.target.value)} />
+        <input style={signoffInput} placeholder="Environment (staging / prod TEST)" value={state.meta.env} onChange={(e) => setMeta("env", e.target.value)} />
+        <input style={signoffInput} placeholder="Dealer" value={state.meta.dealer} onChange={(e) => setMeta("dealer", e.target.value)} />
+        <input style={signoffInput} placeholder="Deal method (shoe / manual)" value={state.meta.method} onChange={(e) => setMeta("method", e.target.value)} />
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {SIGNOFF_CASES.map((c) => {
+          const r = state.rows[c];
+          return (
+            <div
+              key={c}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(150px, 1.5fr) auto minmax(110px, 1.2fr)",
+                gap: 10,
+                alignItems: "center",
+                padding: "8px 0",
+                borderBottom: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <span style={{ fontSize: 13, color: r.status === "pass" ? "#7ddfb0" : r.status === "fail" ? "#fb8080" : "#d1d5db" }}>{c}</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <StatusToggle active={r.status === "pass"} color="#05df72" label="PASS" onClick={() => setStatus(c, "pass")} />
+                <StatusToggle active={r.status === "fail"} color="#fb2c36" label="FAIL" onClick={() => setStatus(c, "fail")} />
+              </div>
+              <input style={signoffInput} placeholder="Notes" value={r.notes} onChange={(e) => setNotes(c, e.target.value)} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+        <span style={{ fontSize: 12, color: "#99a1af" }}>
+          <strong style={{ color: "#7ddfb0" }}>{passed} pass</strong> · <strong style={{ color: "#fb8080" }}>{failed} fail</strong> · {pending} pending — saved on this device{savedAt ? ` · ${savedAt}` : ""}
+        </span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" style={btn} onClick={copyResults}>Copy results</button>
+          <button type="button" style={btn} onClick={clearAll}>Clear all</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Credentials panel — hidden by default, password re-auth to reveal   */
 /* ------------------------------------------------------------------ */
 
@@ -424,6 +656,9 @@ export default function GuideContent() {
           <style>{`
             .guide-content p { font-size: 14px; line-height: 1.7; margin: 0 0 12px; }
             .guide-content h3 { font-size: 15px; font-weight: 700; color: #d08700; margin: 24px 0 10px; }
+            .guide-content input { font-family: inherit; }
+            .guide-content input::placeholder { color: #6a7282; }
+            .guide-content a code { text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
             .guide-content ul, .guide-content ol { font-size: 14px; line-height: 1.7; margin: 0 0 12px; padding-left: 20px; }
             .guide-content li { margin: 4px 0; }
             .guide-content code { background: rgba(208,135,0,0.1); color: #f0b100; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
@@ -527,10 +762,10 @@ export default function GuideContent() {
           <Section item={TOC[8]}>
             <p>A structured plan for the studio team to verify <strong>operations accuracy</strong> — dealing, scoring, settlement, and stream sync — by running real rounds and checking every outcome against what the rules say should happen. Run it before going live and after any change to a table, the shoe, or the stream. It uses play money on a TEST table, so nothing here can reach a real player or real funds.</p>
 
-            <div className="info"><strong>Where to run it.</strong> Studio: open <code>/studio</code> and select a <strong>TEST-</strong> table (never a live one). Players: open <code>/play/demo</code> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. Works on staging <em>and</em> production. No TEST table yet? Create one in Studio Settings, or use the <a href="#emulator" style={{ color: GOLD }}>Emulator</a> as a software shoe. Keep the browser console open (F12) on both tabs — you are watching for red errors all session.</div>
+            <div className="info"><strong>Where to run it.</strong> Studio: open <AppLink path="/studio"><code>/studio</code></AppLink> and select a <strong>TEST-</strong> table (never a live one). Players: open <AppLink path="/play/demo"><code>/play/demo</code></AppLink> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. These links follow whichever site you opened this guide on (staging or production). No TEST table yet? Create one in Studio Settings, or use the <AppLink path="/emulator">Emulator</AppLink> as a software shoe. Keep the browser console open (F12) on both tabs — you are watching for red errors all session.</div>
 
             <h3>Pre-flight (5 min)</h3>
-            <div className="step"><span className="step-num">1</span><span className="step-text">API health is green — open <code>/health</code>, expect <code>{`{"status":"ok"}`}</code>.</span></div>
+            <div className="step"><span className="step-num">1</span><span className="step-text">API health is green — open <ApiLink path="/health"><code>/health</code></ApiLink>, expect <code>{`{"status":"ok"}`}</code>.</span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text">Studio login works; dealer name set, <strong>TEST-</strong> table selected, Saved.</span></div>
             <div className="step"><span className="step-num">3</span><span className="step-text">Demo tab shows the <strong>10,000</strong> balance and the same TEST table; live video is visible.</span></div>
             <div className="step"><span className="step-num">4</span><span className="step-text">Dealing the shoe? Connect it first (<a href="#setup" style={{ color: GOLD }}>Setup</a>). No shoe? Use <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a> or the <a href="#emulator" style={{ color: GOLD }}>Emulator</a> to force exact cards.</span></div>
@@ -576,7 +811,7 @@ export default function GuideContent() {
             </table>
 
             <h3>Test cases</h3>
-            <p>Run each as a full round loop. Use <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a> to force the exact cards. ✓ each one off in the sign-off sheet below.</p>
+            <p>Run each as a full round loop. Use <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a> to force the exact cards, then mark <strong>Pass/Fail</strong> for it in the tracker below — results save automatically on this device.</p>
             <table>
               <thead><tr><th>#</th><th>Bet (demo)</th><th>Force</th><th>Expect</th></tr></thead>
               <tbody>
@@ -600,26 +835,9 @@ export default function GuideContent() {
             <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Stream sync</strong> — on WebRTC the card overlay lands within ~1–2s of the table on video. On HLS a 2–4s lead is normal. Off consistently? Calibrate <a href="#video-delay" style={{ color: GOLD }}>Video Delay</a>.</span></div>
             <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Recovery</strong> — reload the demo tab mid-round; video reconnects and the round state (bets, phase, cards) comes back correct.</span></div>
 
-            <h3>Sign-off sheet</h3>
-            <p>Date ___ · Environment (staging / prod TEST) ___ · Dealer ___ · Deal method (shoe / manual) ___</p>
-            <table>
-              <thead><tr><th>Case</th><th>Pass / Fail</th><th>Notes</th></tr></thead>
-              <tbody>
-                <tr><td>TC-01 Player win</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-02 Banker win + commission</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-03 Tie</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-04 Push on tie</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-05 Player draws 3rd</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-06 Banker-7 invalid-draw block</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-07 Side bet (pair)</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-08 Loss path</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-09 Opposing-bet block</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>TC-10 Mis-read correction</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>10-round loop clean</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>Stream stayed in sync</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                <tr><td>Console clean (no red / no 500)</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-              </tbody>
-            </table>
+            <h3>Sign-off sheet — tap PASS / FAIL, add notes (saved on this device)</h3>
+            <p>Fill the header, then mark each case. Everything you enter is saved in this browser automatically, so you can close the tab and come back to review it. <strong>Copy results</strong> exports a text summary to paste into chat; <strong>Clear all</strong> wipes it.</p>
+            <SignOffChecklist />
 
             <div className="warn">A settlement looks wrong? Open <strong>Admin → Rounds → that round</strong> and compare cards, scores, <code>betPosition</code>, <code>actualBetAmt</code>, <code>validBetAmt</code>, <code>winAmt</code> against what you expected. Capture a screenshot + the round id for the dev/admin team.</div>
           </Section>
