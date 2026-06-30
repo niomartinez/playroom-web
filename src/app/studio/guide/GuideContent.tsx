@@ -423,6 +423,7 @@ export default function GuideContent() {
         <main className="flex-1 min-w-0 guide-content" style={{ color: "#d1d5db" }}>
           <style>{`
             .guide-content p { font-size: 14px; line-height: 1.7; margin: 0 0 12px; }
+            .guide-content h3 { font-size: 15px; font-weight: 700; color: #d08700; margin: 24px 0 10px; }
             .guide-content ul, .guide-content ol { font-size: 14px; line-height: 1.7; margin: 0 0 12px; padding-left: 20px; }
             .guide-content li { margin: 4px 0; }
             .guide-content code { background: rgba(208,135,0,0.1); color: #f0b100; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
@@ -524,32 +525,103 @@ export default function GuideContent() {
           </Section>
 
           <Section item={TOC[8]}>
-            <p>Run this before going live — or after any change to a table, the shoe, or the stream — to confirm a table <strong>deals, settles, and stays in sync</strong> correctly. It uses play money on a TEST table, so nothing here can reach a real player or real funds.</p>
+            <p>A structured plan for the studio team to verify <strong>operations accuracy</strong> — dealing, scoring, settlement, and stream sync — by running real rounds and checking every outcome against what the rules say should happen. Run it before going live and after any change to a table, the shoe, or the stream. It uses play money on a TEST table, so nothing here can reach a real player or real funds.</p>
 
-            <div className="info"><strong>Where to run it.</strong> Studio: open <code>/studio</code> and select a <strong>TEST-</strong> table (never a live one). Players: open <code>/play/demo</code> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. Works on staging <em>and</em> production. No TEST table yet? Create one in Studio Settings, or use the <a href="#emulator" style={{ color: GOLD }}>Emulator</a>.</div>
+            <div className="info"><strong>Where to run it.</strong> Studio: open <code>/studio</code> and select a <strong>TEST-</strong> table (never a live one). Players: open <code>/play/demo</code> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. Works on staging <em>and</em> production. No TEST table yet? Create one in Studio Settings, or use the <a href="#emulator" style={{ color: GOLD }}>Emulator</a> as a software shoe. Keep the browser console open (F12) on both tabs — you are watching for red errors all session.</div>
 
-            <p><strong>How:</strong> run a normal round (see <a href="#dealing" style={{ color: GOLD }}>Dealing a Round</a>), place a demo bet each time, then check the result and payout against the table below. To force an exact result, enter the cards by hand with <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a>.</p>
+            <h3>Pre-flight (5 min)</h3>
+            <div className="step"><span className="step-num">1</span><span className="step-text">API health is green — open <code>/health</code>, expect <code>{`{"status":"ok"}`}</code>.</span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text">Studio login works; dealer name set, <strong>TEST-</strong> table selected, Saved.</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Demo tab shows the <strong>10,000</strong> balance and the same TEST table; live video is visible.</span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text">Dealing the shoe? Connect it first (<a href="#setup" style={{ color: GOLD }}>Setup</a>). No shoe? Use <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a> or the <a href="#emulator" style={{ color: GOLD }}>Emulator</a> to force exact cards.</span></div>
 
+            <h3>The round loop (every test case uses this)</h3>
+            <p>Full detail in <a href="#dealing" style={{ color: GOLD }}>Dealing a Round</a> — the short version per round:</p>
+            <div className="step"><span className="step-num">1</span><span className="step-text"><strong>NEW ROUND</strong> → status reads <strong>PLACE BETS</strong>, countdown starts.</span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text">Place demo bet(s) before the countdown ends.</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Countdown hits 0 → <strong>NO MORE BETS</strong>; the card verification screen opens by itself. (No card should ever show before this point.)</span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text">Deal <strong>Player 1 · Banker 1 · Player 2 · Banker 2</strong>, then a 3rd card only if the rules call for it.</span></div>
+            <div className="step"><span className="step-num">5</span><span className="step-text">Wrong card? <strong>Tap the slot</strong> and pick the correct one.</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text"><strong>CONFIRM &amp; SETTLE</strong> → result recorded, winners paid, losers cleared, roads advance, in one step.</span></div>
+
+            <h3>Card values &amp; scoring</h3>
+            <p>Ace = 1; 2–9 = face value; 10/J/Q/K = 0. A hand&apos;s score is the <strong>last digit</strong> of the sum (e.g. 7+8 = 15 → <strong>5</strong>). Card codes are rank+suit: <code>AS</code>, <code>TD</code>, <code>9H</code>, <code>KC</code>.</p>
+
+            <h3>Third-card rules (enforced automatically)</h3>
+            <p><strong>Natural:</strong> if Player or Banker has <strong>8 or 9</strong> on the first two cards, no third card for anyone — higher score wins, equal is a Tie. Otherwise: <strong>Player</strong> draws on 0–5, stands on 6–7. <strong>Banker</strong> (when Player stood) draws on 0–5, stands on 6–7. When Player drew a third card, Banker follows:</p>
             <table>
-              <thead><tr><th>Bet (demo)</th><th>Force this result</th><th>Expect after Confirm &amp; Settle</th></tr></thead>
+              <thead><tr><th>Banker total</th><th>Banker draws if Player&apos;s 3rd card is…</th></tr></thead>
               <tbody>
-                <tr><td>100 on PLAYER</td><td>Player wins</td><td>Returns 200 — net <strong>+100</strong> (pays 1:1)</td></tr>
-                <tr><td>100 on BANKER</td><td>Banker wins</td><td>Returns 195 — net <strong>+95</strong> (1:1 minus 5% commission)</td></tr>
-                <tr><td>100 on TIE</td><td>Tie</td><td>Returns 900 — net <strong>+800</strong> (pays 8:1)</td></tr>
-                <tr><td>100 on PLAYER</td><td>Tie</td><td><strong>Push</strong> — stake refunded, net 0 (Player/Banker bets tie back)</td></tr>
-                <tr><td>100 on PLAYER</td><td>Banker wins</td><td>Loss — chips clear, no win flash, net <strong>−100</strong></td></tr>
-                <tr><td>100 on PLAYER PAIR</td><td>Deal Player a pair</td><td>Pays <strong>11:1</strong> (Perfect Pair 25:1, Either Pair 5:1)</td></tr>
-                <tr><td>PLAYER then BANKER, same round</td><td>—</td><td>Second bet <strong>rejected</strong> — you can&apos;t back both sides</td></tr>
+                <tr><td>0, 1, 2</td><td>always draws</td></tr>
+                <tr><td>3</td><td>any except <strong>8</strong></td></tr>
+                <tr><td>4</td><td><strong>2–7</strong></td></tr>
+                <tr><td>5</td><td><strong>4–7</strong></td></tr>
+                <tr><td>6</td><td><strong>6–7</strong></td></tr>
+                <tr><td>7</td><td>stands (never draws)</td></tr>
               </tbody>
             </table>
 
-            <p><strong>Rules are enforced for you.</strong> The third-card rules run automatically. To prove it, open Manual Input, give the Banker a two-card total of <strong>7</strong>, and try to add a third Banker card — the system refuses it (a 7 always stands).</p>
+            <h3>Payouts (defaults — confirm live values in Admin → Payout Odds)</h3>
+            <table>
+              <thead><tr><th>Bet</th><th>Pays</th></tr></thead>
+              <tbody>
+                <tr><td>PLAYER</td><td>1 : 1 — 100 returns 200</td></tr>
+                <tr><td>BANKER</td><td>1 : 1 minus 5% commission — 100 returns <strong>195</strong></td></tr>
+                <tr><td>TIE</td><td>8 : 1 — 100 returns 900</td></tr>
+                <tr><td>Player/Banker bet on a Tie</td><td><strong>Push</strong> — stake refunded</td></tr>
+                <tr><td>PERFECT PAIR</td><td>25 : 1</td></tr>
+                <tr><td>EITHER PAIR</td><td>5 : 1</td></tr>
+                <tr><td>PLAYER PAIR / BANKER PAIR</td><td>11 : 1</td></tr>
+              </tbody>
+            </table>
 
-            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Card accuracy</strong> — every card on screen matches the physical card, in deal order (Player 1, Banker 1, Player 2, Banker 2…).</span></div>
-            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Stream sync</strong> — cards appear on the player at the same moment as the video. Off? Calibrate <a href="#video-delay" style={{ color: GOLD }}>Video Delay</a>.</span></div>
-            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>10 rounds back-to-back</strong> without reloading — every result, payout, and the roadmap advance correctly, with no red errors in the browser console (F12).</span></div>
+            <h3>Test cases</h3>
+            <p>Run each as a full round loop. Use <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a> to force the exact cards. ✓ each one off in the sign-off sheet below.</p>
+            <table>
+              <thead><tr><th>#</th><th>Bet (demo)</th><th>Force</th><th>Expect</th></tr></thead>
+              <tbody>
+                <tr><td>TC-01</td><td>100 PLAYER</td><td>Player <strong>natural</strong> (e.g. 9♥9♠=8) vs 7</td><td>PLAYER wins, no third cards, net <strong>+100</strong></td></tr>
+                <tr><td>TC-02</td><td>100 BANKER</td><td>Banker high (e.g. 9♣K♦=9) vs 7</td><td>BANKER wins, returns <strong>195</strong> (5% comm.), net +95</td></tr>
+                <tr><td>TC-03</td><td>100 TIE</td><td>equal scores (e.g. both 9)</td><td>TIE, pays 8:1, net <strong>+800</strong></td></tr>
+                <tr><td>TC-04</td><td>100 PLAYER</td><td>a Tie</td><td><strong>Push</strong> — stake back, net 0, no win flash</td></tr>
+                <tr><td>TC-05</td><td>100 PLAYER</td><td>Player 5 draws a 3rd card</td><td>Player draws correctly, Banker follows the table, right winner</td></tr>
+                <tr><td>TC-06</td><td>—</td><td>Manual Input: Banker total <strong>7</strong>, add a 3rd Banker card</td><td>System <strong>refuses</strong> it (7 always stands)</td></tr>
+                <tr><td>TC-07</td><td>100 PLAYER + 100 PERFECT PAIR</td><td>Player a pair (e.g. 8♥8♦)</td><td>Main settles by outcome; pair pays per odds; both hit balance</td></tr>
+                <tr><td>TC-08</td><td>100 PLAYER</td><td>a Banker win</td><td>Loss — chips clear, <strong>no</strong> win flash, net −100</td></tr>
+                <tr><td>TC-09</td><td>PLAYER then BANKER, same round</td><td>—</td><td>2nd bet <strong>rejected</strong> — can&apos;t back both sides (check Network tab)</td></tr>
+                <tr><td>TC-10</td><td>any</td><td>deal, tap a slot to change a card, then Confirm &amp; Settle</td><td>Overlay updates live; settlement uses the <strong>corrected</strong> hand</td></tr>
+              </tbody>
+            </table>
 
-            <div className="warn">Confirm the live <strong>payout odds</strong> in the Admin panel before trusting the numbers above — they are the standard defaults but are configurable per table.</div>
+            <h3>Multi-round loop &amp; stream sync</h3>
+            <p>Run <strong>10 rounds back-to-back without reloading</strong>, varying bets to cover every path (win / loss / tie / push / pair / opposing-bet). Each round, before moving on:</p>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Card accuracy</strong> — cards on screen = cards dealt = cards on the live video, in deal order.</span></div>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Score &amp; winner</strong> correct; <strong>settlement correct to the peso</strong>; roadmap advanced by one.</span></div>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Stream sync</strong> — on WebRTC the card overlay lands within ~1–2s of the table on video. On HLS a 2–4s lead is normal. Off consistently? Calibrate <a href="#video-delay" style={{ color: GOLD }}>Video Delay</a>.</span></div>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Recovery</strong> — reload the demo tab mid-round; video reconnects and the round state (bets, phase, cards) comes back correct.</span></div>
+
+            <h3>Sign-off sheet</h3>
+            <p>Date ___ · Environment (staging / prod TEST) ___ · Dealer ___ · Deal method (shoe / manual) ___</p>
+            <table>
+              <thead><tr><th>Case</th><th>Pass / Fail</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>TC-01 Player win</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-02 Banker win + commission</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-03 Tie</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-04 Push on tie</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-05 Player draws 3rd</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-06 Banker-7 invalid-draw block</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-07 Side bet (pair)</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-08 Loss path</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-09 Opposing-bet block</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>TC-10 Mis-read correction</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>10-round loop clean</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>Stream stayed in sync</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                <tr><td>Console clean (no red / no 500)</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+              </tbody>
+            </table>
+
+            <div className="warn">A settlement looks wrong? Open <strong>Admin → Rounds → that round</strong> and compare cards, scores, <code>betPosition</code>, <code>actualBetAmt</code>, <code>validBetAmt</code>, <code>winAmt</code> against what you expected. Capture a screenshot + the round id for the dev/admin team.</div>
           </Section>
 
           <Section item={TOC[9]}>
