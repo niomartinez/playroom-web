@@ -38,9 +38,10 @@ const TOC: TocItem[] = [
   { id: "video-delay", num: 6, title: "Video Delay (Card Sync)", keywords: ["sync", "delay", "latency", "calibration", "1100", "cards early", "cards late", "video"] },
   { id: "manual-input", num: 7, title: "Manual Input (Fallback)", keywords: ["manual", "fallback", "shoe broken", "card picker", "override"] },
   { id: "emulator", num: 8, title: "Testing with Emulator", keywords: ["emulator", "test", "no hardware", "demo", "fake cards"] },
-  { id: "shift-change", num: 9, title: "Shift Change & Accounts", keywords: ["shift", "handover", "dealer change", "logout", "log out", "pause", "password", "change password", "reset password", "account", "forgot"] },
-  { id: "troubleshooting", num: 10, title: "Troubleshooting", keywords: ["black video", "disconnected", "wrong card", "browser not supported", "lag", "frozen", "not working", "broken", "issue", "problem"] },
-  { id: "emergency", num: 11, title: "Emergency Procedures", keywords: ["power outage", "internet down", "disconnect", "failure", "emergency", "outage"] },
+  { id: "accuracy-testing", num: 9, title: "Accuracy Testing", keywords: ["test", "testing", "accuracy", "qa", "verify", "scenario", "demo", "play money", "payout", "settlement", "commission", "checklist", "sign off", "go live", "TEST table"] },
+  { id: "shift-change", num: 10, title: "Shift Change & Accounts", keywords: ["shift", "handover", "dealer change", "logout", "log out", "pause", "password", "change password", "reset password", "account", "forgot"] },
+  { id: "troubleshooting", num: 11, title: "Troubleshooting", keywords: ["black video", "disconnected", "wrong card", "browser not supported", "lag", "frozen", "not working", "broken", "issue", "problem"] },
+  { id: "emergency", num: 12, title: "Emergency Procedures", keywords: ["power outage", "internet down", "disconnect", "failure", "emergency", "outage"] },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -523,6 +524,35 @@ export default function GuideContent() {
           </Section>
 
           <Section item={TOC[8]}>
+            <p>Run this before going live — or after any change to a table, the shoe, or the stream — to confirm a table <strong>deals, settles, and stays in sync</strong> correctly. It uses play money on a TEST table, so nothing here can reach a real player or real funds.</p>
+
+            <div className="info"><strong>Where to run it.</strong> Studio: open <code>/studio</code> and select a <strong>TEST-</strong> table (never a live one). Players: open <code>/play/demo</code> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. Works on staging <em>and</em> production. No TEST table yet? Create one in Studio Settings, or use the <a href="#emulator" style={{ color: GOLD }}>Emulator</a>.</div>
+
+            <p><strong>How:</strong> run a normal round (see <a href="#dealing" style={{ color: GOLD }}>Dealing a Round</a>), place a demo bet each time, then check the result and payout against the table below. To force an exact result, enter the cards by hand with <a href="#manual-input" style={{ color: GOLD }}>Manual Input</a>.</p>
+
+            <table>
+              <thead><tr><th>Bet (demo)</th><th>Force this result</th><th>Expect after Confirm &amp; Settle</th></tr></thead>
+              <tbody>
+                <tr><td>100 on PLAYER</td><td>Player wins</td><td>Returns 200 — net <strong>+100</strong> (pays 1:1)</td></tr>
+                <tr><td>100 on BANKER</td><td>Banker wins</td><td>Returns 195 — net <strong>+95</strong> (1:1 minus 5% commission)</td></tr>
+                <tr><td>100 on TIE</td><td>Tie</td><td>Returns 900 — net <strong>+800</strong> (pays 8:1)</td></tr>
+                <tr><td>100 on PLAYER</td><td>Tie</td><td><strong>Push</strong> — stake refunded, net 0 (Player/Banker bets tie back)</td></tr>
+                <tr><td>100 on PLAYER</td><td>Banker wins</td><td>Loss — chips clear, no win flash, net <strong>−100</strong></td></tr>
+                <tr><td>100 on PLAYER PAIR</td><td>Deal Player a pair</td><td>Pays <strong>11:1</strong> (Perfect Pair 25:1, Either Pair 5:1)</td></tr>
+                <tr><td>PLAYER then BANKER, same round</td><td>—</td><td>Second bet <strong>rejected</strong> — you can&apos;t back both sides</td></tr>
+              </tbody>
+            </table>
+
+            <p><strong>Rules are enforced for you.</strong> The third-card rules run automatically. To prove it, open Manual Input, give the Banker a two-card total of <strong>7</strong>, and try to add a third Banker card — the system refuses it (a 7 always stands).</p>
+
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Card accuracy</strong> — every card on screen matches the physical card, in deal order (Player 1, Banker 1, Player 2, Banker 2…).</span></div>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>Stream sync</strong> — cards appear on the player at the same moment as the video. Off? Calibrate <a href="#video-delay" style={{ color: GOLD }}>Video Delay</a>.</span></div>
+            <div className="step"><span className="step-num">✓</span><span className="step-text"><strong>10 rounds back-to-back</strong> without reloading — every result, payout, and the roadmap advance correctly, with no red errors in the browser console (F12).</span></div>
+
+            <div className="warn">Confirm the live <strong>payout odds</strong> in the Admin panel before trusting the numbers above — they are the standard defaults but are configurable per table.</div>
+          </Section>
+
+          <Section item={TOC[9]}>
             <ol>
               <li>Current dealer: Click <strong>PAUSE TABLE</strong> (wait for current round to finish)</li>
               <li>Current dealer: <strong>Log out</strong> (door icon, top-right of the studio header)</li>
@@ -533,7 +563,7 @@ export default function GuideContent() {
             <p><strong>Passwords:</strong> change your own under Settings → <strong>Account</strong> (needs your current password). Forgot it? The supervisor logs in as <code>SuperAdmin</code> and resets it from the same Account section.</p>
           </Section>
 
-          <Section item={TOC[9]}>
+          <Section item={TOC[10]}>
             <table>
               <thead><tr><th>Issue</th><th>Solution</th></tr></thead>
               <tbody>
@@ -548,7 +578,7 @@ export default function GuideContent() {
             </table>
           </Section>
 
-          <Section item={TOC[10]}>
+          <Section item={TOC[11]}>
             <p><strong>Power outage:</strong> All bets preserved in database. Log back in, reconnect shoe, resume table.</p>
             <p><strong>Internet disconnection:</strong> Players auto-reconnect. Video resumes. No bets lost.</p>
             <p><strong>Angel Eye failure:</strong> Switch to Manual Input for remaining rounds. Contact hardware support.</p>
