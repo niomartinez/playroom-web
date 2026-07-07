@@ -80,7 +80,8 @@ export async function proxy(req: NextRequest) {
       if (
         payload.must_change_password === true &&
         pathname !== "/api/admin-ocms/change-password" &&
-        pathname !== "/api/admin-ocms/logout"
+        pathname !== "/api/admin-ocms/logout" &&
+        pathname !== "/api/admin-ocms/me"
       ) {
         return NextResponse.json(
           { error_code: "1006", message: "Password change required" },
