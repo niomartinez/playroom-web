@@ -82,6 +82,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: backendRes.status });
   }
 
+  // The backend returns a FRESH ocms_token whose must_change_password claim is
+  // false. We MUST swap it in — the current backend cookie still carries the
+  // flagged claim, and the backend rejects flagged tokens on every data
+  // endpoint, so without this the user stays locked out after changing their
+  // password (until re-login).
+  const okData = await backendRes.json().catch(() => ({}));
+  const newBackendToken =
+    okData && typeof okData === "object" && okData.data &&
+    typeof okData.data.token === "string"
+      ? (okData.data.token as string)
+      : "";
+
   // Re-issue the guard cookie with the flag cleared so navigation is unblocked.
   const refreshed = await createOcmsSession({
     sub: session.sub,
@@ -92,13 +104,17 @@ export async function POST(req: NextRequest) {
     must_change_password: false,
   });
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(OCMS_SESSION_COOKIE, refreshed, {
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     maxAge: 60 * 60 * 12,
     path: "/",
-  });
+  };
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set(OCMS_SESSION_COOKIE, refreshed, cookieOpts);
+  if (newBackendToken) {
+    res.cookies.set("ocms_token", newBackendToken, cookieOpts);
+  }
   return res;
 }
