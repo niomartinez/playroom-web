@@ -51,6 +51,54 @@ async function verifyStudioCookie(
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  /* ── OCMS partner-portal API routes (return 401 JSON, no redirect) ──
+   * Handled BEFORE the /admin branches because "/admin-ocms" also matches
+   * startsWith("/admin"). The OCMS guard cookie (ocms_session) is fully
+   * distinct from the /admin panel cookie (admin_session). */
+  if (pathname.startsWith("/api/admin-ocms/")) {
+    if (
+      pathname === "/api/admin-ocms/login" ||
+      pathname === "/api/admin-ocms/logout"
+    ) {
+      return NextResponse.next();
+    }
+
+    const token = req.cookies.get("ocms_session")?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error_code: "1001", message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    try {
+      await jwtVerify(token, ADMIN_JWT_SECRET);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.json(
+        { error_code: "1002", message: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+  }
+
+  /* ── OCMS partner-portal page routes ── */
+  if (pathname.startsWith("/admin-ocms")) {
+    if (pathname === "/admin-ocms/login") return NextResponse.next();
+
+    const token = req.cookies.get("ocms_session")?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin-ocms/login", req.url));
+    }
+
+    try {
+      await jwtVerify(token, ADMIN_JWT_SECRET);
+      return NextResponse.next();
+    } catch {
+      return NextResponse.redirect(new URL("/admin-ocms/login", req.url));
+    }
+  }
+
   /* ── Admin API routes (return 401 JSON, no redirect) ── */
   if (pathname.startsWith("/api/admin/")) {
     // Allow login/logout endpoints without auth
@@ -156,5 +204,12 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*", "/emulator/:path*", "/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/studio/:path*",
+    "/emulator/:path*",
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/admin-ocms/:path*",
+    "/api/admin-ocms/:path*",
+  ],
 };
