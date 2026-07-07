@@ -1,115 +1,45 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import StatCard from "@/components/admin/ui/StatCard";
+import LinkSpinner from "@/components/admin/ui/LinkSpinner";
+import { getPlayerDetail, getPlayerTransactions } from "@/lib/ocms-server";
 
-interface PlayerDetail {
-  id: string;
-  external_user_id: string;
-  username: string;
-  balance: number;
-  currency_code: string;
-  is_active: boolean;
-  operator_id: string;
-  operator_name: string;
-  created_at: string;
-  updated_at: string;
-  stats: {
-    total_bets: number;
-    total_wagered: number;
-    total_payout: number;
-    net_result: number;
-    settled_bets: number;
-  };
+const TX_PAGE_SIZE = 15;
+
+function txTypeColor(type: string): string {
+  if (type === "credit") return "#00bc7d";
+  if (type === "debit") return "#fb2c36";
+  if (type === "void_refund") return "#f0b100";
+  return "#99a1af";
 }
 
-interface Transaction {
-  id: string;
-  type: string;
-  amount: number;
-  balance_before: number;
-  balance_after: number;
-  description: string | null;
-  bet_id: string | null;
-  created_at: string;
-}
+export default async function OcmsPlayerDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ txPage?: string }>;
+}) {
+  const { id } = await params;
+  const sp = await searchParams;
+  const txPage = Math.max(1, Number(sp.txPage) || 1);
 
-export default function OcmsPlayerDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
-
-  const [player, setPlayer] = useState<PlayerDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [txLoading, setTxLoading] = useState(true);
-  const [txTotal, setTxTotal] = useState(0);
-  const [txPage, setTxPage] = useState(1);
-  const txPageSize = 15;
-
-  const fetchPlayer = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin-ocms/players/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        // Backend returns HTTP 200 with a BaseResponse envelope even on
-        // not-found (error_code set, data:null). Only treat a real data
-        // payload as a player, else fall through to the not-found state.
-        setPlayer(json && json.data ? json.data : null);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  const fetchTransactions = useCallback(async () => {
-    setTxLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(txPage));
-      params.set("page_size", String(txPageSize));
-
-      const res = await fetch(
-        `/api/admin-ocms/players/${id}/transactions?${params.toString()}`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setTransactions(data.transactions ?? []);
-        setTxTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setTxLoading(false);
-    }
-  }, [id, txPage]);
-
-  useEffect(() => {
-    fetchPlayer();
-  }, [fetchPlayer]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <span style={{ color: "#6a7282" }}>Loading player...</span>
-      </div>
-    );
-  }
+  const [player, txData] = await Promise.all([
+    getPlayerDetail(id),
+    getPlayerTransactions(id, txPage, TX_PAGE_SIZE),
+  ]);
 
   if (!player) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
         <span style={{ color: "#6a7282" }}>Player not found</span>
+        <Link
+          href="/admin-ocms/players"
+          className="text-sm hover:underline"
+          style={{ color: "#99a1af" }}
+        >
+          Back to Players
+        </Link>
       </div>
     );
   }
@@ -121,20 +51,21 @@ export default function OcmsPlayerDetailPage() {
     net_result: 0,
     settled_bets: 0,
   };
-  const txTotalPages = Math.max(1, Math.ceil(txTotal / txPageSize));
+  const transactions = txData.transactions;
+  const txTotal = txData.total;
+  const txTotalPages = Math.max(1, Math.ceil(txTotal / TX_PAGE_SIZE));
 
-  function txTypeColor(type: string): string {
-    if (type === "credit") return "#00bc7d";
-    if (type === "debit") return "#fb2c36";
-    if (type === "void_refund") return "#f0b100";
-    return "#99a1af";
+  function txPageHref(p: number): string {
+    return p > 1
+      ? `/admin-ocms/players/${id}?txPage=${p}`
+      : `/admin-ocms/players/${id}`;
   }
 
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back link */}
-      <button
-        onClick={() => router.push("/admin-ocms/players")}
+      <Link
+        href="/admin-ocms/players"
         className="flex items-center gap-1 text-sm hover:underline"
         style={{ color: "#99a1af" }}
       >
@@ -142,7 +73,8 @@ export default function OcmsPlayerDetailPage() {
           <polyline points="15 18 9 12 15 6" />
         </svg>
         Back to Players
-      </button>
+        <LinkSpinner />
+      </Link>
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{player.username}</h1>
@@ -240,11 +172,7 @@ export default function OcmsPlayerDetailPage() {
           </h2>
         </div>
 
-        {txLoading ? (
-          <div className="px-6 py-8 text-center" style={{ color: "#6a7282" }}>
-            Loading...
-          </div>
-        ) : transactions.length === 0 ? (
+        {transactions.length === 0 ? (
           <div className="px-6 py-8 text-center" style={{ color: "#6a7282" }}>
             No transactions found
           </div>
@@ -330,22 +258,34 @@ export default function OcmsPlayerDetailPage() {
               Page {txPage} of {txTotalPages}
             </span>
             <div className="flex gap-2">
-              <button
-                disabled={txPage <= 1}
-                onClick={() => setTxPage(txPage - 1)}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
-                style={{ color: "#99a1af" }}
-              >
-                Prev
-              </button>
-              <button
-                disabled={txPage >= txTotalPages}
-                onClick={() => setTxPage(txPage + 1)}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
-                style={{ color: "#99a1af" }}
-              >
-                Next
-              </button>
+              {txPage > 1 ? (
+                <Link
+                  href={txPageHref(txPage - 1)}
+                  scroll={false}
+                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5"
+                  style={{ color: "#99a1af" }}
+                >
+                  <LinkSpinner /> Prev
+                </Link>
+              ) : (
+                <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                  Prev
+                </span>
+              )}
+              {txPage < txTotalPages ? (
+                <Link
+                  href={txPageHref(txPage + 1)}
+                  scroll={false}
+                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5"
+                  style={{ color: "#99a1af" }}
+                >
+                  Next <LinkSpinner />
+                </Link>
+              ) : (
+                <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                  Next
+                </span>
+              )}
             </div>
           </div>
         )}

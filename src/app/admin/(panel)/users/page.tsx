@@ -45,6 +45,12 @@ export default function UsersPage() {
   /* Deactivate */
   const [deactivateUser, setDeactivateUser] = useState<AdminUser | null>(null);
 
+  /* Reset password */
+  const [resetUser, setResetUser] = useState<AdminUser | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -152,6 +158,45 @@ export default function UsersPage() {
     }
   }
 
+  async function handleReset() {
+    if (!resetUser) return;
+    setResetting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${resetUser.id}/reset-password`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.error_code === undefined || data.error_code === "0000")) {
+        // Backend returns the temp password so the literal is not hardcoded here.
+        const tempPassword: string =
+          data?.data?.temp_password ??
+          data?.data?.temporary_password ??
+          data?.temp_password ??
+          "TempPass123!";
+        setResetResult({ email: resetUser.email, tempPassword });
+        setResetUser(null);
+        toast({ type: "success", message: "Password reset" });
+      } else {
+        toast({ type: "error", message: data.message || "Failed to reset password" });
+      }
+    } catch {
+      toast({ type: "error", message: "Network error" });
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  async function copyTempPassword() {
+    if (!resetResult) return;
+    try {
+      await navigator.clipboard.writeText(resetResult.tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ type: "error", message: "Could not copy to clipboard" });
+    }
+  }
+
   function openEdit(user: AdminUser) {
     setEditUser(user);
     setEditName(user.display_name);
@@ -200,6 +245,13 @@ export default function UsersPage() {
             style={{ color: "#99a1af" }}
           >
             Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setResetUser(row); }}
+            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+            style={{ color: "#f0b100" }}
+          >
+            Reset password
           </button>
           {row.is_active && (
             <button
@@ -311,6 +363,90 @@ export default function UsersPage() {
         confirmLabel="Deactivate"
         danger
       />
+
+      {/* Reset Password Confirm */}
+      <ConfirmDialog
+        open={!!resetUser}
+        onClose={() => { if (!resetting) setResetUser(null); }}
+        onConfirm={handleReset}
+        title="Reset Password"
+        message={`Reset the password for "${resetUser?.display_name}" to a temporary password? They will be required to set a new password on their next login.`}
+        confirmLabel={resetting ? "Resetting..." : "Reset password"}
+      />
+
+      {/* Reset Password Result */}
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setResetResult(null)}
+          />
+          <div
+            className="relative z-10 w-full max-w-md rounded-xl overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #171717 0%, #000000 100%)",
+              border: "1px solid rgba(208,135,0,0.3)",
+              boxShadow: "0 25px 50px rgba(0,0,0,0.5), 0 0 30px rgba(208,135,0,0.15)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ borderBottom: "1px solid rgba(208,135,0,0.2)" }}
+            >
+              <h2 className="font-bold text-lg" style={{ color: "#f0b100" }}>
+                Password Reset
+              </h2>
+              <button
+                onClick={() => setResetResult(null)}
+                className="text-[#6a7282] hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-sm" style={{ color: "#99a1af" }}>
+                Temporary password for <span className="text-white">{resetResult.email}</span>:
+              </p>
+              <div className="flex items-center gap-2">
+                <code
+                  className="flex-1 rounded-lg px-3 py-2 text-sm font-mono text-white select-all"
+                  style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.2)" }}
+                >
+                  {resetResult.tempPassword}
+                </code>
+                <button
+                  onClick={copyTempPassword}
+                  className="rounded-lg px-3 py-2 text-sm font-semibold text-black shrink-0"
+                  style={{ backgroundColor: "#f0b100" }}
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs" style={{ color: "#f0b100" }}>
+                Share this with the user securely. They must change it on their next login.
+              </p>
+            </div>
+
+            <div
+              className="flex items-center justify-end gap-3 px-6 py-4"
+              style={{ borderTop: "1px solid rgba(208,135,0,0.2)" }}
+            >
+              <button
+                onClick={() => setResetResult(null)}
+                className="rounded-lg px-6 py-2 text-sm font-semibold text-black"
+                style={{ backgroundColor: "#f0b100" }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

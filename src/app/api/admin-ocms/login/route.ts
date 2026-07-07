@@ -65,15 +65,23 @@ export async function POST(req: NextRequest) {
   // Backend wraps response in BaseResponse: { error_code, message, data: { ... } }
   const data = rawData.data || rawData;
 
+  const mustChangePassword = data.must_change_password === true;
+
   const token = await createOcmsSession({
     sub: data.admin_id || data.id || data.user_id || "",
     email: data.email || "",
     role: data.role || "ocms_cs",
     display_name: data.display_name || data.name || "",
     operator_id: data.operator_id || "",
+    must_change_password: mustChangePassword,
   });
 
-  const res = NextResponse.json({ ok: true });
+  // Surface the flag so the login page can redirect straight to the
+  // force-password screen (the middleware guard also enforces it).
+  const res = NextResponse.json({
+    ok: true,
+    must_change_password: mustChangePassword,
+  });
   res.cookies.set("ocms_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

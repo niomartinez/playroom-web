@@ -1,153 +1,104 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import DataTable, { type Column } from "@/components/admin/ui/DataTable";
+import Link from "next/link";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
-import { useDebounce } from "@/lib/use-debounce";
+import LinkSpinner from "@/components/admin/ui/LinkSpinner";
+import OcmsPlayersSearch from "@/components/admin/OcmsPlayersSearch";
+import { getPlayers } from "@/lib/ocms-server";
 
-interface Player {
-  id: string;
-  external_user_id: string;
-  username: string;
-  balance: number;
-  currency_code: string;
-  is_active: boolean;
-  created_at: string;
-  [key: string]: unknown;
-}
+const PAGE_SIZE = 20;
 
-export default function OcmsPlayersPage() {
-  const router = useRouter();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const pageSize = 20;
+export default async function OcmsPlayersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; search?: string }>;
+}) {
+  const sp = await searchParams;
+  const search = sp.search ?? "";
+  const page = Math.max(1, Number(sp.page) || 1);
 
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
+  const { players, total } = await getPlayers({
+    page,
+    page_size: PAGE_SIZE,
+    search: search || undefined,
+  });
 
-  const fetchPlayers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("page_size", String(pageSize));
-      if (debouncedSearch) params.set("search", debouncedSearch);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-      const res = await fetch(`/api/admin-ocms/players?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setPlayers(data.players ?? []);
-        setTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [page, debouncedSearch]);
-
-  useEffect(() => {
-    fetchPlayers();
-  }, [fetchPlayers]);
-
-  function handleSearch(q: string) {
-    setSearch(q);
-    setPage(1);
+  // Preserve the active search when paging.
+  function pageHref(p: number): string {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/admin-ocms/players?${qs}` : "/admin-ocms/players";
   }
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  const inputStyle = {
-    backgroundColor: "rgba(0,0,0,0.6)" as const,
-    border: "1px solid rgba(208,135,0,0.15)" as const,
-  };
-
-  const columns: Column<Player>[] = [
-    { key: "username", label: "Username", sortable: true },
-    {
-      key: "external_user_id",
-      label: "External ID",
-      render: (row) => (
-        <span className="font-mono text-xs">{row.external_user_id}</span>
-      ),
-    },
-    {
-      key: "balance",
-      label: "Balance",
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono">
-          {Number(row.balance).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-          })}{" "}
-          <span style={{ color: "#6a7282" }}>{row.currency_code}</span>
-        </span>
-      ),
-    },
-    {
-      key: "is_active",
-      label: "Status",
-      render: (row) => (
-        <StatusBadge status={row.is_active ? "active" : "inactive"} />
-      ),
-    },
-    {
-      key: "created_at",
-      label: "Joined",
-      sortable: true,
-      render: (row) =>
-        row.created_at
-          ? new Date(row.created_at).toLocaleDateString()
-          : "—",
-    },
-  ];
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Players</h1>
 
       {/* Filter bar (search only — single operator, read-only) */}
+      <OcmsPlayersSearch initialSearch={search} />
+
+      {/* Results table (server-rendered) */}
       <div
-        className="rounded-xl p-4"
+        className="rounded-xl overflow-hidden"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="flex flex-wrap gap-3 items-end">
-          <div>
-            <label
-              className="block text-xs font-medium mb-1"
-              style={{ color: "#99a1af" }}
-            >
-              Search
-            </label>
-            <input
-              type="text"
-              placeholder="Username or external ID..."
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none min-w-[220px]"
-              style={inputStyle}
-            />
-          </div>
+        {/* Header row */}
+        <div
+          className="grid grid-cols-[1.4fr_1.2fr_1fr_0.8fr_0.9fr] px-4 py-3 text-xs font-semibold uppercase tracking-wider"
+          style={{
+            color: "#d08700",
+            borderBottom: "1px solid rgba(208,135,0,0.15)",
+          }}
+        >
+          <span>Username</span>
+          <span>External ID</span>
+          <span>Balance</span>
+          <span>Status</span>
+          <span>Joined</span>
         </div>
-      </div>
 
-      <DataTable
-        columns={columns}
-        data={players}
-        loading={loading}
-        emptyMessage="No players found"
-        searchPlaceholder="Search in results..."
-        onRowClick={(row) => router.push(`/admin-ocms/players/${row.id}`)}
-        pageSize={pageSize}
-        disablePagination
-      />
+        {players.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm" style={{ color: "#6a7282" }}>
+            No players found
+          </div>
+        ) : (
+          players.map((p) => (
+            <Link
+              key={p.id}
+              href={`/admin-ocms/players/${p.id}`}
+              className="grid grid-cols-[1.4fr_1.2fr_1fr_0.8fr_0.9fr] items-center px-4 py-3 text-sm transition-colors hover:bg-white/5"
+              style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+            >
+              <span className="text-white font-medium flex items-center gap-2">
+                {p.username}
+                <LinkSpinner />
+              </span>
+              <span className="font-mono text-xs" style={{ color: "#99a1af" }}>
+                {p.external_user_id}
+              </span>
+              <span className="font-mono text-white">
+                {Number(p.balance).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}{" "}
+                <span style={{ color: "#6a7282" }}>{p.currency_code}</span>
+              </span>
+              <span>
+                <StatusBadge status={p.is_active ? "active" : "inactive"} />
+              </span>
+              <span style={{ color: "#99a1af" }}>
+                {p.created_at
+                  ? new Date(p.created_at).toLocaleDateString()
+                  : "—"}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
 
       {/* Server-side pagination */}
       {totalPages > 1 && (
@@ -159,22 +110,32 @@ export default function OcmsPlayersPage() {
             Page {page} of {totalPages} ({total} players)
           </span>
           <div className="flex gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
-              style={{ color: "#99a1af" }}
-            >
-              Prev
-            </button>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
-              style={{ color: "#99a1af" }}
-            >
-              Next
-            </button>
+            {page > 1 ? (
+              <Link
+                href={pageHref(page - 1)}
+                className="flex items-center gap-1.5 rounded px-3 py-1 transition-colors hover:bg-white/5"
+                style={{ color: "#99a1af" }}
+              >
+                <LinkSpinner /> Prev
+              </Link>
+            ) : (
+              <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                Prev
+              </span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={pageHref(page + 1)}
+                className="flex items-center gap-1.5 rounded px-3 py-1 transition-colors hover:bg-white/5"
+                style={{ color: "#99a1af" }}
+              >
+                Next <LinkSpinner />
+              </Link>
+            ) : (
+              <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                Next
+              </span>
+            )}
           </div>
         </div>
       )}

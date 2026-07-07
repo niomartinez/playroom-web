@@ -1,34 +1,13 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import StatCard from "@/components/admin/ui/StatCard";
-
-interface Summary {
-  total_wagered: number;
-  total_payout: number;
-  ggr: number;
-  bet_count: number;
-  date_from?: string;
-  date_to?: string;
-}
+import { getReportSummary } from "@/lib/ocms-server";
 
 function fmt(n: number): string {
   return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
 }
 
-export default function OcmsDashboard() {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/admin-ocms/reports/summary")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (json) setSummary(json.data ?? json);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+export default async function OcmsDashboard() {
+  const summary = await getReportSummary();
+  const ggr = summary?.ggr ?? 0;
 
   return (
     <div className="space-y-6">
@@ -41,7 +20,7 @@ export default function OcmsDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Wagered"
-          value={loading ? "..." : fmt(summary?.total_wagered ?? 0)}
+          value={fmt(summary?.total_wagered ?? 0)}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -51,7 +30,7 @@ export default function OcmsDashboard() {
         />
         <StatCard
           label="Total Payout"
-          value={loading ? "..." : fmt(summary?.total_payout ?? 0)}
+          value={fmt(summary?.total_payout ?? 0)}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -60,10 +39,8 @@ export default function OcmsDashboard() {
         />
         <StatCard
           label="GGR"
-          value={loading ? "..." : fmt(summary?.ggr ?? 0)}
-          color={
-            loading ? undefined : (summary?.ggr ?? 0) >= 0 ? "#00bc7d" : "#fb2c36"
-          }
+          value={fmt(ggr)}
+          color={ggr >= 0 ? "#00bc7d" : "#fb2c36"}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="20" x2="18" y2="10" />
@@ -74,7 +51,7 @@ export default function OcmsDashboard() {
         />
         <StatCard
           label="Bet Count"
-          value={loading ? "..." : (summary?.bet_count ?? 0).toLocaleString()}
+          value={(summary?.bet_count ?? 0).toLocaleString()}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />

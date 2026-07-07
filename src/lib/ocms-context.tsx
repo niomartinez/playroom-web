@@ -33,12 +33,23 @@ const OcmsContext = createContext<OcmsState | null>(null);
 /*  Provider                                                           */
 /* ------------------------------------------------------------------ */
 
-export function OcmsProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<OcmsUser | null>(null);
+export function OcmsProvider({
+  children,
+  initialUser = null,
+}: {
+  children: ReactNode;
+  /** Seeded from the RSC (panel) layout via the guard session, so there is no
+   *  client-side /me fetch waterfall. When provided, the effect is skipped. */
+  initialUser?: OcmsUser | null;
+}) {
+  const [currentUser, setCurrentUser] = useState<OcmsUser | null>(initialUser);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialUser === null);
 
   useEffect(() => {
+    // If the server already seeded the user, skip the client fetch entirely.
+    if (initialUser !== null) return;
+
     fetch("/api/admin-ocms/me")
       .then((res) => {
         if (res.ok) return res.json();
@@ -59,7 +70,7 @@ export function OcmsProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [initialUser]);
 
   const value: OcmsState = {
     currentUser,

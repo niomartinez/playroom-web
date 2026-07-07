@@ -72,7 +72,21 @@ export async function proxy(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, ADMIN_JWT_SECRET);
+      const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET);
+      // Force-password-change gate for the API routes (defense-in-depth; the
+      // backend also rejects flagged tokens). A flagged session may only reach
+      // change-password + logout — otherwise it could script the data/mutation
+      // routes directly, bypassing the page redirect.
+      if (
+        payload.must_change_password === true &&
+        pathname !== "/api/admin-ocms/change-password" &&
+        pathname !== "/api/admin-ocms/logout"
+      ) {
+        return NextResponse.json(
+          { error_code: "1006", message: "Password change required" },
+          { status: 403 }
+        );
+      }
       return NextResponse.next();
     } catch {
       return NextResponse.json(
@@ -92,7 +106,21 @@ export async function proxy(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, ADMIN_JWT_SECRET);
+      const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET);
+      // Force-password-change enforcement: a flagged user is redirected to the
+      // force-password page on EVERY panel route until they change it. The
+      // page itself is whitelisted so the redirect can't loop.
+      const mustChange = payload.must_change_password === true;
+      const onForcePage = pathname === "/admin-ocms/force-password";
+      if (mustChange && !onForcePage) {
+        return NextResponse.redirect(
+          new URL("/admin-ocms/force-password", req.url)
+        );
+      }
+      // A non-flagged user has no business on the force page — bounce home.
+      if (!mustChange && onForcePage) {
+        return NextResponse.redirect(new URL("/admin-ocms", req.url));
+      }
       return NextResponse.next();
     } catch {
       return NextResponse.redirect(new URL("/admin-ocms/login", req.url));

@@ -39,6 +39,9 @@ export interface OcmsPayload {
   role: string; // ocms_admin | ocms_cs
   display_name: string;
   operator_id: string;
+  /** Force-password-change flag. When true the guard redirects every panel
+   *  route to /admin-ocms/force-password until the user changes it. */
+  must_change_password: boolean;
 }
 
 /** Create a signed JWT for the OCMS guard session. */
@@ -49,6 +52,7 @@ export async function createOcmsSession(payload: OcmsPayload): Promise<string> {
     role: payload.role,
     display_name: payload.display_name,
     operator_id: payload.operator_id,
+    must_change_password: payload.must_change_password,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("12h")
@@ -68,6 +72,7 @@ export async function verifyOcmsSession(
       role: payload.role as string,
       display_name: payload.display_name as string,
       operator_id: payload.operator_id as string,
+      must_change_password: payload.must_change_password === true,
     };
   } catch {
     return null;

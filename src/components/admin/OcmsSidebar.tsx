@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useOcms } from "@/lib/ocms-context";
+import LinkSpinner from "@/components/admin/ui/LinkSpinner";
 
 interface NavItem {
   label: string;
@@ -157,7 +158,12 @@ export default function OcmsSidebar() {
               >
                 {item.icon}
               </span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {!sidebarCollapsed && (
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  <LinkSpinner />
+                </span>
+              )}
             </Link>
           );
         })}
