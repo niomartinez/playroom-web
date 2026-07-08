@@ -144,7 +144,21 @@ export async function proxy(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, ADMIN_JWT_SECRET);
+      const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET);
+      // Force-password-change gate for the API routes (defense-in-depth; the
+      // backend also rejects flagged tokens). A flagged session may only reach
+      // change-password + logout + me, else it could script the API directly.
+      if (
+        payload.must_change_password === true &&
+        pathname !== "/api/admin/change-password" &&
+        pathname !== "/api/admin/logout" &&
+        pathname !== "/api/admin/me"
+      ) {
+        return NextResponse.json(
+          { error_code: "1006", message: "Password change required" },
+          { status: 403 }
+        );
+      }
       return NextResponse.next();
     } catch {
       return NextResponse.json(
@@ -165,7 +179,18 @@ export async function proxy(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(token, ADMIN_JWT_SECRET);
+      const { payload } = await jwtVerify(token, ADMIN_JWT_SECRET);
+      // Force-password-change: a flagged admin is redirected to the
+      // force-password page on EVERY admin route until they change it; the
+      // page itself is whitelisted so the redirect can't loop.
+      const mustChange = payload.must_change_password === true;
+      const onForcePage = pathname === "/admin/force-password";
+      if (mustChange && !onForcePage) {
+        return NextResponse.redirect(new URL("/admin/force-password", req.url));
+      }
+      if (!mustChange && onForcePage) {
+        return NextResponse.redirect(new URL("/admin", req.url));
+      }
       return NextResponse.next();
     } catch {
       return NextResponse.redirect(new URL("/admin/login", req.url));

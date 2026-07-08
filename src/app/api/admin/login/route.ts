@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
     email: data.email || "",
     role: data.role || "viewer",
     display_name: data.display_name || data.name || "",
+    must_change_password: data.must_change_password === true,
   });
 
   const res = NextResponse.json({ ok: true });

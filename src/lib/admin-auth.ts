@@ -33,6 +33,7 @@ export interface AdminPayload {
   email: string;
   role: string; // superadmin | operator_admin | viewer
   display_name: string;
+  must_change_password?: boolean;
 }
 
 /** Create a signed JWT for the admin session. */
@@ -42,6 +43,7 @@ export async function createAdminSession(payload: AdminPayload): Promise<string>
     email: payload.email,
     role: payload.role,
     display_name: payload.display_name,
+    must_change_password: payload.must_change_password === true,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("12h")
@@ -60,6 +62,7 @@ export async function verifyAdminSession(
       email: payload.email as string,
       role: payload.role as string,
       display_name: payload.display_name as string,
+      must_change_password: payload.must_change_password === true,
     };
   } catch {
     return null;
