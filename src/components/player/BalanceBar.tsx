@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { symbolFor } from "@/lib/currency";
+import { useT } from "@/lib/i18n";
 
 const CHIPS = [
   { value: 50, src: "/mobile-assets/chip-50.png" },
@@ -89,8 +91,9 @@ function useDisplayBalance(target: number): number {
 }
 
 export default function BalanceBar() {
-  const { balance, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets } = useGame();
+  const { balance, currency, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
   const displayBalance = useDisplayBalance(balance);
   const isBettingOpen = roundStatus === "betting_open";
   const hasPlacedBets = placedBets.length > 0;
@@ -112,12 +115,9 @@ export default function BalanceBar() {
 
   // The crawled value is what the player sees; the underlying `balance` is
   // still the canonical number (used for chip affordability checks above).
-  const formatted = Math.round(displayBalance).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
+  const formatted = `${symbolFor(currency)}${Math.round(displayBalance).toLocaleString("en-US", {
     maximumFractionDigits: 0,
-  });
+  })}`;
 
   if (isMobile) {
     return (
@@ -135,12 +135,12 @@ export default function BalanceBar() {
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <img
             src="/mobile-assets/balance-icon.png"
-            alt="Balance"
+            alt={t("balance.label")}
             style={{ width: 16, height: 16, flexShrink: 0 }}
           />
           <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
             <span style={{ fontSize: 10, fontWeight: 400, color: "#99A1AF" }}>
-              Balance
+              {t("balance.label")}
             </span>
             <span
               style={{
@@ -200,7 +200,7 @@ export default function BalanceBar() {
                   opacity: isDisabled ? 0.4 : 1,
                   filter: isDisabled ? "grayscale(1)" : "none",
                 }}
-                aria-label={`$${chip.value} chip`}
+                aria-label={t("balance.chipAria", { amount: `${symbolFor(currency)}${chip.value.toLocaleString()}` })}
                 aria-disabled={isDisabled}
               >
                 <img
@@ -236,12 +236,12 @@ export default function BalanceBar() {
       <div className="flex items-center flex-shrink-0" style={{ gap: "0.7vw" }}>
         <img
           src="/mobile-assets/balance-icon.png"
-          alt="Balance"
+          alt={t("balance.label")}
           className="flex-shrink-0"
           style={{ width: "clamp(28px, 3.4vh, 48px)", height: "clamp(28px, 3.4vh, 48px)" }}
         />
         <div>
-          <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>Balance</div>
+          <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>{t("balance.label")}</div>
           <div
             className="font-bold text-white"
             style={{
@@ -277,7 +277,7 @@ export default function BalanceBar() {
             whiteSpace: "nowrap",
           }}
         >
-          CLEAR BETS
+          {t("balance.clearBets")}
         </button>
       )}
 
@@ -313,7 +313,7 @@ export default function BalanceBar() {
                 opacity: isDisabled ? 0.4 : 1,
                 filter: isDisabled ? "grayscale(1)" : "none",
               }}
-              aria-label={`$${chip.value} chip`}
+              aria-label={t("balance.chipAria", { amount: `${symbolFor(currency)}${chip.value.toLocaleString()}` })}
               aria-disabled={isDisabled}
             >
               <img

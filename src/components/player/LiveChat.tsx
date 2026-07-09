@@ -1,16 +1,52 @@
 "use client";
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, type CSSProperties, type KeyboardEvent } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useChatWs } from "@/lib/use-chat-ws";
+import { useT } from "@/lib/i18n";
+
+/** localStorage key for the persisted chat panel opacity. */
+const OPACITY_KEY = "prg_chat_opacity";
+const DEFAULT_OPACITY = 0.65;
+const MIN_OPACITY = 0.3;
+const MAX_OPACITY = 1.0;
+
+function clampOpacity(v: number): number {
+  if (!Number.isFinite(v)) return DEFAULT_OPACITY;
+  return Math.min(MAX_OPACITY, Math.max(MIN_OPACITY, v));
+}
 
 export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const isMobileHook = useIsMobile();
   const isMobile = mobile ?? isMobileHook;
+  const t = useT();
   const [isOpen, setIsOpen] = useState(true);
   const [draft, setDraft] = useState("");
+  const [showOpacity, setShowOpacity] = useState(false);
   const { messages, presence, connected, send, lastError } = useChatWs();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+
+  // Panel opacity — drives the --chat-opacity custom property so one control
+  // changes every translucent surface at once. Restored from localStorage on
+  // mount (default 0.65).
+  const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(OPACITY_KEY);
+      if (saved !== null) setOpacity(clampOpacity(Number(saved)));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const handleOpacityChange = (v: number) => {
+    const next = clampOpacity(v);
+    setOpacity(next);
+    try {
+      window.localStorage.setItem(OPACITY_KEY, String(next));
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Auto-scroll to newest message on every render that changes length.
   useEffect(() => {
@@ -35,9 +71,15 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="absolute right-4 top-4 z-20 bg-[#1e2939]/90 border border-[#364153] rounded-xl px-4 py-2 text-sm font-semibold text-white hover:bg-[#283548]/90 transition cursor-pointer"
+        className="absolute right-4 top-4 z-20 rounded-xl px-4 py-2 text-sm font-semibold text-white transition cursor-pointer"
+        style={{
+          background: "rgba(30,41,57,0.8)",
+          border: "1px solid rgba(54,65,83,0.8)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+        }}
       >
-        Chat
+        {t("chat.open")}
       </button>
     );
   }
@@ -52,69 +94,118 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
     }
   };
 
+  // The --chat-opacity custom property is set on the container; every
+  // translucent child reads it via rgba(..., var(--chat-opacity)).
+  const containerStyle = {
+    // Custom property — cast because CSSProperties doesn't type `--vars`.
+    "--chat-opacity": String(opacity),
+    backgroundColor: "rgba(16,24,40, var(--chat-opacity))",
+    border: "1px solid rgba(54,65,83,0.7)",
+    borderRadius: isMobile ? "14px" : "16px",
+    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
+    ...(isMobile ? { maxHeight: 360, width: "100%" } : {}),
+  } as CSSProperties;
+
   return (
     <div
       className={isMobile ? "flex flex-col overflow-hidden" : "absolute right-4 top-4 bottom-4 z-20 w-[280px] flex flex-col overflow-hidden"}
-      style={{
-        backgroundColor: "#101828",
-        border: "1px solid #364153",
-        borderRadius: isMobile ? "14px" : "16px",
-        boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
-        ...(isMobile ? { maxHeight: 360, width: "100%" } : {}),
-      }}
+      style={containerStyle}
     >
-      {/* Header */}
+      {/* Header — subtle neutral translucent bar (loud blue removed) */}
       <div
         className="flex items-center justify-between px-[16px]"
         style={{
-          height: "52px",
-          background: "linear-gradient(to right, #155dfc, #1447e6)",
-          borderBottom: "1px solid rgba(43,127,255,0.3)",
+          minHeight: "52px",
+          background: "rgba(30,41,57, calc(var(--chat-opacity) + 0.06))",
+          borderBottom: "1px solid rgba(54,65,83,0.6)",
           borderRadius: "16px 16px 0 0",
         }}
       >
         <div className="flex items-center gap-[12px]">
           <div className="relative">
-            <svg className="w-[24px] h-[24px] text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-[22px] h-[22px] text-[#cbd5e1]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             <div
-              className="absolute -bottom-[2px] -right-[2px] w-[12px] h-[12px] rounded-full"
+              className="absolute -bottom-[2px] -right-[2px] w-[11px] h-[11px] rounded-full"
               style={{
                 backgroundColor: connected ? "#05df72" : "#fb2c36",
-                border: "2px solid #1447e6",
+                border: "2px solid #1e2939",
               }}
             />
           </div>
           <div>
-            <div className="font-bold text-[13px] text-white">Live Chat</div>
-            <div className="text-[12px] text-[#dbeafe]">
+            <div className="font-semibold text-[13px] text-white">{t("chat.title")}</div>
+            <div className="text-[11px] text-[#9ca3af]">
               {connected
-                ? `${presence} ${presence === 1 ? "player" : "players"} online`
-                : "Connecting..."}
+                ? t(presence === 1 ? "chat.onlineOne" : "chat.onlineMany", { count: presence })
+                : t("chat.connecting")}
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="w-[36px] h-[36px] rounded-[10px] flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer"
-          aria-label="Close chat"
-        >
-          <svg className="w-[20px] h-[20px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-[4px]">
+          {/* Opacity control toggle */}
+          <button
+            onClick={() => setShowOpacity((v) => !v)}
+            className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            aria-label={t("chat.opacity")}
+            title={t("chat.opacity")}
+          >
+            <svg className="w-[16px] h-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            aria-label={t("chat.close")}
+          >
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      {/* Opacity slider popover */}
+      {showOpacity && (
+        <div
+          className="flex items-center gap-[10px] px-[16px] py-[8px]"
+          style={{
+            background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.1))",
+            borderBottom: "1px solid rgba(54,65,83,0.5)",
+          }}
+        >
+          <span className="text-[10px] text-[#9ca3af] whitespace-nowrap">{t("chat.opacity")}</span>
+          <input
+            type="range"
+            min={MIN_OPACITY}
+            max={MAX_OPACITY}
+            step={0.05}
+            value={opacity}
+            onChange={(e) => handleOpacityChange(Number(e.target.value))}
+            aria-label={t("chat.opacity")}
+            className="flex-1 cursor-pointer"
+            style={{ accentColor: "#2b7fff" }}
+          />
+          <span className="text-[10px] text-[#9ca3af] tabular-nums w-[28px] text-right">
+            {Math.round(opacity * 100)}
+          </span>
+        </div>
+      )}
 
       {/* Message area */}
       <div
         ref={scrollerRef}
         className="flex-1 overflow-y-auto px-[16px] pt-[16px]"
-        style={{ backgroundColor: "rgba(3,7,18,0.5)" }}
+        style={{ backgroundColor: "rgba(3,7,18, calc(var(--chat-opacity) * 0.7))" }}
       >
         {messages.length === 0 ? (
           <div className="text-center text-[12px] text-[#6a7282] py-[12px]">
-            No messages yet — say hi!
+            {t("chat.empty")}
           </div>
         ) : (
           <div className="flex flex-col gap-[8px] pb-[8px]">
@@ -125,7 +216,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
                     <span className="font-semibold text-[11px] text-white truncate max-w-[140px]">{msg.user}</span>
                     <span className="text-[10px] text-[#6a7282]">{fmtTime(msg.time)}</span>
                   </div>
-                  <div className="bg-[#1e2939] rounded-[12px] min-h-[28px] px-[10px] py-[6px] flex items-center">
+                  <div
+                    className="rounded-[12px] min-h-[28px] px-[10px] py-[6px] flex items-center"
+                    style={{ backgroundColor: "rgba(30,41,57, calc(var(--chat-opacity) + 0.2))" }}
+                  >
                     <span className="text-[12px] text-[#f3f4f6] break-words">{msg.text}</span>
                   </div>
                 </div>
@@ -149,8 +243,8 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
       <div
         className="px-[16px] pt-[10px] pb-[10px] flex items-center gap-[8px]"
         style={{
-          backgroundColor: "#101828",
-          borderTop: "1px solid #364153",
+          backgroundColor: "rgba(16,24,40, var(--chat-opacity))",
+          borderTop: "1px solid rgba(54,65,83,0.6)",
           borderRadius: "0 0 16px 16px",
         }}
       >
@@ -159,20 +253,26 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKey}
-          placeholder={connected ? "Type a message..." : "Connecting..."}
+          placeholder={connected ? t("chat.placeholder") : t("chat.connecting")}
           disabled={!connected}
           maxLength={200}
-          className="flex-1 h-[32px] bg-[#1e2939] border border-[#364153] rounded-[10px] px-[12px] text-[12px] text-white placeholder-[#6a7282] outline-none disabled:opacity-50"
+          className="flex-1 h-[32px] border rounded-[10px] px-[12px] text-[12px] text-white placeholder-[#6a7282] outline-none disabled:opacity-50"
+          style={{
+            backgroundColor: "rgba(30,41,57, calc(var(--chat-opacity) + 0.15))",
+            borderColor: "rgba(54,65,83,0.8)",
+          }}
         />
         <button
           onClick={handleSend}
           disabled={!connected || !draft.trim()}
-          className="w-[36px] h-[32px] bg-[#155dfc] rounded-[10px] flex items-center justify-center text-white hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="Send"
+          className="h-[32px] px-[12px] rounded-[10px] flex items-center justify-center gap-[6px] text-white text-[12px] font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ background: "rgba(43,127,255,0.85)" }}
+          aria-label={t("chat.send")}
         >
-          <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
+          <span>{t("chat.send")}</span>
         </button>
       </div>
     </div>

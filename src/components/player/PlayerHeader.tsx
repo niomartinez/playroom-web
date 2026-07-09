@@ -4,10 +4,46 @@ import { useState, useEffect, useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useT, normalizeLang } from "@/lib/i18n";
+
+/**
+ * Compact language switcher (English / 中文). A native <select> keeps it
+ * accessible and keyboard-friendly. Writes through setLang, which persists
+ * the choice (localStorage) so it wins over the launch ?lang= on reload.
+ */
+function LanguageSelect({ compact }: { compact?: boolean }) {
+  const { lang, setLang } = useGame();
+  const t = useT();
+  const current = normalizeLang(lang);
+  return (
+    <select
+      aria-label={t("header.language")}
+      value={current}
+      onChange={(e) => setLang(e.target.value)}
+      style={{
+        background: "rgba(30,41,57,0.9)",
+        color: "#fff",
+        border: "1px solid #364153",
+        borderRadius: 8,
+        fontSize: compact ? 11 : 12,
+        fontWeight: 600,
+        padding: compact ? "3px 6px" : "4px 8px",
+        cursor: "pointer",
+        outline: "none",
+        appearance: "none",
+        WebkitAppearance: "none",
+      }}
+    >
+      <option value="en">English</option>
+      <option value="zh-Hans">中文</option>
+    </select>
+  );
+}
 
 export default function PlayerHeader() {
   const { currentRound, roundStatus, lobbyUrl, tableName, dealerName } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
   const [countdown, setCountdown] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -38,11 +74,11 @@ export default function PlayerHeader() {
   }, [roundStatus, currentRound?.countdown]);
 
   const roundLabel = (() => {
-    if (!currentRound?.roundNumber) return "No round";
+    if (!currentRound?.roundNumber) return t("header.noRound");
     const rn = String(currentRound.roundNumber);
     // Clean up internal IDs like "ROUND-EA6EC7C8" → just show short hash
-    if (rn.startsWith("ROUND-")) return `Round #${rn.slice(6, 10)}`;
-    return `Round #${rn}`;
+    if (rn.startsWith("ROUND-")) return t("header.round", { n: rn.slice(6, 10) });
+    return t("header.round", { n: rn });
   })();
 
   const statusColor: Record<string, string> = {
@@ -53,10 +89,10 @@ export default function PlayerHeader() {
   };
 
   const statusLabel: Record<string, string> = {
-    waiting: "Waiting",
-    betting_open: countdown !== null ? `PLACE BETS (${countdown}s)` : "Place Bets",
-    dealing: "Dealing",
-    result: "Result",
+    waiting: t("status.waiting"),
+    betting_open: countdown !== null ? t("status.placeBetsCountdown", { seconds: countdown }) : t("status.placeBets"),
+    dealing: t("status.dealing"),
+    result: t("status.result"),
   };
 
   const handleBack = () => {
@@ -119,13 +155,16 @@ export default function PlayerHeader() {
                 boxShadow: "0 0 6px rgba(251,44,54,0.4)",
               }}
             />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: 0.4 }}>LIVE</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: 0.4 }}>{t("status.live")}</span>
           </div>
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#99A1AF" }}>Live Baccarat</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: "#99A1AF" }}>{t("header.liveBaccarat")}</span>
         </div>
 
-        {/* Right: Round number */}
-        <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff", zIndex: 1 }}>{roundLabel}</span>
+        {/* Right: language switcher + round number */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+          <LanguageSelect compact />
+          <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff" }}>{roundLabel}</span>
+        </div>
       </header>
     );
   }
@@ -142,7 +181,7 @@ export default function PlayerHeader() {
         <button onClick={handleBack} className="cursor-pointer">
           <img src="/logo.png" alt="Play Room Gaming" className="object-contain h-[3.5vh]" />
         </button>
-        <span className="text-[1.1vh] text-[#99a1af]">Live Baccarat</span>
+        <span className="text-[1.1vh] text-[#99a1af]">{t("header.liveBaccarat")}</span>
         <span className="text-[1vh] text-[#6a7282]">|</span>
         <span className="text-[1.1vh] text-white font-semibold">{tableName}</span>
         <span className="text-[1vh] text-[#6a7282]">•</span>
@@ -176,9 +215,11 @@ export default function PlayerHeader() {
               color: roundStatus === "betting_open" ? "#05df72" : "white",
             }}
           >
-            {statusLabel[roundStatus] || "LIVE"}
+            {statusLabel[roundStatus] || t("status.live")}
           </span>
         </div>
+        {/* Language switcher */}
+        <LanguageSelect />
         {/* Round number */}
         <div className="flex items-center gap-[0.4vw] bg-[#1e2939] border border-[#364153] rounded-[0.6vw] px-[0.8vw] py-[0.4vh]">
           <svg className="text-[#99a1af]" style={{ width: "1.2vh", height: "1.2vh" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

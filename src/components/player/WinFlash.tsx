@@ -2,6 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useGame } from "@/lib/game-context";
+import { symbolFor } from "@/lib/currency";
+import { useT } from "@/lib/i18n";
+
+/** Map a backend bet code to its i18n label key (falls back to the raw label). */
+const BET_CODE_LABEL_KEY: Record<string, string> = {
+  BAC_Player: "bet.player",
+  BAC_Banker: "bet.banker",
+  BAC_Tie: "bet.tie",
+  BAC_PlayerPair: "bet.playerPair",
+  BAC_BankerPair: "bet.bankerPair",
+  BAC_EitherPair: "bet.eitherPair",
+  BAC_PerfectPair: "bet.perfectPair",
+};
 
 /**
  * Total time the YOU WON overlay is visible (fade-in + hold + fade-out).
@@ -50,7 +63,7 @@ const STYLES = `
   font-weight: 800;
   letter-spacing: 0.06em;
   color: #FFD54F;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   animation: prgWinFlashGlow 1.2s ease-in-out infinite;
 }
 .prg-win-flash__line {
@@ -83,7 +96,9 @@ function formatAmount(n: number): string {
  * the duration. This component only renders.
  */
 export default function WinFlash() {
-  const { recentWin } = useGame();
+  const { recentWin, currency } = useGame();
+  const t = useT();
+  const sym = symbolFor(currency);
   // Force a remount when a fresh win arrives so the CSS animation replays
   // even if two consecutive rounds have the same fightId by accident.
   const [renderKey, setRenderKey] = useState(0);
@@ -104,14 +119,18 @@ export default function WinFlash() {
         aria-live="polite"
       >
         <div className="prg-win-flash__title">
-          YOU WON ${formatAmount(recentWin.totalPayoff)}
+          {t("win.youWon", { amount: `${sym}${formatAmount(recentWin.totalPayoff)}` })}
         </div>
-        {recentWin.lines.map((line, i) => (
-          <div key={`${line.label}-${i}`} className="prg-win-flash__line">
-            <span className="label">{line.label}</span>
-            <span className="amount">+${formatAmount(line.amount)}</span>
-          </div>
-        ))}
+        {recentWin.lines.map((line, i) => {
+          const key = BET_CODE_LABEL_KEY[String(line.betCode)];
+          const label = key ? t(key) : line.label;
+          return (
+            <div key={`${line.label}-${i}`} className="prg-win-flash__line">
+              <span className="label">{label}</span>
+              <span className="amount">+{sym}{formatAmount(line.amount)}</span>
+            </div>
+          );
+        })}
       </div>
     </>
   );

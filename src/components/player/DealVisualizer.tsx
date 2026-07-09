@@ -2,6 +2,7 @@
 
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useT, type TFunction } from "@/lib/i18n";
 import { useState, useEffect, useRef } from "react";
 
 /* ------------------------------------------------------------------ */
@@ -111,7 +112,7 @@ function EmptySlot({ isMobile }: { isMobile?: boolean }) {
 /*  Phase banner                                                       */
 /* ------------------------------------------------------------------ */
 
-function PhaseBanner({ roundStatus, countdown, hasCards }: { roundStatus: string; countdown: number | null; hasCards: boolean }) {
+function PhaseBanner({ roundStatus, countdown, hasCards, t }: { roundStatus: string; countdown: number | null; hasCards: boolean; t: TFunction }) {
   let text = "";
   let bgColor = "rgba(255,255,255,0.06)";
   let textColor = "#99a1af";
@@ -119,25 +120,25 @@ function PhaseBanner({ roundStatus, countdown, hasCards }: { roundStatus: string
 
   switch (roundStatus) {
     case "betting_open":
-      text = countdown !== null ? `PLACE BETS  ${countdown}s` : "PLACE BETS";
+      text = countdown !== null ? t("viz.placeBetsCountdown", { seconds: countdown }) : t("viz.placeBets");
       bgColor = "rgba(5,223,114,0.15)";
       textColor = "#05df72";
       pulse = true;
       break;
     case "dealing":
       // "NO MORE BETS" until first card arrives, then "DEALING"
-      text = hasCards ? "DEALING" : "NO MORE BETS";
+      text = hasCards ? t("viz.dealing") : t("viz.noMoreBets");
       bgColor = "rgba(240,177,0,0.15)";
       textColor = "#f0b100";
       pulse = true;
       break;
     case "result":
-      text = "RESULT";
+      text = t("viz.result");
       bgColor = "rgba(251,44,54,0.15)";
       textColor = "#fb2c36";
       break;
     default:
-      text = "WAITING FOR NEXT ROUND";
+      text = t("viz.waitingNextRound");
       break;
   }
 
@@ -183,6 +184,7 @@ function PhaseBanner({ roundStatus, countdown, hasCards }: { roundStatus: string
 export default function DealVisualizer() {
   const isMobile = useIsMobile();
   const { currentRound, roundStatus } = useGame();
+  const t = useT();
 
   const playerCards = currentRound?.playerCards ?? [];
   const bankerCards = currentRound?.bankerCards ?? [];
@@ -258,7 +260,7 @@ export default function DealVisualizer() {
 
       {/* Phase banner */}
       <div style={{ marginBottom: hasCards ? (isMobile ? 12 : 24) : 0 }}>
-        <PhaseBanner roundStatus={roundStatus} countdown={countdown} hasCards={hasCards} />
+        <PhaseBanner roundStatus={roundStatus} countdown={countdown} hasCards={hasCards} t={t} />
       </div>
 
       {/* Cards area — only visible when dealing or result */}
@@ -285,7 +287,7 @@ export default function DealVisualizer() {
                   color: "#2b7fff",
                 }}
               >
-                PLAYER
+                {t("side.player")}
               </span>
               <span
                 style={{
@@ -316,7 +318,7 @@ export default function DealVisualizer() {
               letterSpacing: "0.15em",
             }}
           >
-            VS
+            {t("side.vs")}
           </div>
 
           {/* Banker side */}
@@ -330,7 +332,7 @@ export default function DealVisualizer() {
                   color: "#fb2c36",
                 }}
               >
-                BANKER
+                {t("side.banker")}
               </span>
               <span
                 style={{
@@ -372,14 +374,14 @@ export default function DealVisualizer() {
             animation: "vizPulse 2s ease-in-out 1",
           }}
         >
-          {winner === "P" ? "PLAYER WINS" : winner === "B" ? "BANKER WINS" : "TIE"}
+          {winner === "P" ? t("result.playerWins") : winner === "B" ? t("result.bankerWins") : t("result.tie")}
         </div>
       )}
 
       {/* Empty state — no active round */}
       {!hasCards && roundStatus === "waiting" && (
         <div style={{ marginTop: 12, fontSize: "clamp(11px, 1.3vw, 14px)", color: "#4b5563" }}>
-          Waiting for next round...
+          {t("viz.waitingNextRoundDots")}
         </div>
       )}
     </div>

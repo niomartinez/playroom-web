@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Hls from "hls.js";
+import { useT } from "@/lib/i18n";
 
 /**
  * Live video player for a baccarat table.
@@ -54,6 +55,7 @@ function loadAudioPrefs(): { volume: number; muted: boolean } {
 }
 
 export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayerProps) {
+  const t = useT();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [state, setState] = useState<PlaybackState>("connecting");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -420,7 +422,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         >
           <button
             onClick={handleToggleMute}
-            aria-label={muted ? "Unmute" : "Mute"}
+            aria-label={muted ? t("video.unmute") : t("video.mute")}
             style={{
               width: 32,
               height: 32,
@@ -458,7 +460,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
               step={0.05}
               value={muted ? 0 : volume}
               onChange={(e) => handleVolumeChange(Number(e.target.value))}
-              aria-label="Volume"
+              aria-label={t("video.volume")}
               style={{
                 width: 80,
                 accentColor: "#f0b100",
@@ -482,7 +484,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
               letterSpacing: 0.5,
             }}
           >
-            Connecting to live stream…
+            {t("video.connecting")}
           </div>
         </div>
       )}
@@ -517,7 +519,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
                 borderTopColor: "#f0b100",
               }}
             />
-            Reconnecting to live stream…
+            {t("video.reconnecting")}
           </div>
         </div>
       )}

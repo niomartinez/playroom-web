@@ -5,10 +5,13 @@ import { useBetting } from "@/lib/use-betting";
 import { useGame, type BetCode } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 import { dispatchChipFly } from "@/lib/chip-fly";
+import { symbolFor } from "@/lib/currency";
+import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
 
 const BETS: Array<{
   name: string;
+  nameKey: string;
   abbrev: string;
   betCode: BetCode;
   gradient: string;
@@ -18,6 +21,7 @@ const BETS: Array<{
 }> = [
   {
     name: "PLAYER",
+    nameKey: "bet.player",
     abbrev: "P",
     betCode: "BAC_Player",
     gradient: "linear-gradient(154deg, rgb(0,101,255) 0%, rgb(0,21,86) 100%)",
@@ -27,6 +31,7 @@ const BETS: Array<{
   },
   {
     name: "TIE",
+    nameKey: "bet.tie",
     abbrev: "T",
     betCode: "BAC_Tie",
     gradient: "linear-gradient(154deg, rgb(58,161,40) 0%, rgb(0,86,16) 100%)",
@@ -36,6 +41,7 @@ const BETS: Array<{
   },
   {
     name: "BANKER",
+    nameKey: "bet.banker",
     abbrev: "B",
     betCode: "BAC_Banker",
     gradient: "linear-gradient(154deg, rgb(217,62,64) 0%, rgb(86,0,9) 100%)",
@@ -45,10 +51,10 @@ const BETS: Array<{
   },
 ];
 
-function formatCompact(amount: number): string {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 0)}K`;
-  return `$${amount}`;
+function formatCompact(amount: number, symbol: string): string {
+  if (amount >= 1_000_000) return `${symbol}${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (amount >= 1_000) return `${symbol}${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 0)}K`;
+  return `${symbol}${amount}`;
 }
 
 // Map a UI bet code to the bucket key used in MainBetCounts payloads.
@@ -64,8 +70,10 @@ const COUNTS_KEY: Record<BetCode, "Player" | "Tie" | "Banker" | null> = {
 
 export default function MainBets() {
   const { placeBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
-  const { roundStatus, balance, addFlyingChip, mainBetCounts, currentRound } = useGame();
+  const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
+  const sym = symbolFor(currency);
 
   // Only trust the live counts when they line up with the round currently
   // displayed. After RoundClosed we deliberately KEEP the last counts (so the
@@ -196,7 +204,7 @@ export default function MainBets() {
                     letterSpacing: 0.2,
                   }}
                 >
-                  {totalAmount > 0 ? formatCompact(totalAmount) : "$0"}
+                  {totalAmount > 0 ? formatCompact(totalAmount, sym) : `${sym}0`}
                 </span>
 
                 {/* Stats row: people icon + count, then share % */}
@@ -297,7 +305,7 @@ export default function MainBets() {
 
             <div className="relative z-10 w-full flex flex-col items-center justify-start h-full" style={{ padding: "0.6vh 0.8vw 3.2vh", gap: "0.3vh" }}>
               {/* Bet title */}
-              <div className="font-bold text-white text-center leading-none" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{bet.name}</div>
+              <div className="font-bold text-white text-center leading-none" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{t(bet.nameKey)}</div>
 
               {/* Player's own bet amount on this side -- the most important
                   number on the button. Falls back to a 1-em line when no bet
@@ -311,7 +319,7 @@ export default function MainBets() {
                   minHeight: "2.6vh",
                 }}
               >
-                {myTotal > 0 ? `$${myTotal.toLocaleString()}` : isBettingOpen ? "—" : roundStatus === "waiting" ? "—" : "Closed"}
+                {myTotal > 0 ? `${sym}${myTotal.toLocaleString()}` : isBettingOpen ? "—" : roundStatus === "waiting" ? "—" : t("bet.closed")}
               </div>
 
               {/* Share-of-players bar */}
@@ -324,8 +332,8 @@ export default function MainBets() {
 
               {/* Player count + total bet across all players + share */}
               <div className="flex items-center justify-between w-full text-white/70" style={{ fontSize: "clamp(7px, 0.85vh, 12px)" }}>
-                <span>{playerCount} player{playerCount !== 1 ? "s" : ""}</span>
-                <span className="opacity-80">{totalAmount > 0 ? `$${totalAmount.toLocaleString()}` : "$0"}</span>
+                <span>{t(playerCount === 1 ? "players.one" : "players.many", { count: playerCount })}</span>
+                <span className="opacity-80">{totalAmount > 0 ? `${sym}${totalAmount.toLocaleString()}` : `${sym}0`}</span>
                 <span>{sharePct}%</span>
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useT } from "@/lib/i18n";
 
 const SUIT_SYMBOLS: Record<string, string> = {
   H: "\u2665", D: "\u2666", C: "\u2663", S: "\u2660",
@@ -37,6 +38,7 @@ function PlayingCard({ card, size }: { card: string; size: "mobile" | "desktop" 
 export default function BaccaratTable() {
   const { currentRound, roundStatus } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
 
   const playerScore = currentRound?.playerScore ?? 0;
   const bankerScore = currentRound?.bankerScore ?? 0;
@@ -45,13 +47,13 @@ export default function BaccaratTable() {
   const winner = currentRound?.winner;
 
   const statusText: Record<string, string> = {
-    waiting: "Waiting for bets...",
-    betting_open: "Place your bets!",
-    dealing: "Dealing cards...",
-    result: winner === "P" ? "Player Wins!" : winner === "B" ? "Banker Wins!" : winner === "T" ? "Tie!" : "Result",
+    waiting: t("table.waitingBets"),
+    betting_open: t("table.placeYourBets"),
+    dealing: t("table.dealingCards"),
+    result: winner === "P" ? t("table.playerWins") : winner === "B" ? t("table.bankerWins") : winner === "T" ? t("table.tie") : t("table.result"),
   };
 
-  const message = statusText[roundStatus] || "Waiting for bets...";
+  const message = statusText[roundStatus] || t("table.waitingBets");
 
   if (isMobile) {
     const isPlayerWinner = roundStatus === "result" && winner === "P";
@@ -84,7 +86,7 @@ export default function BaccaratTable() {
           }}
         >
           <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
-            PLAYER
+            {t("table.player")}
           </span>
           <div
             style={{
@@ -139,7 +141,7 @@ export default function BaccaratTable() {
           }}
         >
           <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>
-            BANKER
+            {t("table.banker")}
           </span>
           <div
             style={{
@@ -201,7 +203,7 @@ export default function BaccaratTable() {
             <div className="rounded-full bg-[#2b7fff] border-2 border-white flex items-center justify-center shadow-lg" style={{ width: "3.5vh", height: "3.5vh" }}>
               <span className="text-white font-bold" style={{ fontSize: "1.5vh" }}>P</span>
             </div>
-            <span className="font-bold text-white" style={{ fontSize: "1.8vh" }}>PLAYER</span>
+            <span className="font-bold text-white" style={{ fontSize: "1.8vh" }}>{t("table.player")}</span>
           </div>
           <div className="bg-[#2b7fff] shadow-lg flex items-center justify-center" style={{ borderRadius: "0.8vw", padding: "0.2vh 0.6vw" }}>
             <span className="text-white font-bold" style={{ fontSize: "2.5vh" }}>{playerScore}</span>
@@ -225,7 +227,7 @@ export default function BaccaratTable() {
             <div className="rounded-full bg-[#fb2c36] border-2 border-white flex items-center justify-center shadow-lg" style={{ width: "3.5vh", height: "3.5vh" }}>
               <span className="text-white font-bold" style={{ fontSize: "1.5vh" }}>B</span>
             </div>
-            <span className="font-bold text-white" style={{ fontSize: "1.8vh" }}>BANKER</span>
+            <span className="font-bold text-white" style={{ fontSize: "1.8vh" }}>{t("table.banker")}</span>
           </div>
           <div className="bg-[#fb2c36] shadow-lg flex items-center justify-center" style={{ borderRadius: "0.8vw", padding: "0.2vh 0.6vw" }}>
             <span className="text-white font-bold" style={{ fontSize: "2.5vh" }}>{bankerScore}</span>
@@ -256,7 +258,7 @@ export default function BaccaratTable() {
               textShadow: "0 2px 8px rgba(0,0,0,0.5)",
             }}
           >
-            {winner === "P" ? "PLAYER WINS" : winner === "B" ? "BANKER WINS" : "TIE"}
+            {winner === "P" ? t("result.playerWins") : winner === "B" ? t("result.bankerWins") : t("result.tie")}
           </div>
         </div>
       )}

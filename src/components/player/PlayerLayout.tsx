@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame } from "@/lib/game-context";
+import { useFeatures } from "@/lib/use-features";
 import PlayerHeader from "./PlayerHeader";
 import LiveChat from "./LiveChat";
 import SideBets from "./SideBets";
@@ -48,6 +49,7 @@ const BET_PANEL_STYLES = `
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
   const { roundStatus, placedBets, cancelPlacedBets, webrtcUrl, hlsUrl } = useGame();
+  const { live_chat_enabled: liveChatEnabled } = useFeatures();
   const [showChat, setShowChat] = useState(false);
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -147,14 +149,15 @@ export default function PlayerLayout() {
           <MainBets />
         </div>
 
-        {/* Action Bar — Live Chat only (tips removed) */}
+        {/* Action Bar — Live Chat only (tips removed). Gated on the admin
+            live_chat_enabled feature flag, kept consistent with the overlay. */}
         <MobileActionBar
           onChatPress={() => setShowChat((v) => !v)}
-          chatEnabled
+          chatEnabled={liveChatEnabled}
         />
 
         {/* Live Chat overlay */}
-        {showChat && (
+        {liveChatEnabled && showChat && (
           <div style={{ padding: "0 19px" }}>
             <LiveChat mobile />
           </div>
@@ -191,7 +194,7 @@ export default function PlayerLayout() {
           hlsUrl={hlsUrl}
           fallback={<DealVisualizer />}
         />
-        <LiveChat />
+        {liveChatEnabled && <LiveChat />}
       </div>
 
       <div

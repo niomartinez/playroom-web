@@ -5,10 +5,12 @@ import { useBetting } from "@/lib/use-betting";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame, type BetCode } from "@/lib/game-context";
 import { dispatchChipFly } from "@/lib/chip-fly";
+import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
 
 const SIDE_BETS: Array<{
   name: string;
+  nameKey: string;
   betCode: BetCode;
   odds: string;
   gradient: string;
@@ -18,6 +20,7 @@ const SIDE_BETS: Array<{
 }> = [
   {
     name: "PERFECT PAIR",
+    nameKey: "bet.perfectPair",
     betCode: "BAC_PerfectPair",
     odds: "25:1",
     gradient: "linear-gradient(162deg, rgb(208,135,0) 0%, rgb(137,75,0) 100%)",
@@ -27,6 +30,7 @@ const SIDE_BETS: Array<{
   },
   {
     name: "EITHER PAIR",
+    nameKey: "bet.eitherPair",
     betCode: "BAC_EitherPair",
     odds: "5:1",
     gradient: "linear-gradient(162deg, rgb(208,135,0) 0%, rgb(137,75,0) 100%)",
@@ -36,6 +40,7 @@ const SIDE_BETS: Array<{
   },
   {
     name: "PLAYER PAIR",
+    nameKey: "bet.playerPair",
     betCode: "BAC_PlayerPair",
     odds: "11:1",
     gradient: "linear-gradient(162deg, rgb(21,93,252) 0%, rgb(25,60,184) 100%)",
@@ -45,6 +50,7 @@ const SIDE_BETS: Array<{
   },
   {
     name: "BANKER PAIR",
+    nameKey: "bet.bankerPair",
     betCode: "BAC_BankerPair",
     odds: "11:1",
     gradient: "linear-gradient(162deg, rgb(231,0,11) 0%, rgb(159,7,18) 100%)",
@@ -58,6 +64,7 @@ export default function SideBets() {
   const { placeBet, isBettingOpen, placedBets, selectedChip } = useBetting();
   const { balance, addFlyingChip } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
 
   const handleBet = useCallback(
     async (betCode: BetCode, targetEl: HTMLElement | null) => {
@@ -149,7 +156,7 @@ export default function SideBets() {
                     letterSpacing: 0.2,
                   }}
                 >
-                  {bet.name}
+                  {t(bet.nameKey)}
                 </div>
                 <div
                   style={{
@@ -171,7 +178,7 @@ export default function SideBets() {
                       letterSpacing: 0.3,
                     }}
                   >
-                    PLACED
+                    {t("bet.placedShort")}
                   </div>
                 )}
               </div>
@@ -209,11 +216,11 @@ export default function SideBets() {
               <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />
             </div>
             <div className="relative z-10">
-              <div className="font-bold text-white leading-tight" style={{ fontSize: "clamp(9px, 1.1vh, 16px)" }}>{bet.name}</div>
+              <div className="font-bold text-white leading-tight" style={{ fontSize: "clamp(9px, 1.1vh, 16px)" }}>{t(bet.nameKey)}</div>
               <div className="font-medium text-white/90" style={{ fontSize: "clamp(8px, 0.9vh, 14px)" }}>{bet.odds}</div>
               {hasBet && (
                 <div className="text-white/70" style={{ fontSize: "clamp(7px, 0.8vh, 12px)" }}>
-                  Bet placed
+                  {t("bet.placed")}
                 </div>
               )}
             </div>

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useT } from "@/lib/i18n";
 import { buildBigRoadColumns } from "@/lib/big-road";
 import { BigRoadGrid } from "@/components/shared/BigRoadGrid";
 
@@ -17,6 +18,7 @@ const ROWS = 6;
 export default function RoadmapPanel() {
   const { roads } = useGame();
   const isMobile = useIsMobile();
+  const t = useT();
 
   /* Build big road columns (dragon-style with vertical streaks, ties
      overlayed on the most recent non-Tie cell, wrap to last 3 columns
@@ -71,7 +73,7 @@ export default function RoadmapPanel() {
               marginBottom: 4,
             }}
           >
-            Big Road
+            {t("roadmap.bigRoad")}
           </div>
           <div style={{ width: "100%" }}>
             <BigRoadGrid
@@ -96,7 +98,7 @@ export default function RoadmapPanel() {
         >
           {/* Left: Next Prediction */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-            <span style={{ fontSize: 10, color: "#99A1AF", fontWeight: 500 }}>Next</span>
+            <span style={{ fontSize: 10, color: "#99A1AF", fontWeight: 500 }}>{t("roadmap.next")}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {[
                 { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },
@@ -166,7 +168,7 @@ export default function RoadmapPanel() {
         className="flex-[3] min-h-0 flex flex-col overflow-hidden"
         style={{ backgroundColor: "#101828", border: "0.8px solid #364153", borderRadius: "0.6vw", padding: "0.4vh 0.6vw" }}
       >
-        <div className="font-semibold text-[#d1d5dc] shrink-0" style={{ fontSize: "1.1vh", marginBottom: "0.3vh" }}>Big Road</div>
+        <div className="font-semibold text-[#d1d5dc] shrink-0" style={{ fontSize: "1.1vh", marginBottom: "0.3vh" }}>{t("roadmap.bigRoad")}</div>
         <BigRoadGrid
           columns={bigRoadDesktop.columns}
           leadingTie={bigRoadDesktop.leadingTie}
@@ -180,9 +182,9 @@ export default function RoadmapPanel() {
       {/* Score Counters */}
       <div className="grid grid-cols-3 shrink-0" style={{ gap: "0.3vw" }}>
         {[
-          { label: "Player", bg: "#155dfc", text: "#dbeafe", count: roads.playerWins },
-          { label: "Tie", bg: "#00a63e", text: "#dcfce7", count: roads.ties },
-          { label: "Banker", bg: "#e7000b", text: "#ffe2e2", count: roads.bankerWins },
+          { label: t("roadmap.player"), bg: "#155dfc", text: "#dbeafe", count: roads.playerWins },
+          { label: t("roadmap.tie"), bg: "#00a63e", text: "#dcfce7", count: roads.ties },
+          { label: t("roadmap.banker"), bg: "#e7000b", text: "#ffe2e2", count: roads.bankerWins },
         ].map((s) => (
           <div key={s.label} className="flex flex-col items-center justify-center" style={{ backgroundColor: s.bg, borderRadius: "0.5vw", padding: "0.5vh 0" }}>
             <span className="text-white font-bold" style={{ fontSize: "1.8vh" }}>{s.count}</span>
@@ -196,7 +198,7 @@ export default function RoadmapPanel() {
         className="shrink-0 flex flex-col"
         style={{ backgroundColor: "#101828", border: "0.8px solid #364153", borderRadius: "0.6vw", padding: "0.4vh 0.6vw" }}
       >
-        <div className="font-semibold text-[#d1d5dc]" style={{ fontSize: "1vh", marginBottom: "0.3vh" }}>Next Prediction</div>
+        <div className="font-semibold text-[#d1d5dc]" style={{ fontSize: "1vh", marginBottom: "0.3vh" }}>{t("roadmap.nextPrediction")}</div>
         <div className="flex items-center justify-center" style={{ gap: "1vw" }}>
           {[
             { label: "P", bg: "#2b7fff", border: "#51a2ff", pct: pPct },

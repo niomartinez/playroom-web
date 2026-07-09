@@ -176,6 +176,13 @@ export interface GameState {
 
   /* Live state */
   balance: number;
+  /**
+   * ISO-4217 currency code for the player's wallet. Drives the money symbol
+   * across the UI (see lib/currency.ts). Defaults to "PHP"; the balance WS
+   * "connected" frame overrides it when the operator wallet reports one.
+   * Demo mode never gets a currency frame, so the default stands.
+   */
+  currency: string;
   roundStatus: RoundStatus;
   currentRound: CurrentRound | null;
   roads: Roads;
@@ -199,6 +206,12 @@ export interface GameState {
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
+  setCurrency: (c: string) => void;
+  /**
+   * Change the active UI language and persist it. A persisted choice takes
+   * precedence over the launch `?lang=` param on subsequent loads.
+   */
+  setLang: (lang: string) => void;
   setRoundStatus: (s: SetStateAction<RoundStatus>) => void;
   setCurrentRound: (r: SetStateAction<CurrentRound | null>) => void;
   setRoads: (r: SetStateAction<Roads>) => void;
@@ -248,7 +261,7 @@ interface GameProviderProps {
 export function GameProvider({
   token,
   gameId,
-  lang,
+  lang: initialLang,
   lobbyUrl,
   cashierUrl,
   children,
@@ -259,6 +272,31 @@ export function GameProvider({
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [videoDelayMs, setVideoDelayMs] = useState(0);
   const [balance, setBalance] = useState(0);
+  const [currency, setCurrency] = useState("PHP");
+
+  /**
+   * Language precedence: a persisted user choice (localStorage) wins over the
+   * launch `?lang=` param on later loads; the launch param is only the
+   * first-load default. Start from the launch param for SSR-consistent markup,
+   * then swap to any persisted choice on mount.
+   */
+  const [lang, setLangState] = useState(initialLang);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("prg_lang");
+      if (saved) setLangState(saved);
+    } catch {
+      /* localStorage unavailable (private mode / iframe) — keep launch param */
+    }
+  }, []);
+  const setLang = useCallback((next: string) => {
+    setLangState(next);
+    try {
+      localStorage.setItem("prg_lang", next);
+    } catch {
+      /* ignore persistence failure — in-memory change still applies */
+    }
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -454,6 +492,7 @@ export function GameProvider({
     setHlsUrl,
     setVideoDelayMs,
     balance,
+    currency,
     roundStatus,
     currentRound,
     roads,
@@ -466,6 +505,8 @@ export function GameProvider({
     setTableName,
     setDealerName,
     setBalance,
+    setCurrency,
+    setLang,
     setRoundStatus,
     setCurrentRound,
     setRoads,

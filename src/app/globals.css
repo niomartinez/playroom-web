@@ -29,7 +29,11 @@
 body {
   background: linear-gradient(to right, #000000, #171717, #000000);
   color: var(--text-white);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  /* Inter for Latin, then CJK-capable system fonts so Simplified Chinese
+     (zh-Hans) renders without tofu on macOS / Windows / Linux / Android. */
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -3,13 +3,17 @@
 import { useState } from "react";
 import { sendToParent } from "@/lib/iframe-bridge";
 import { useGame } from "@/lib/game-context";
+import { symbolFor } from "@/lib/currency";
+import { useT } from "@/lib/i18n";
 
 const TIPS = [50, 100, 250, 500, 1000, 2500, 5000];
 
 export default function MobileTipPanel({ onClose }: { onClose: () => void }) {
   const [selectedTip, setSelectedTip] = useState<number>(100);
   const [sent, setSent] = useState(false);
-  const { token, balance, setBalance, cashierUrl } = useGame();
+  const { token, balance, currency, setBalance, cashierUrl } = useGame();
+  const t = useT();
+  const sym = symbolFor(currency);
 
   const handleSendTip = () => {
     if (token === "demo") {
@@ -50,7 +54,7 @@ export default function MobileTipPanel({ onClose }: { onClose: () => void }) {
         }}
       >
         <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>
-          Send Tip to Dealer
+          {t("tip.title")}
         </span>
         <button
           onClick={onClose}
@@ -97,7 +101,7 @@ export default function MobileTipPanel({ onClose }: { onClose: () => void }) {
               transform: selectedTip === tip ? "scale(1.03)" : "scale(1)",
             }}
           >
-            ₱{tip.toLocaleString()}
+            {sym}{tip.toLocaleString()}
           </button>
         ))}
       </div>
@@ -124,7 +128,7 @@ export default function MobileTipPanel({ onClose }: { onClose: () => void }) {
         }}
       >
         <span style={{ fontSize: 16 }}>❤</span>
-        {sent ? "SENT!" : `SEND ₱${selectedTip.toLocaleString()}`}
+        {sent ? t("tip.sent") : t("tip.sendAmount", { amount: `${sym}${selectedTip.toLocaleString()}` })}
       </button>
     </div>
   );

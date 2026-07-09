@@ -30,6 +30,7 @@ export function useBalanceWs() {
   const {
     token,
     setBalance,
+    setCurrency,
     setRecentWin,
     stackedChips,
     addFlyingChip,
@@ -40,6 +41,7 @@ export function useBalanceWs() {
   // Refs avoid stale closures inside ws.onmessage without forcing reconnects.
   const settersRef = useRef({
     setBalance,
+    setCurrency,
     setRecentWin,
     stackedChips,
     addFlyingChip,
@@ -48,6 +50,7 @@ export function useBalanceWs() {
   });
   settersRef.current = {
     setBalance,
+    setCurrency,
     setRecentWin,
     stackedChips,
     addFlyingChip,
@@ -108,6 +111,20 @@ export function useBalanceWs() {
     ) {
       try {
         const s = settersRef.current;
+
+        // Currency: the backend sends "currency" on the "connected"
+        // BalanceUpdate frame. Apply it whenever present so the money symbol
+        // across the UI reflects the operator wallet. (Demo mode never sends
+        // this frame, so the GameContext "PHP" default stands.)
+        const currency =
+          typeof msg.currency === "string"
+            ? (msg.currency as string)
+            : typeof data.currency === "string"
+              ? (data.currency as string)
+              : null;
+        if (currency) {
+          s.setCurrency(currency);
+        }
 
         // BalanceUpdate (or bare {balance: x})
         const balance =

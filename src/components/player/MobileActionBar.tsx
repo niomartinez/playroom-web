@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 export default function MobileActionBar({
   onChatPress,
   chatEnabled = true,
@@ -7,6 +9,7 @@ export default function MobileActionBar({
   onChatPress?: () => void;
   chatEnabled?: boolean;
 }) {
+  const t = useT();
   if (!chatEnabled) return null;
   return (
     <div
@@ -41,7 +44,7 @@ export default function MobileActionBar({
             lineHeight: 1,
           }}
         >
-          Live Chat
+          {t("chat.title")}
         </span>
       </button>
     </div>
