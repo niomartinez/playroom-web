@@ -7,9 +7,20 @@ import { useT } from "@/lib/i18n";
 
 /** localStorage key for the persisted chat panel opacity. */
 const OPACITY_KEY = "prg_chat_opacity";
-const DEFAULT_OPACITY = 0.65;
-const MIN_OPACITY = 0.3;
+const DEFAULT_OPACITY = 0.2;
+const MIN_OPACITY = 0.2;
 const MAX_OPACITY = 1.0;
+
+/** Client-side send cooldown (mirrors the server's 1 msg / 5s rule for UX). */
+const SEND_COOLDOWN_MS = 5000;
+
+/** Curated emoji set for the picker — no external deps, CSP-safe. */
+const EMOJIS = [
+  "😀","😂","😅","😉","😍","😎","🤑","😭","😡","🤔",
+  "👍","👎","👏","🙏","💪","🔥","💯","🎉","✨","💰",
+  "🃏","🎰","🍀","💵","💸","⚡","❤️","💔","👀","🤝",
+  "😱","🥳","😴","🤮","🤡","👑","🚀","⭐","✅","❌",
+];
 
 function clampOpacity(v: number): number {
   if (!Number.isFinite(v)) return DEFAULT_OPACITY;
@@ -23,8 +34,12 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const [isOpen, setIsOpen] = useState(true);
   const [draft, setDraft] = useState("");
   const [showOpacity, setShowOpacity] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [cooldownLeft, setCooldownLeft] = useState(0); // seconds remaining
   const { messages, presence, connected, send, lastError } = useChatWs();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const cooldownUntilRef = useRef(0);
 
   // Panel opacity — drives the --chat-opacity custom property so one control
   // changes every translucent surface at once. Restored from localStorage on
@@ -54,10 +69,32 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
+  // Tick the send-cooldown countdown once a second while it's active.
+  useEffect(() => {
+    if (cooldownLeft <= 0) return;
+    const id = setInterval(() => {
+      const left = Math.ceil((cooldownUntilRef.current - Date.now()) / 1000);
+      setCooldownLeft(left > 0 ? left : 0);
+    }, 250);
+    return () => clearInterval(id);
+  }, [cooldownLeft]);
+
+  const startCooldown = () => {
+    cooldownUntilRef.current = Date.now() + SEND_COOLDOWN_MS;
+    setCooldownLeft(Math.ceil(SEND_COOLDOWN_MS / 1000));
+  };
+
   const handleSend = () => {
-    if (!draft.trim()) return;
+    if (!draft.trim() || cooldownLeft > 0) return;
     send(draft);
     setDraft("");
+    setShowEmoji(false);
+    startCooldown();
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setDraft((d) => (d + emoji).slice(0, 200));
+    inputRef.current?.focus();
   };
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -239,6 +276,29 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         </div>
       )}
 
+      {/* Emoji picker popover */}
+      {showEmoji && (
+        <div
+          className="px-[12px] py-[10px] grid grid-cols-10 gap-[2px]"
+          style={{
+            background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
+            borderTop: "1px solid rgba(54,65,83,0.5)",
+          }}
+        >
+          {EMOJIS.map((e) => (
+            <button
+              key={e}
+              onClick={() => insertEmoji(e)}
+              className="text-[18px] leading-none rounded-[6px] p-[3px] hover:bg-white/10 transition cursor-pointer"
+              aria-label={e}
+              type="button"
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Input bar */}
       <div
         className="px-[16px] pt-[10px] pb-[10px] flex items-center gap-[8px]"
@@ -248,7 +308,19 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           borderRadius: "0 0 16px 16px",
         }}
       >
+        {/* Emoji toggle */}
+        <button
+          onClick={() => setShowEmoji((v) => !v)}
+          disabled={!connected}
+          className="h-[32px] w-[32px] shrink-0 rounded-[10px] flex items-center justify-center text-[18px] hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label={t("chat.emoji")}
+          title={t("chat.emoji")}
+          type="button"
+        >
+          🙂
+        </button>
         <input
+          ref={inputRef}
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -264,15 +336,21 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         />
         <button
           onClick={handleSend}
-          disabled={!connected || !draft.trim()}
+          disabled={!connected || !draft.trim() || cooldownLeft > 0}
           className="h-[32px] px-[12px] rounded-[10px] flex items-center justify-center gap-[6px] text-white text-[12px] font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "rgba(43,127,255,0.85)" }}
           aria-label={t("chat.send")}
         >
-          <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-          </svg>
-          <span>{t("chat.send")}</span>
+          {cooldownLeft > 0 ? (
+            <span className="tabular-nums">{cooldownLeft}s</span>
+          ) : (
+            <>
+              <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+              </svg>
+              <span>{t("chat.send")}</span>
+            </>
+          )}
         </button>
       </div>
     </div>

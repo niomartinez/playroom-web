@@ -86,6 +86,7 @@ const zhHans: Record<string, string> = {
   "chat.onlineMany": "{count} 位玩家在线",
   "chat.close": "关闭聊天",
   "chat.opacity": "聊天透明度",
+  "chat.emoji": "表情",
 
   /* Win flash */
   "win.youWon": "赢得 {amount}",
