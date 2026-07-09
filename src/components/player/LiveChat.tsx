@@ -337,19 +337,17 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         <button
           onClick={handleSend}
           disabled={!connected || !draft.trim() || cooldownLeft > 0}
-          className="h-[32px] px-[12px] rounded-[10px] flex items-center justify-center gap-[6px] text-white text-[12px] font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="h-[32px] w-[32px] shrink-0 rounded-[10px] flex items-center justify-center text-white text-[12px] font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "rgba(43,127,255,0.85)" }}
           aria-label={t("chat.send")}
+          title={t("chat.send")}
         >
           {cooldownLeft > 0 ? (
-            <span className="tabular-nums">{cooldownLeft}s</span>
+            <span className="tabular-nums text-[11px]">{cooldownLeft}</span>
           ) : (
-            <>
-              <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-              </svg>
-              <span>{t("chat.send")}</span>
-            </>
+            <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+            </svg>
           )}
         </button>
       </div>
