@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { GameProvider, useGame } from "@/lib/game-context";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 
@@ -56,6 +57,9 @@ export default function DemoWrapper({ children }: { children: ReactNode }) {
   const [tables, setTables] = useState<TestTable[]>([]);
   const [selectedTable, setSelectedTable] = useState("");
   const [loading, setLoading] = useState(true);
+  // Honor the launch ?lang= param in demo too (mirrors the real /play path),
+  // so demo can preview the localized UI. Defaults to English.
+  const demoLang = useSearchParams().get("lang") ?? "en";
 
   useEffect(() => {
     fetch("/api/emulator/tables")
@@ -97,7 +101,7 @@ export default function DemoWrapper({ children }: { children: ReactNode }) {
     <GameProvider
       token="demo"
       gameId={selectedTable}
-      lang="en"
+      lang={demoLang}
       lobbyUrl={null}
       cashierUrl={null}
       key={selectedTable}
