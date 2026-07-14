@@ -186,7 +186,9 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           {/* Opacity control toggle */}
           <button
             onClick={() => setShowOpacity((v) => !v)}
-            className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className={`rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer ${
+              isMobile ? "w-[40px] h-[40px]" : "w-[30px] h-[30px]"
+            }`}
             aria-label={t("chat.opacity")}
             title={t("chat.opacity")}
           >
@@ -197,7 +199,9 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           </button>
           <button
             onClick={() => setIsOpen(false)}
-            className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className={`rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer ${
+              isMobile ? "w-[40px] h-[40px]" : "w-[30px] h-[30px]"
+            }`}
             aria-label={t("chat.close")}
           >
             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -276,10 +280,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         </div>
       )}
 
-      {/* Emoji picker popover */}
+      {/* Emoji picker popover — 8 cols on mobile (bigger tap targets), 10 on desktop */}
       {showEmoji && (
         <div
-          className="px-[12px] py-[10px] grid grid-cols-10 gap-[2px]"
+          className={`px-[12px] py-[10px] grid gap-[2px] ${isMobile ? "grid-cols-8" : "grid-cols-10"}`}
           style={{
             background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
             borderTop: "1px solid rgba(54,65,83,0.5)",
@@ -289,7 +293,9 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
             <button
               key={e}
               onClick={() => insertEmoji(e)}
-              className="text-[18px] leading-none rounded-[6px] p-[3px] hover:bg-white/10 transition cursor-pointer"
+              className={`leading-none rounded-[6px] hover:bg-white/10 transition cursor-pointer flex items-center justify-center ${
+                isMobile ? "text-[22px] min-h-[40px]" : "text-[18px] min-h-[26px] p-[3px]"
+              }`}
               aria-label={e}
               type="button"
             >
@@ -308,11 +314,13 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           borderRadius: "0 0 16px 16px",
         }}
       >
-        {/* Emoji toggle */}
+        {/* Emoji toggle — 40px tap target on mobile */}
         <button
           onClick={() => setShowEmoji((v) => !v)}
           disabled={!connected}
-          className="h-[32px] w-[32px] shrink-0 rounded-[10px] flex items-center justify-center text-[18px] hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className={`shrink-0 rounded-[10px] flex items-center justify-center hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            isMobile ? "h-[40px] w-[40px] text-[22px]" : "h-[32px] w-[32px] text-[18px]"
+          }`}
           aria-label={t("chat.emoji")}
           title={t("chat.emoji")}
           type="button"
@@ -328,7 +336,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           placeholder={connected ? t("chat.placeholder") : t("chat.connecting")}
           disabled={!connected}
           maxLength={200}
-          className="flex-1 h-[32px] border rounded-[10px] px-[12px] text-[12px] text-white placeholder-[#6a7282] outline-none disabled:opacity-50"
+          /* 16px font on mobile prevents iOS Safari from zooming the page on focus */
+          className={`flex-1 border rounded-[10px] px-[12px] text-white placeholder-[#6a7282] outline-none disabled:opacity-50 ${
+            isMobile ? "h-[40px] text-[16px]" : "h-[32px] text-[12px]"
+          }`}
           style={{
             backgroundColor: "rgba(30,41,57, calc(var(--chat-opacity) + 0.15))",
             borderColor: "rgba(54,65,83,0.8)",
@@ -337,15 +348,23 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         <button
           onClick={handleSend}
           disabled={!connected || !draft.trim() || cooldownLeft > 0}
-          className="h-[32px] w-[32px] shrink-0 rounded-[10px] flex items-center justify-center text-white text-[12px] font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className={`shrink-0 rounded-[10px] flex items-center justify-center text-white font-semibold hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            isMobile ? "h-[40px] w-[40px]" : "h-[32px] w-[32px]"
+          }`}
           style={{ background: "rgba(43,127,255,0.85)" }}
           aria-label={t("chat.send")}
           title={t("chat.send")}
         >
           {cooldownLeft > 0 ? (
-            <span className="tabular-nums text-[11px]">{cooldownLeft}</span>
+            <span className={`tabular-nums ${isMobile ? "text-[13px]" : "text-[11px]"}`}>
+              {cooldownLeft}
+            </span>
           ) : (
-            <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 20 20">
+            <svg
+              className={isMobile ? "w-[19px] h-[19px]" : "w-[16px] h-[16px]"}
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
               <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
             </svg>
           )}
