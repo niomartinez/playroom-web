@@ -283,7 +283,9 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
       {/* Emoji picker popover — 8 cols on mobile (bigger tap targets), 10 on desktop */}
       {showEmoji && (
         <div
-          className={`px-[12px] py-[10px] grid gap-[2px] ${isMobile ? "grid-cols-8" : "grid-cols-10"}`}
+          className={`px-[12px] py-[10px] grid gap-[2px] ${
+            isMobile ? "grid-cols-8 max-h-[132px] overflow-y-auto" : "grid-cols-10"
+          }`}
           style={{
             background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
             borderTop: "1px solid rgba(54,65,83,0.5)",
