@@ -87,6 +87,9 @@ const zhHans: Record<string, string> = {
   "chat.close": "关闭聊天",
   "chat.opacity": "聊天透明度",
   "chat.emoji": "表情",
+  "chat.expand": "展开",
+  "chat.collapse": "收起",
+  "chat.newMessages": "{count} 条新消息",
 
   /* Win flash */
   "win.youWon": "赢得 {amount}",

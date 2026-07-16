@@ -4,28 +4,16 @@ import { useState, useRef, useEffect, type CSSProperties, type KeyboardEvent } f
 import { useIsMobile } from "@/lib/use-mobile";
 import { useChatWs } from "@/lib/use-chat-ws";
 import { useT } from "@/lib/i18n";
-
-/** localStorage key for the persisted chat panel opacity. */
-const OPACITY_KEY = "prg_chat_opacity";
-const DEFAULT_OPACITY = 0.2;
-const MIN_OPACITY = 0.2;
-const MAX_OPACITY = 1.0;
-
-/** Client-side send cooldown (mirrors the server's 1 msg / 5s rule for UX). */
-const SEND_COOLDOWN_MS = 5000;
-
-/** Curated emoji set for the picker — no external deps, CSP-safe. */
-const EMOJIS = [
-  "😀","😂","😅","😉","😍","😎","🤑","😭","😡","🤔",
-  "👍","👎","👏","🙏","💪","🔥","💯","🎉","✨","💰",
-  "🃏","🎰","🍀","💵","💸","⚡","❤️","💔","👀","🤝",
-  "😱","🥳","😴","🤮","🤡","👑","🚀","⭐","✅","❌",
-];
-
-function clampOpacity(v: number): number {
-  if (!Number.isFinite(v)) return DEFAULT_OPACITY;
-  return Math.min(MAX_OPACITY, Math.max(MIN_OPACITY, v));
-}
+import {
+  EMOJIS,
+  clampOpacity,
+  fmtTime,
+  OPACITY_KEY,
+  DEFAULT_OPACITY,
+  MIN_OPACITY,
+  MAX_OPACITY,
+  SEND_COOLDOWN_MS,
+} from "@/lib/chat-ui";
 
 export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const isMobileHook = useIsMobile();
@@ -122,14 +110,7 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   }
 
   // Format the time component of an ISO string into a compact "HH:MM" for display.
-  const fmtTime = (iso: string): string => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-    } catch {
-      return "";
-    }
-  };
+  // `fmtTime` is imported from chat-ui for a single source of truth.
 
   // The --chat-opacity custom property is set on the container; every
   // translucent child reads it via rgba(..., var(--chat-opacity)).

@@ -87,6 +87,9 @@ const en: Record<string, string> = {
   "chat.close": "Close chat",
   "chat.opacity": "Chat opacity",
   "chat.emoji": "Emoji",
+  "chat.expand": "Expand",
+  "chat.collapse": "Collapse",
+  "chat.newMessages": "{count} new messages",
 
   /* Win flash */
   "win.youWon": "YOU WON {amount}",

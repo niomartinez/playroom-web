@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame } from "@/lib/game-context";
 import { useFeatures } from "@/lib/use-features";
 import PlayerHeader from "./PlayerHeader";
 import LiveChat from "./LiveChat";
+import MobileChat from "./MobileChat";
 import SideBets from "./SideBets";
 import MainBets from "./MainBets";
 import BaccaratTable from "./BaccaratTable";
@@ -13,7 +13,6 @@ import BalanceBar from "./BalanceBar";
 import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import VideoPlayer from "./VideoPlayer";
-import MobileActionBar from "./MobileActionBar";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
 
@@ -50,7 +49,6 @@ export default function PlayerLayout() {
   const isMobile = useIsMobile();
   const { roundStatus, placedBets, cancelPlacedBets, webrtcUrl, hlsUrl } = useGame();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
-  const [showChat, setShowChat] = useState(false);
 
   const isBettingOpen = roundStatus === "betting_open";
   const hasPlacedBets = placedBets.length > 0;
@@ -149,19 +147,9 @@ export default function PlayerLayout() {
           <MainBets />
         </div>
 
-        {/* Action Bar — Live Chat only (tips removed). Gated on the admin
-            live_chat_enabled feature flag, kept consistent with the overlay. */}
-        <MobileActionBar
-          onChatPress={() => setShowChat((v) => !v)}
-          chatEnabled={liveChatEnabled}
-        />
-
-        {/* Live Chat overlay */}
-        {liveChatEnabled && showChat && (
-          <div style={{ padding: "0 19px" }}>
-            <LiveChat mobile />
-          </div>
-        )}
+        {/* Live Chat — EVO-style floating button + translucent bottom sheet.
+            Gated on the admin live_chat_enabled feature flag. */}
+        {liveChatEnabled && <MobileChat />}
 
         {/* Score Cards — below the fold */}
         <div style={{ padding: "0 19px", marginTop: 16, marginBottom: 24 }}>

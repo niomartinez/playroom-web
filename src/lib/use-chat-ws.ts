@@ -17,6 +17,8 @@ interface UseChatWsResult {
   connected: boolean;
   send: (text: string) => void;
   lastError: string | null;
+  /** True once the server's initial `history` payload has been received. */
+  historyLoaded: boolean;
 }
 
 /**
@@ -34,11 +36,13 @@ export function useChatWs(): UseChatWsResult {
   const [presence, setPresence] = useState(0);
   const [connected, setConnected] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!token || token === "demo" || !gameId) return;
 
+    setHistoryLoaded(false);
     let mounted = true;
     let retry = 0;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -63,6 +67,7 @@ export function useChatWs(): UseChatWsResult {
           if (type === "history") {
             const list = (data.messages ?? []) as ChatMessage[];
             setMessages(list);
+            setHistoryLoaded(true);
           } else if (type === "presence") {
             setPresence(Number(data.count) || 0);
           } else if (type === "message") {
@@ -116,5 +121,5 @@ export function useChatWs(): UseChatWsResult {
     ws.send(JSON.stringify({ text: trimmed }));
   }, []);
 
-  return { messages, presence, connected, send, lastError };
+  return { messages, presence, connected, send, lastError, historyLoaded };
 }
