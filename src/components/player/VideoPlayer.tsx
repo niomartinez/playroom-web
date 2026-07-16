@@ -393,19 +393,34 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Instead, keep the video mounted and overlay the fallback when needed.
   return (
     <div
-      className="absolute inset-0 w-full h-full"
-      // Branded felt backdrop instead of flat black. The video is
-      // object-contain, so on wide viewports it letter/pillarboxes — this
-      // image fills those bars (and any gap before the stream connects).
-      // Solid black stays behind it as the load/failure fallback color.
-      style={{
-        backgroundColor: "#000",
-        backgroundImage: "url(/stream-bg.png)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
+      className="absolute inset-0 w-full h-full overflow-hidden"
+      // overflow-hidden clips the scaled-up backdrop below; solid black is
+      // the ultimate fallback color behind everything.
+      style={{ backgroundColor: "#000" }}
     >
+      {/* Branded felt backdrop — its OWN layer so the blur + scrim never
+          touch the video or the controls. It's blurred and slightly scaled
+          up (scale hides the blur's soft transparent edge that would
+          otherwise reveal the black container border) with a translucent
+          dark scrim on top, so the felt reads as an out-of-focus background
+          behind the live feed rather than a competing foreground. A full
+          backdrop-filter "glass" panel would be pointless here — the felt is
+          static, so pre-blurring the image is the same look far cheaper. */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          zIndex: 0,
+          backgroundColor: "#000",
+          backgroundImage:
+            "linear-gradient(rgba(3,7,18,0.4), rgba(3,7,18,0.4)), url(/stream-bg.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          filter: "blur(4px)",
+          transform: "scale(1.06)",
+        }}
+      />
       <video
         ref={videoRef}
         playsInline
@@ -415,12 +430,22 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         // volume controls.
         muted
         // object-contain: never crop the dealer feed — the full 1080p frame
-        // is always visible, letter/pillarboxed over the black backdrop.
-        className="w-full h-full object-contain"
-        style={{ display: state === "fallback" ? "none" : "block" }}
+        // is always visible, letter/pillarboxed over the felt backdrop. The
+        // drop-shadow traces the transparent letterbox, so it hugs the actual
+        // video frame (not the element box) at any aspect ratio, making the
+        // feed look like it floats above the background.
+        className="relative w-full h-full object-contain"
+        style={{
+          zIndex: 1,
+          display: state === "fallback" ? "none" : "block",
+          filter:
+            "drop-shadow(0 2px 10px rgba(0,0,0,0.55)) drop-shadow(0 12px 32px rgba(0,0,0,0.45))",
+        }}
       />
       {state === "fallback" && (
-        <div className="absolute inset-0">{fallback}</div>
+        <div className="absolute inset-0" style={{ zIndex: 1 }}>
+          {fallback}
+        </div>
       )}
 
       {/* Audio controls — only shown when actually playing the stream.
