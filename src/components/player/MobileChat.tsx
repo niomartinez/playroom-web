@@ -161,6 +161,19 @@ export default function MobileChat() {
     };
   }, []);
 
+  // Broadcast open state so sibling UI (the floating "Change name" button in
+  // GameWrapper) can hide itself while the chat sheet is up. Decoupled via a
+  // window event so no shared context/plumbing is needed.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("prg:chat-open", { detail: isOpen }));
+  }, [isOpen]);
+  useEffect(
+    () => () => {
+      window.dispatchEvent(new CustomEvent("prg:chat-open", { detail: false }));
+    },
+    [],
+  );
+
   // Treat the initial history payload as already-seen so backlog isn't counted
   // as unread when the player first joins.
   useEffect(() => {

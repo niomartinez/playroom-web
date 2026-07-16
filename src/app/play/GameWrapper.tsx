@@ -72,6 +72,16 @@ function UsernameGate({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Hide the floating "change name" affordance while the mobile chat sheet is
+  // open so it never overlaps the chat input. MobileChat broadcasts its open
+  // state via a window event (decoupled — no shared context needed).
+  const [chatOpen, setChatOpen] = useState(false);
+  useEffect(() => {
+    const handler = (e: Event) => setChatOpen(Boolean((e as CustomEvent<boolean>).detail));
+    window.addEventListener("prg:chat-open", handler as EventListener);
+    return () => window.removeEventListener("prg:chat-open", handler as EventListener);
+  }, []);
+
   if (status === "loading") {
     return (
       <div
@@ -116,28 +126,30 @@ function UsernameGate({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <button
-        type="button"
-        onClick={() => setChanging(true)}
-        // i18n follow-up: translate "Change name"
-        style={{
-          position: "fixed",
-          left: 10,
-          bottom: 10,
-          zIndex: 900,
-          padding: "5px 10px",
-          fontSize: 11,
-          fontWeight: 600,
-          color: "#99a1af",
-          background: "rgba(16,24,40,0.85)",
-          border: "1px solid #364153",
-          borderRadius: 8,
-          cursor: "pointer",
-          backdropFilter: "blur(4px)",
-        }}
-      >
-        Change name
-      </button>
+      {!chatOpen && (
+        <button
+          type="button"
+          onClick={() => setChanging(true)}
+          // i18n follow-up: translate "Change name"
+          style={{
+            position: "fixed",
+            left: 10,
+            bottom: 10,
+            zIndex: 900,
+            padding: "5px 10px",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#99a1af",
+            background: "rgba(16,24,40,0.85)",
+            border: "1px solid #364153",
+            borderRadius: 8,
+            cursor: "pointer",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          Change name
+        </button>
+      )}
       {changing && (
         <UsernameModal
           blocking={false}
