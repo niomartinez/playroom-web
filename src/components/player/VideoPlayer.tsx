@@ -417,8 +417,8 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          filter: "blur(4px)",
-          transform: "scale(1.06)",
+          filter: "blur(1px)",
+          transform: "scale(1.03)",
         }}
       />
       <video
