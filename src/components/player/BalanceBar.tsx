@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
-import { symbolFor } from "@/lib/currency";
+import { symbolFor, formatBalance } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
 
 const CHIPS = [
@@ -115,9 +115,8 @@ export default function BalanceBar() {
 
   // The crawled value is what the player sees; the underlying `balance` is
   // still the canonical number (used for chip affordability checks above).
-  const formatted = `${symbolFor(currency)}${Math.round(displayBalance).toLocaleString("en-US", {
-    maximumFractionDigits: 0,
-  })}`;
+  // Exact minor units (₱10.61) — never round the wallet balance.
+  const formatted = formatBalance(displayBalance, currency);
 
   if (isMobile) {
     return (

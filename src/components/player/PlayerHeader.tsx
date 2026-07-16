@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useCountdown } from "@/lib/use-countdown";
 import { useT, normalizeLang } from "@/lib/i18n";
 
 /**
@@ -44,34 +44,9 @@ export default function PlayerHeader() {
   const { currentRound, roundStatus, lobbyUrl, tableName, dealerName } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Start countdown from server-sent value when betting opens
-  useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (roundStatus === "betting_open") {
-      // Use server-sent countdown (operator-configurable per table)
-      const initial = currentRound?.countdown ?? 15;
-      setCountdown(initial);
-      timerRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === null || prev <= 0) return 0;
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setCountdown(null);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [roundStatus, currentRound?.countdown]);
+  // Shared betting countdown — same source as the big feed overlay so the
+  // header pill and the on-video number never disagree.
+  const countdown = useCountdown();
 
   const roundLabel = (() => {
     if (!currentRound?.roundNumber) return t("header.noRound");

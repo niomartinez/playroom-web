@@ -36,3 +36,17 @@ export function formatMoney(amount: number, code: string | null | undefined): st
     maximumFractionDigits: 0,
   })}`;
 }
+
+/**
+ * Formats a wallet balance with exact minor units (2 decimals) — the real
+ * operator balance can carry cents (e.g. ₱10.61 from a 0.95x banker payoff),
+ * and rounding it misrepresents the player's money. Use this for the balance
+ * readout and any "you have X" copy; keep `formatMoney` for chip-denominated
+ * bet/stake amounts that are always whole.
+ */
+export function formatBalance(amount: number, code: string | null | undefined): string {
+  return `${symbolFor(code)}${amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}

@@ -13,6 +13,7 @@ import BalanceBar from "./BalanceBar";
 import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import VideoPlayer from "./VideoPlayer";
+import RoundCountdown from "./RoundCountdown";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
 
@@ -92,6 +93,7 @@ export default function PlayerLayout() {
             hlsUrl={hlsUrl}
             fallback={<DealVisualizer />}
           />
+          <RoundCountdown />
         </div>
 
         {/* Roadmap — moved ABOVE the bet panel so the road is the first
@@ -182,6 +184,7 @@ export default function PlayerLayout() {
           hlsUrl={hlsUrl}
           fallback={<DealVisualizer />}
         />
+        <RoundCountdown />
         {liveChatEnabled && <LiveChat />}
       </div>
 

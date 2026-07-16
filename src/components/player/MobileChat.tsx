@@ -54,6 +54,13 @@ const STYLES = `
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 .prg-chat-fab-in { animation: prgChatFabIn 0.22s ease-out; }
+@keyframes prgFloatMsg {
+  0% { opacity: 0; transform: translateY(10px) scale(0.98); }
+  8% { opacity: 1; transform: translateY(0) scale(1); }
+  86% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+.prg-float-msg { animation: prgFloatMsg 5s ease forwards; }
 `;
 
 /** Shared style for the small header icon buttons (opacity / expand / close). */
@@ -99,6 +106,8 @@ export default function MobileChat() {
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const [unread, setUnread] = useState(0);
   const [wiggling, setWiggling] = useState(false);
+  // #7 — recent messages that float over the feed while the sheet is closed.
+  const [floating, setFloating] = useState<{ key: string; user: string; text: string; expires: number }[]>([]);
 
   // Visual-viewport tracking so the sheet lifts above the on-screen keyboard.
   const [vp, setVp] = useState<{ h: number; kb: number }>({ h: 0, kb: 0 });
@@ -114,6 +123,7 @@ export default function MobileChat() {
   const hydratedRef = useRef(false);
   const prevUnreadRef = useRef(0);
   const focusExpandRef = useRef(false);
+  const floatSeenRef = useRef(0);
   const dragRef = useRef<{ startY: number; moved: number; active: boolean }>({
     startY: 0,
     moved: 0,
@@ -180,6 +190,7 @@ export default function MobileChat() {
     if (historyLoaded && !hydratedRef.current) {
       hydratedRef.current = true;
       seenRef.current = messages.length;
+      floatSeenRef.current = messages.length;
       setUnread(0);
     }
   }, [historyLoaded, messages.length]);
@@ -200,6 +211,34 @@ export default function MobileChat() {
     if (unread > prevUnreadRef.current && !isOpen) setWiggling(true);
     prevUnreadRef.current = unread;
   }, [unread, isOpen]);
+
+  // #7 — while the sheet is closed, surface newly-arrived messages as
+  // transient bubbles over the feed (the last 3, each auto-expiring).
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (isOpen) {
+      setFloating([]);
+      floatSeenRef.current = messages.length;
+      return;
+    }
+    if (messages.length <= floatSeenRef.current) return;
+    const fresh = messages.slice(floatSeenRef.current);
+    floatSeenRef.current = messages.length;
+    const now = Date.now();
+    setFloating((prev) =>
+      [...prev, ...fresh.map((m) => ({ key: m.id, user: m.user, text: m.text, expires: now + 5000 }))].slice(-3),
+    );
+  }, [messages.length, isOpen]);
+
+  // Prune expired floating bubbles.
+  useEffect(() => {
+    if (floating.length === 0) return;
+    const id = setInterval(() => {
+      const now = Date.now();
+      setFloating((prev) => (prev.some((f) => f.expires <= now) ? prev.filter((f) => f.expires > now) : prev));
+    }, 500);
+    return () => clearInterval(id);
+  }, [floating.length]);
 
   // Keep the newest message in view on new content / open / expand.
   useEffect(() => {
@@ -406,6 +445,42 @@ export default function MobileChat() {
             </span>
           )}
         </button>
+      )}
+
+      {/* #7 — floating recent messages over the feed while the sheet is closed */}
+      {!isOpen && floating.length > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            left: "calc(env(safe-area-inset-left, 0px) + 12px)",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+            zIndex: 59,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            maxWidth: "66vw",
+            pointerEvents: "none",
+          }}
+        >
+          {floating.map((f) => (
+            <div
+              key={f.key}
+              className="prg-float-msg"
+              style={{
+                background: "rgba(16,24,40,0.55)",
+                border: "1px solid rgba(54,65,83,0.5)",
+                borderRadius: 12,
+                padding: "6px 10px",
+                backdropFilter: "blur(5px)",
+                WebkitBackdropFilter: "blur(5px)",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#93b8ff", marginRight: 6 }}>{f.user}</span>
+              <span style={{ fontSize: 12, color: "#f3f4f6", wordBreak: "break-word" }}>{f.text}</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Translucent bottom sheet (open state) */}
