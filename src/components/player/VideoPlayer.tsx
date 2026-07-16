@@ -392,7 +392,20 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // videoRef.current === null and the WHEP/HLS handshake silently never runs.
   // Instead, keep the video mounted and overlay the fallback when needed.
   return (
-    <div className="absolute inset-0 w-full h-full bg-black">
+    <div
+      className="absolute inset-0 w-full h-full"
+      // Branded felt backdrop instead of flat black. The video is
+      // object-contain, so on wide viewports it letter/pillarboxes — this
+      // image fills those bars (and any gap before the stream connects).
+      // Solid black stays behind it as the load/failure fallback color.
+      style={{
+        backgroundColor: "#000",
+        backgroundImage: "url(/stream-bg.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <video
         ref={videoRef}
         playsInline
