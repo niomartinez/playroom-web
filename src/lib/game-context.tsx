@@ -174,6 +174,10 @@ export interface GameState {
    */
   videoDelayMs: number;
 
+  /** Table bet limits from the table config. Null until table state loads. */
+  minBet: number | null;
+  maxBet: number | null;
+
   /* Live state */
   balance: number;
   /**
@@ -203,6 +207,8 @@ export interface GameState {
   setWebrtcUrl: (u: string | null) => void;
   setHlsUrl: (u: string | null) => void;
   setVideoDelayMs: (ms: number) => void;
+  setMinBet: (v: number | null) => void;
+  setMaxBet: (v: number | null) => void;
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
@@ -271,6 +277,8 @@ export function GameProvider({
   const [webrtcUrl, setWebrtcUrl] = useState<string | null>(null);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [videoDelayMs, setVideoDelayMs] = useState(0);
+  const [minBet, setMinBet] = useState<number | null>(null);
+  const [maxBet, setMaxBet] = useState<number | null>(null);
   const [balance, setBalance] = useState(0);
   const [currency, setCurrency] = useState("PHP");
 
@@ -488,9 +496,13 @@ export function GameProvider({
     webrtcUrl,
     hlsUrl,
     videoDelayMs,
+    minBet,
+    maxBet,
     setWebrtcUrl,
     setHlsUrl,
     setVideoDelayMs,
+    setMinBet,
+    setMaxBet,
     balance,
     currency,
     roundStatus,

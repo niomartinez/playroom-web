@@ -16,6 +16,7 @@ import VideoPlayer from "./VideoPlayer";
 import RoundCountdown from "./RoundCountdown";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
+import LowBalanceModal from "./LowBalanceModal";
 
 /**
  * Inline keyframes for the betting-open pulse on the bet panel border.
@@ -160,6 +161,7 @@ export default function PlayerLayout() {
 
         <FlyingChips />
         <WinFlash />
+        <LowBalanceModal />
       </div>
     );
   }
@@ -227,6 +229,7 @@ export default function PlayerLayout() {
 
       <FlyingChips />
       <WinFlash />
+      <LowBalanceModal />
     </div>
   );
 }

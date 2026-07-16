@@ -91,6 +91,57 @@ const en: Record<string, string> = {
   "chat.collapse": "Collapse",
   "chat.newMessages": "{count} new messages",
 
+  /* Menu / settings hub */
+  "menu.title": "Menu",
+  "menu.open": "Menu",
+  "menu.howToPlay": "How to Play",
+  "menu.soundVideo": "Sound & Video",
+  "menu.payouts": "Payouts & Limits",
+  "menu.back": "Back",
+  "menu.close": "Close",
+
+  /* How to play */
+  "howto.intro": "Bet on whether the Player or Banker hand will total closest to 9. You can also bet on a Tie.",
+  "howto.valuesTitle": "Card values",
+  "howto.values": "Ace = 1, cards 2–9 = face value, 10s and face cards = 0. Only the last digit of the total counts (7 + 8 = 15 → 5).",
+  "howto.flowTitle": "How a round works",
+  "howto.flow": "Place bets while betting is open. Two cards go to Player and Banker; a third may be drawn automatically. Closest to 9 wins.",
+  "howto.thirdTitle": "Third card",
+  "howto.third": "Third-card rules are applied automatically by the dealer — nothing for you to do.",
+  "howto.tipsTitle": "Good to know",
+  "howto.tips": "Banker wins pay a 5% commission. Side bets (pairs, bonuses) are optional long-shots with bigger payouts.",
+
+  /* Payouts & limits */
+  "pay.bet": "Bet",
+  "pay.payout": "Payout",
+  "pay.limitsTitle": "Table limits",
+  "pay.min": "Min",
+  "pay.max": "Max",
+  "pay.player": "Player",
+  "pay.banker": "Banker",
+  "pay.bankerNote": "5% commission on wins",
+  "pay.tie": "Tie",
+  "pay.playerPair": "Player Pair",
+  "pay.bankerPair": "Banker Pair",
+  "pay.eitherPair": "Either Pair",
+  "pay.perfectPair": "Perfect Pair",
+  "pay.sideNote": "Side bets are optional and capped at a share of your main bet.",
+  "pay.unknown": "—",
+
+  /* Sound & video */
+  "sv.soundTitle": "Sound",
+  "sv.mute": "Mute",
+  "sv.unmute": "Unmute",
+  "sv.volume": "Volume",
+  "sv.videoTitle": "Video",
+  "sv.reload": "Reload stream",
+  "sv.reloadHint": "Reconnect if the video stalls or falls behind.",
+
+  /* Low balance */
+  "low.title": "Low Balance",
+  "low.body": "Your balance is below the minimum bet ({min}). Please deposit to keep playing.",
+  "low.close": "Close",
+
   /* Win flash */
   "win.youWon": "YOU WON {amount}",
 

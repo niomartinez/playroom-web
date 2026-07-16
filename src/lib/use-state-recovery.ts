@@ -28,6 +28,8 @@ interface TableStatePayload {
     webrtc_url?: string | null;
     hls_url?: string | null;
     video_delay_ms?: number | null;
+    min_bet?: number | null;
+    max_bet?: number | null;
   };
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
@@ -98,6 +100,8 @@ export function useStateRecovery() {
     setWebrtcUrl,
     setHlsUrl,
     setVideoDelayMs,
+    setMinBet,
+    setMaxBet,
   } = useGame();
 
   useEffect(() => {
@@ -126,6 +130,8 @@ export function useStateRecovery() {
         setWebrtcUrl(payload.table?.webrtc_url ?? null);
         setHlsUrl(payload.table?.hls_url ?? null);
         setVideoDelayMs(payload.table?.video_delay_ms ?? 0);
+        setMinBet(payload.table?.min_bet ?? null);
+        setMaxBet(payload.table?.max_bet ?? null);
 
         const fight = payload.fight;
         if (!fight) {

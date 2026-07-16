@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Hls from "hls.js";
 import { useT } from "@/lib/i18n";
+import {
+  getMuted,
+  getVolume,
+  setMutedPref,
+  setVolumePref,
+  subscribeMedia,
+  onVideoReload,
+} from "@/lib/media-prefs";
 
 /**
  * Live video player for a baccarat table.
@@ -34,25 +42,8 @@ interface VideoPlayerProps {
 
 type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 
-const VOLUME_STORAGE_KEY = "prg_player_volume";
-const MUTED_STORAGE_KEY = "prg_player_muted";
-
 /** How long to wait before re-attempting a failed/ended stream connection. */
 const RECONNECT_DELAY_MS = 6000;
-
-/** Read persisted audio preferences (volume 0-1, muted bool). */
-function loadAudioPrefs(): { volume: number; muted: boolean } {
-  if (typeof window === "undefined") return { volume: 1, muted: true };
-  const v = Number(window.localStorage.getItem(VOLUME_STORAGE_KEY));
-  const m = window.localStorage.getItem(MUTED_STORAGE_KEY);
-  return {
-    volume: Number.isFinite(v) && v >= 0 && v <= 1 ? v : 1,
-    // Default muted until the player explicitly unmutes — browser autoplay
-    // policy rejects unmuted autoplay without a user gesture, and we don't
-    // want a startup audio blast surprising the dealer's headset feedback.
-    muted: m === null ? true : m === "true",
-  };
-}
 
 export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayerProps) {
   const t = useT();
@@ -69,10 +60,21 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
   useEffect(() => {
-    const prefs = loadAudioPrefs();
-    setMuted(prefs.muted);
-    setVolume(prefs.volume);
+    setMuted(getMuted());
+    setVolume(getVolume());
   }, []);
+
+  // Stay in sync with the Sound & Video menu panel (shared prefs), and honor
+  // external "reload stream" requests from the menu.
+  useEffect(
+    () =>
+      subscribeMedia(() => {
+        setMuted(getMuted());
+        setVolume(getVolume());
+      }),
+    [],
+  );
+  useEffect(() => onVideoReload(() => setAttempt((a) => a + 1)), []);
 
   // Push state changes onto the underlying <video>. Separate effect from the
   // stream connection so toggling mute doesn't re-negotiate WebRTC.
@@ -86,9 +88,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   const handleToggleMute = () => {
     const next = !muted;
     setMuted(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(MUTED_STORAGE_KEY, String(next));
-    }
+    setMutedPref(next);
     // Unmuting in response to a click counts as a user gesture, so play()
     // will succeed even if the stream was previously muted-autoplay.
     if (!next) videoRef.current?.play().catch(() => undefined);
@@ -96,15 +96,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
 
   const handleVolumeChange = (v: number) => {
     setVolume(v);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(v));
-    }
+    setVolumePref(v);
     // Moving the slider from 0 implies the player wants audio — auto-unmute.
     if (v > 0 && muted) {
       setMuted(false);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(MUTED_STORAGE_KEY, "false");
-      }
+      setMutedPref(false);
     }
   };
 

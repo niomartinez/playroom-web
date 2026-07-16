@@ -91,6 +91,57 @@ const zhHans: Record<string, string> = {
   "chat.collapse": "收起",
   "chat.newMessages": "{count} 条新消息",
 
+  /* Menu / settings hub */
+  "menu.title": "菜单",
+  "menu.open": "菜单",
+  "menu.howToPlay": "玩法说明",
+  "menu.soundVideo": "声音与视频",
+  "menu.payouts": "赔付与限额",
+  "menu.back": "返回",
+  "menu.close": "关闭",
+
+  /* How to play */
+  "howto.intro": "押注“闲家”或“庄家”哪一方点数最接近 9，也可以押“和”。",
+  "howto.valuesTitle": "点数计算",
+  "howto.values": "A = 1，2–9 为面值，10 和人头牌 = 0。只取总和的个位数（7 + 8 = 15 → 5）。",
+  "howto.flowTitle": "回合流程",
+  "howto.flow": "下注时间内进行下注。闲家与庄家各发两张牌，必要时自动补第三张，最接近 9 者获胜。",
+  "howto.thirdTitle": "第三张牌",
+  "howto.third": "补牌规则由荷官自动执行，您无需操作。",
+  "howto.tipsTitle": "小提示",
+  "howto.tips": "庄家获胜需缴 5% 佣金。边注（对子、奖金）为可选高赔率玩法。",
+
+  /* Payouts & limits */
+  "pay.bet": "投注",
+  "pay.payout": "赔付",
+  "pay.limitsTitle": "台桌限额",
+  "pay.min": "最低",
+  "pay.max": "最高",
+  "pay.player": "闲家",
+  "pay.banker": "庄家",
+  "pay.bankerNote": "获胜收取 5% 佣金",
+  "pay.tie": "和",
+  "pay.playerPair": "闲对子",
+  "pay.bankerPair": "庄对子",
+  "pay.eitherPair": "任意对子",
+  "pay.perfectPair": "完美对子",
+  "pay.sideNote": "边注为可选玩法，且限制为主注的一部分。",
+  "pay.unknown": "—",
+
+  /* Sound & video */
+  "sv.soundTitle": "声音",
+  "sv.mute": "静音",
+  "sv.unmute": "取消静音",
+  "sv.volume": "音量",
+  "sv.videoTitle": "视频",
+  "sv.reload": "重新加载视频",
+  "sv.reloadHint": "画面卡顿或延迟时重新连接。",
+
+  /* Low balance */
+  "low.title": "余额不足",
+  "low.body": "您的余额低于最低投注额（{min}）。请充值后继续游戏。",
+  "low.close": "关闭",
+
   /* Win flash */
   "win.youWon": "赢得 {amount}",
 

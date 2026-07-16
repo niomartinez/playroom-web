@@ -5,6 +5,7 @@ import { sendToParent } from "@/lib/iframe-bridge";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useCountdown } from "@/lib/use-countdown";
 import { useT, normalizeLang } from "@/lib/i18n";
+import PlayerMenu from "./PlayerMenu";
 
 /**
  * Compact language switcher (English / 中文). A native <select> keeps it
@@ -135,8 +136,9 @@ export default function PlayerHeader() {
           <span style={{ fontSize: 11, fontWeight: 500, color: "#99A1AF" }}>{t("header.liveBaccarat")}</span>
         </div>
 
-        {/* Right: language switcher + round number */}
+        {/* Right: menu + language switcher + round number */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+          <PlayerMenu />
           <LanguageSelect compact />
           <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff" }}>{roundLabel}</span>
         </div>
@@ -203,6 +205,7 @@ export default function PlayerHeader() {
           </svg>
           <span className="font-semibold text-white" style={{ fontSize: "1.2vh" }}>{roundLabel}</span>
         </div>
+        <PlayerMenu />
       </div>
     </header>
   );

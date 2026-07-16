@@ -20,7 +20,7 @@ function DemoConnections({ children }: { children: ReactNode }) {
   // cannot place real bets or touch real balances.
   useLobbyWs({ demo: true });
 
-  const { setBalance, gameId, setWebrtcUrl, setHlsUrl, setVideoDelayMs } = useGame();
+  const { setBalance, gameId, setWebrtcUrl, setHlsUrl, setVideoDelayMs, setMinBet, setMaxBet } = useGame();
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -45,6 +45,8 @@ function DemoConnections({ children }: { children: ReactNode }) {
         setWebrtcUrl(t.webrtc_url ?? null);
         setHlsUrl(t.hls_url ?? null);
         setVideoDelayMs(t.video_delay_ms ?? 0);
+        setMinBet(t.min_bet ?? null);
+        setMaxBet(t.max_bet ?? null);
       })
       .catch(() => undefined);
     return () => { cancelled = true; };
