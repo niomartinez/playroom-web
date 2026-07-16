@@ -5,9 +5,9 @@ import { GameProvider } from "@/lib/game-context";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 import { useBalanceWs } from "@/lib/use-balance-ws";
 import { useStateRecovery } from "@/lib/use-state-recovery";
-import { useIdleKick } from "@/lib/use-idle-kick";
 import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 import UsernameModal from "@/components/player/UsernameModal";
+import SessionGuard from "@/components/player/SessionGuard";
 
 /* ------------------------------------------------------------------ */
 /*  Username gate                                                      */
@@ -72,15 +72,19 @@ function UsernameGate({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Hide the floating "change name" affordance while the mobile chat sheet is
-  // open so it never overlaps the chat input. MobileChat broadcasts its open
-  // state via a window event (decoupled — no shared context needed).
-  const [chatOpen, setChatOpen] = useState(false);
+  // #12 — the "change name" affordance now lives in chat settings. The chat
+  // panel dispatches `prg:open-change-name` to open the modal here, and we
+  // broadcast the current screen name so chat settings can display it.
   useEffect(() => {
-    const handler = (e: Event) => setChatOpen(Boolean((e as CustomEvent<boolean>).detail));
-    window.addEventListener("prg:chat-open", handler as EventListener);
-    return () => window.removeEventListener("prg:chat-open", handler as EventListener);
+    const handler = () => setChanging(true);
+    window.addEventListener("prg:open-change-name", handler);
+    return () => window.removeEventListener("prg:open-change-name", handler);
   }, []);
+  useEffect(() => {
+    if (autoName) {
+      window.dispatchEvent(new CustomEvent("prg:name-changed", { detail: autoName }));
+    }
+  }, [autoName]);
 
   if (status === "loading") {
     return (
@@ -126,30 +130,6 @@ function UsernameGate({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      {!chatOpen && (
-        <button
-          type="button"
-          onClick={() => setChanging(true)}
-          // i18n follow-up: translate "Change name"
-          style={{
-            position: "fixed",
-            left: 10,
-            bottom: 10,
-            zIndex: 900,
-            padding: "5px 10px",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#99a1af",
-            background: "rgba(16,24,40,0.85)",
-            border: "1px solid #364153",
-            borderRadius: 8,
-            cursor: "pointer",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          Change name
-        </button>
-      )}
       {changing && (
         <UsernameModal
           blocking={false}
@@ -175,8 +155,6 @@ function GameConnections({ children }: { children: ReactNode }) {
   // One-shot fetch on mount: rehydrates round state + this player's
   // placed bets if they refresh during a live round.
   useStateRecovery();
-  // Kick back to operator's lobby after 3 consecutive idle rounds.
-  useIdleKick();
 
   /* Send gameReady on mount, listen for parent commands */
   useEffect(() => {
@@ -192,7 +170,13 @@ function GameConnections({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
-  return <UsernameGate>{children}</UsernameGate>;
+  return (
+    <>
+      <UsernameGate>{children}</UsernameGate>
+      {/* #5 — idle warnings + frozen "Session Expired" overlay. */}
+      <SessionGuard />
+    </>
+  );
 }
 
 /* ------------------------------------------------------------------ */

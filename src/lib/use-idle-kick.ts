@@ -1,41 +1,53 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
-import { sendToParent } from "./iframe-bridge";
 
 /**
- * Kick a real-wallet player out of the table after N consecutive rounds
- * without a single bet. Counter resets whenever the player places at
- * least one bet in a round.
+ * Idle-session policy for real-wallet players. Counts consecutive rounds with
+ * no bet and escalates:
+ *   - {@link WARN_1_AT} idle rounds  → warnLevel 1 ("place bets to avoid removal")
+ *   - {@link WARN_2_AT} idle rounds  → warnLevel 2 ("place a bet to keep your seat")
+ *   - {@link EXPIRE_AT} idle rounds  → expired (frozen "Session Expired" overlay)
  *
- * On kick:
- *   1. Navigate to the `lobbyUrl` operator passed at launch, OR
- *   2. Fall back to `closeGame` postMessage to the parent iframe.
+ * Placing at least one bet in a round resets the counter. Demo mode is exempt.
  *
- * Demo mode is exempt (`token === "demo"`) — the demo player is a
- * self-paced sandbox.
+ * Unlike the previous behavior, this NEVER auto-redirects or closes the tab —
+ * the UI (SessionGuard) freezes the game and lets the player return manually.
  */
-const KICK_AFTER_N_IDLE_ROUNDS = 3;
+const WARN_1_AT = 4;
+const WARN_2_AT = 5;
+const EXPIRE_AT = 6;
 
-export function useIdleKick() {
-  const { token, roundStatus, currentRound, placedBets, lobbyUrl } = useGame();
+export interface IdleSessionState {
+  /** 0 = fine, 1 = first warning, 2 = final warning. */
+  warnLevel: 0 | 1 | 2;
+  /** True once the player has been removed for inactivity (frozen overlay). */
+  expired: boolean;
+}
+
+export function useIdleSession(): IdleSessionState {
+  const { token, roundStatus, currentRound, placedBets } = useGame();
+
+  const [warnLevel, setWarnLevel] = useState<0 | 1 | 2>(0);
+  const [expired, setExpired] = useState(false);
 
   const idleRoundsRef = useRef(0);
   const lastRoundIdRef = useRef<string | null>(null);
   const placedThisRoundRef = useRef(false);
-  const kickedRef = useRef(false);
 
   // Track whether at least one bet was placed during the current round.
+  // Betting also clears any active warning immediately for responsive feedback.
   useEffect(() => {
     if (placedBets.length > 0) {
       placedThisRoundRef.current = true;
+      setWarnLevel((w) => (w === 0 ? w : 0));
     }
   }, [placedBets.length]);
 
   // Evaluate at every transition into a fresh betting_open round.
   useEffect(() => {
-    if (token === "demo" || kickedRef.current) return;
+    if (token === "demo" || expired) return;
     if (roundStatus !== "betting_open" || !currentRound?.roundId) return;
 
     const newRoundId = String(currentRound.roundId);
@@ -51,7 +63,7 @@ export function useIdleKick() {
     // Same round (re-trigger) — ignore.
     if (prevRoundId === newRoundId) return;
 
-    // Round transitioned. Evaluate prior round's bet activity.
+    // Round transitioned. Evaluate the prior round's bet activity.
     if (placedThisRoundRef.current) {
       idleRoundsRef.current = 0;
     } else {
@@ -60,20 +72,18 @@ export function useIdleKick() {
     placedThisRoundRef.current = false;
     lastRoundIdRef.current = newRoundId;
 
-    if (idleRoundsRef.current >= KICK_AFTER_N_IDLE_ROUNDS) {
-      kickedRef.current = true;
-      // Tell the parent first so operators that observe postMessage can
-      // clean up; then navigate. If we're top-level (not iframed), the
-      // postMessage is a no-op.
-      try {
-        sendToParent("closeGame", { reason: "idle_no_bets", rounds: idleRoundsRef.current });
-      } catch {
-        // ignore
-      }
-      if (lobbyUrl && typeof window !== "undefined") {
-        // Use the operator-provided lobby URL captured at launch.
-        window.location.href = lobbyUrl;
-      }
+    const idle = idleRoundsRef.current;
+    if (idle >= EXPIRE_AT) {
+      setExpired(true);
+      setWarnLevel(0);
+    } else if (idle >= WARN_2_AT) {
+      setWarnLevel(2);
+    } else if (idle >= WARN_1_AT) {
+      setWarnLevel(1);
+    } else {
+      setWarnLevel(0);
     }
-  }, [roundStatus, currentRound?.roundId, token, lobbyUrl]);
+  }, [roundStatus, currentRound?.roundId, token, expired]);
+
+  return { warnLevel, expired };
 }

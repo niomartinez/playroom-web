@@ -9,7 +9,7 @@ import {
   type PointerEvent,
 } from "react";
 import { useChatWs } from "@/lib/use-chat-ws";
-import { useT } from "@/lib/i18n";
+import { useT, type TFunction } from "@/lib/i18n";
 import {
   EMOJIS,
   clampOpacity,
@@ -78,6 +78,66 @@ const iconBtn: CSSProperties = {
   WebkitTapHighlightColor: "transparent",
 };
 
+/** #12 — chat settings sub-view: shows and edits the player's screen name. */
+function ChatSettingsPanel({ t, name }: { t: TFunction; name: string | null }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: 16,
+        backgroundColor: "rgba(3,7,18, calc(var(--chat-opacity) * 0.6))",
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "#9ca3af", marginBottom: 10 }}>
+        {t("chat.settings")}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          background: "rgba(30,41,57, calc(var(--chat-opacity) + 0.2))",
+          border: "1px solid rgba(54,65,83,0.6)",
+          borderRadius: 12,
+          padding: "12px 14px",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: "#9ca3af" }}>{t("chat.screenName")}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {name ?? "…"}
+          </div>
+        </div>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("prg:open-change-name"))}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 12px",
+            borderRadius: 10,
+            background: "rgba(43,127,255,0.9)",
+            border: "none",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            flexShrink: 0,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+          {t("chat.edit")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Mobile live chat, modelled on EVO-style live-casino apps.
  *
@@ -108,6 +168,9 @@ export default function MobileChat() {
   const [wiggling, setWiggling] = useState(false);
   // #7 — recent messages that float over the feed while the sheet is closed.
   const [floating, setFloating] = useState<{ key: string; user: string; text: string; expires: number }[]>([]);
+  // #12 — chat settings sub-view + the player's current screen name.
+  const [showSettings, setShowSettings] = useState(false);
+  const [myName, setMyName] = useState<string | null>(null);
 
   // Visual-viewport tracking so the sheet lifts above the on-screen keyboard.
   const [vp, setVp] = useState<{ h: number; kb: number }>({ h: 0, kb: 0 });
@@ -124,6 +187,7 @@ export default function MobileChat() {
   const prevUnreadRef = useRef(0);
   const focusExpandRef = useRef(false);
   const floatSeenRef = useRef(0);
+  const nameFetchedRef = useRef(false);
   const dragRef = useRef<{ startY: number; moved: number; active: boolean }>({
     startY: 0,
     moved: 0,
@@ -171,18 +235,28 @@ export default function MobileChat() {
     };
   }, []);
 
-  // Broadcast open state so sibling UI (the floating "Change name" button in
-  // GameWrapper) can hide itself while the chat sheet is up. Decoupled via a
-  // window event so no shared context/plumbing is needed.
+  // #12 — keep the displayed screen name in sync (GameWrapper broadcasts it on
+  // profile load and after a change), and lazily fetch it the first time the
+  // settings sub-view is opened.
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("prg:chat-open", { detail: isOpen }));
-  }, [isOpen]);
-  useEffect(
-    () => () => {
-      window.dispatchEvent(new CustomEvent("prg:chat-open", { detail: false }));
-    },
-    [],
-  );
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent<string>).detail;
+      if (name) setMyName(name);
+    };
+    window.addEventListener("prg:name-changed", handler as EventListener);
+    return () => window.removeEventListener("prg:name-changed", handler as EventListener);
+  }, []);
+  useEffect(() => {
+    if (!showSettings || myName || nameFetchedRef.current) return;
+    nameFetchedRef.current = true;
+    fetch("/api/me/profile", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const name = j?.data?.display_name;
+        if (name) setMyName(name);
+      })
+      .catch(() => undefined);
+  }, [showSettings, myName]);
 
   // Treat the initial history payload as already-seen so backlog isn't counted
   // as unread when the player first joins.
@@ -271,6 +345,7 @@ export default function MobileChat() {
     setExpanded(false);
     setShowEmoji(false);
     setShowOpacity(false);
+    setShowSettings(false);
     inputRef.current?.blur();
   };
 
@@ -545,6 +620,17 @@ export default function MobileChat() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
               <button
+                onClick={() => setShowSettings((v) => !v)}
+                aria-label={t("chat.settings")}
+                title={t("chat.settings")}
+                style={iconBtn}
+              >
+                <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} style={{ opacity: showSettings ? 1 : 0.7 }}>
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+              </button>
+              <button
                 onClick={() => setShowOpacity((v) => !v)}
                 aria-label={t("chat.opacity")}
                 title={t("chat.opacity")}
@@ -612,7 +698,10 @@ export default function MobileChat() {
           </div>
         )}
 
-        {/* Message list */}
+        {/* Message list (or the settings sub-view) */}
+        {showSettings ? (
+          <ChatSettingsPanel t={t} name={myName} />
+        ) : (
         <div
           ref={scrollerRef}
           style={{
@@ -664,6 +753,7 @@ export default function MobileChat() {
             </div>
           )}
         </div>
+        )}
 
         {/* Inline error / rate-limit notice */}
         {lastError && (

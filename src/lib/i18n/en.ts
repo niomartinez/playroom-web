@@ -90,6 +90,9 @@ const en: Record<string, string> = {
   "chat.expand": "Expand",
   "chat.collapse": "Collapse",
   "chat.newMessages": "{count} new messages",
+  "chat.settings": "Settings",
+  "chat.screenName": "Screen name",
+  "chat.edit": "Edit",
 
   /* Menu / settings hub */
   "menu.title": "Menu",
@@ -141,6 +144,13 @@ const en: Record<string, string> = {
   "low.title": "Low Balance",
   "low.body": "Your balance is below the minimum bet ({min}). Please deposit to keep playing.",
   "low.close": "Close",
+
+  /* Session / idle */
+  "session.warn1": "Please place bets to avoid being removed from the table.",
+  "session.warn2": "Place a bet now to keep your seat this round.",
+  "session.expiredTitle": "Session Expired",
+  "session.expiredBody": "You were removed from the table for inactivity. Please return to the site to rejoin.",
+  "session.return": "Return to lobby",
 
   /* Win flash */
   "win.youWon": "YOU WON {amount}",

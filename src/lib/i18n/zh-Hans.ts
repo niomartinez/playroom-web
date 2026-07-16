@@ -90,6 +90,9 @@ const zhHans: Record<string, string> = {
   "chat.expand": "展开",
   "chat.collapse": "收起",
   "chat.newMessages": "{count} 条新消息",
+  "chat.settings": "设置",
+  "chat.screenName": "昵称",
+  "chat.edit": "修改",
 
   /* Menu / settings hub */
   "menu.title": "菜单",
@@ -141,6 +144,13 @@ const zhHans: Record<string, string> = {
   "low.title": "余额不足",
   "low.body": "您的余额低于最低投注额（{min}）。请充值后继续游戏。",
   "low.close": "关闭",
+
+  /* Session / idle */
+  "session.warn1": "请下注，以免被移出牌桌。",
+  "session.warn2": "本局请立即下注以保留您的座位。",
+  "session.expiredTitle": "会话已过期",
+  "session.expiredBody": "由于长时间未操作，您已被移出牌桌。请返回站点重新加入。",
+  "session.return": "返回大厅",
 
   /* Win flash */
   "win.youWon": "赢得 {amount}",

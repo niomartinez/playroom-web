@@ -164,6 +164,19 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
           </div>
         </div>
         <div className="flex items-center gap-[4px]">
+          {/* Screen name / chat settings (#12) */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("prg:open-change-name"))}
+            className={`rounded-[8px] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition cursor-pointer ${
+              isMobile ? "w-[40px] h-[40px]" : "w-[30px] h-[30px]"
+            }`}
+            aria-label={t("chat.screenName")}
+            title={t("chat.screenName")}
+          >
+            <svg className="w-[16px] h-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
           {/* Opacity control toggle */}
           <button
             onClick={() => setShowOpacity((v) => !v)}
