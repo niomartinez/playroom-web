@@ -60,13 +60,14 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
     clearPlacedBets,
     clearStackedChips,
     setRecentWin,
+    setRoundWinners,
     stackedChips,
     addFlyingChip,
   } = useGame();
 
   // Use refs to avoid stale closures in WS callbacks
-  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip });
-  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, stackedChips, addFlyingChip };
+  const settersRef = useRef({ token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, setRoundWinners, stackedChips, addFlyingChip });
+  settersRef.current = { token, gameId, setBalance, placedBets, setRoundStatus, setCurrentRound, setRoads, setMainBetCounts, clearPlacedBets, clearStackedChips, setRecentWin, setRoundWinners, stackedChips, addFlyingChip };
 
   useEffect(() => {
     let mounted = true;
@@ -136,6 +137,13 @@ export function useLobbyWs(options: UseLobbyWsOptions = {}) {
             if (!matches) return;
           }
           const cur = settersRef.current;
+          // #6 — winners marquee: system-wide, keyed to this table.
+          if (msg.type === "RoundWinners" || msg.type === "round_winners") {
+            const winners = (data.winners ?? []) as { user: string; amount: number }[];
+            const roundId = (data.roundId ?? data.round_id) as string | undefined;
+            cur.setRoundWinners({ roundId: String(roundId ?? ""), winners });
+            return;
+          }
           handleMessage(msg, cur.setRoundStatus, cur.setCurrentRound, cur.setRoads, cur.clearPlacedBets, cur.token, cur.placedBets, cur.setBalance, cur.clearStackedChips, cur.setMainBetCounts, cur.setRecentWin, () => settersRef.current.stackedChips, cur.addFlyingChip, cur.gameId);
         } catch {
           // ignore

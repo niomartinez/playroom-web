@@ -100,6 +100,7 @@ const zhHans: Record<string, string> = {
   "menu.howToPlay": "玩法说明",
   "menu.soundVideo": "声音与视频",
   "menu.payouts": "赔付与限额",
+  "menu.history": "游戏记录",
   "menu.back": "返回",
   "menu.close": "关闭",
 
@@ -140,6 +141,13 @@ const zhHans: Record<string, string> = {
   "sv.reload": "重新加载视频",
   "sv.reloadHint": "画面卡顿或延迟时重新连接。",
 
+  /* Game history */
+  "hist.empty": "暂无投注记录。",
+  "hist.win": "赢",
+  "hist.loss": "输",
+  "hist.push": "和局退还",
+  "hist.pending": "结算中",
+
   /* Low balance */
   "low.title": "余额不足",
   "low.body": "您的余额低于最低投注额（{min}）。请充值后继续游戏。",
@@ -151,6 +159,9 @@ const zhHans: Record<string, string> = {
   "session.expiredTitle": "会话已过期",
   "session.expiredBody": "由于长时间未操作，您已被移出牌桌。请返回站点重新加入。",
   "session.return": "返回大厅",
+
+  /* Winners marquee */
+  "winners.title": "本局赢家",
 
   /* Win flash */
   "win.youWon": "赢得 {amount}",

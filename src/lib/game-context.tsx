@@ -148,6 +148,16 @@ export interface RecentWin {
   lines: RecentWinLine[];
 }
 
+/** #6 — per-round global winners for the marquee (screen name + net win). */
+export interface RoundWinnerLine {
+  user: string;
+  amount: number;
+}
+export interface RoundWinners {
+  roundId: string;
+  winners: RoundWinnerLine[];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Context shape                                                      */
 /* ------------------------------------------------------------------ */
@@ -202,6 +212,8 @@ export interface GameState {
 
   /* Settlement flash — set when a RoundSettled event arrives with winners */
   recentWin: RecentWin | null;
+  /** #6 — per-round winners for the marquee. */
+  roundWinners: RoundWinners | null;
 
   /* Setters — accept direct values or functional updaters */
   setWebrtcUrl: (u: string | null) => void;
@@ -239,6 +251,7 @@ export interface GameState {
   popStackedChip: (betCode: BetCode) => void;
   clearStackedChips: () => void;
   setRecentWin: (w: RecentWin | null) => void;
+  setRoundWinners: (w: RoundWinners | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -330,6 +343,7 @@ export function GameProvider({
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
   const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
   const [recentWin, setRecentWin] = useState<RecentWin | null>(null);
+  const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -514,6 +528,7 @@ export function GameProvider({
     flyingChips,
     stackedChips,
     recentWin,
+    roundWinners,
     setTableName,
     setDealerName,
     setBalance,
@@ -534,6 +549,7 @@ export function GameProvider({
     popStackedChip,
     clearStackedChips,
     setRecentWin,
+    setRoundWinners,
   };
 
   return <GameContext value={value}>{children}</GameContext>;

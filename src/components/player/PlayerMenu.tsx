@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
-import { useT } from "@/lib/i18n";
+import { useT, type TFunction } from "@/lib/i18n";
 import { formatMoney } from "@/lib/currency";
 import {
   getMuted,
@@ -26,7 +26,34 @@ import {
  * dropped straight into the header's right cluster.
  */
 
-type View = "root" | "howto" | "payouts" | "sound";
+type View = "root" | "howto" | "payouts" | "sound" | "history";
+
+interface HistItem {
+  roundId: string | null;
+  result: string | null;
+  betCode: string;
+  betAmount: number;
+  payoff: number;
+  net: number;
+  outcome: "win" | "loss" | "push" | "pending";
+  time: string | null;
+}
+
+const BET_LABEL_KEY: Record<string, string> = {
+  BAC_Player: "pay.player",
+  BAC_Banker: "pay.banker",
+  BAC_Tie: "pay.tie",
+  BAC_PlayerPair: "pay.playerPair",
+  BAC_BankerPair: "pay.bankerPair",
+  BAC_EitherPair: "pay.eitherPair",
+  BAC_PerfectPair: "pay.perfectPair",
+};
+
+function betLabel(code: string, t: TFunction): string {
+  const key = BET_LABEL_KEY[code];
+  if (key) return t(key);
+  return code.replace(/^BAC_/, "").replace(/([a-z])([A-Z])/g, "$1 $2");
+}
 
 /** Standard baccarat payouts (language-neutral ratios). */
 const PAYOUTS: { labelKey: string; ratio: string; noteKey?: string }[] = [
@@ -77,7 +104,7 @@ function ChevronRight() {
 export default function PlayerMenu() {
   const isMobile = useIsMobile();
   const t = useT();
-  const { currency, minBet, maxBet } = useGame();
+  const { currency, minBet, maxBet, token } = useGame();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("root");
 
@@ -93,7 +120,9 @@ export default function PlayerMenu() {
         ? t("menu.payouts")
         : view === "sound"
           ? t("menu.soundVideo")
-          : t("menu.title");
+          : view === "history"
+            ? t("menu.history")
+            : t("menu.title");
 
   return (
     <>
@@ -203,6 +232,10 @@ export default function PlayerMenu() {
                     {t("menu.payouts")}
                     <ChevronRight />
                   </button>
+                  <button style={rowBtn} onClick={() => setView("history")}>
+                    {t("menu.history")}
+                    <ChevronRight />
+                  </button>
                   <button style={rowBtn} onClick={() => setView("sound")}>
                     {t("menu.soundVideo")}
                     <ChevronRight />
@@ -285,6 +318,7 @@ export default function PlayerMenu() {
               )}
 
               {view === "sound" && <SoundVideoPanel />}
+              {view === "history" && <HistoryPanel t={t} currency={currency} isDemo={token === "demo"} />}
             </div>
           </div>
         </div>
@@ -395,6 +429,90 @@ function SoundVideoPanel() {
         </button>
         <p style={{ ...bodyText, fontSize: 11, color: "#6a7282", marginTop: 6 }}>{t("sv.reloadHint")}</p>
       </div>
+    </div>
+  );
+}
+
+/** Compact date/time for a history row. */
+function fmtHistTime(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch {
+    return "";
+  }
+}
+
+/** #10 — the player's own recent bet history (win/loss per bet). */
+function HistoryPanel({ t, currency, isDemo }: { t: TFunction; currency: string; isDemo: boolean }) {
+  const [items, setItems] = useState<HistItem[] | null>(null);
+
+  useEffect(() => {
+    if (isDemo) {
+      setItems([]);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/me/bet-history?limit=40", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled) setItems((j?.data?.items ?? []) as HistItem[]);
+      })
+      .catch(() => {
+        if (!cancelled) setItems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo]);
+
+  if (items === null) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", padding: "28px 0" }}>
+        <div style={{ width: 26, height: 26, borderRadius: "50%", border: "3px solid #364153", borderTopColor: "#f0b100", animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return <div style={{ textAlign: "center", fontSize: 13, color: "#6a7282", padding: "28px 0" }}>{t("hist.empty")}</div>;
+  }
+
+  const color: Record<string, string> = { win: "#05df72", loss: "#fb2c36", push: "#9ca3af", pending: "#f0b100" };
+  const label: Record<string, string> = { win: t("hist.win"), loss: t("hist.loss"), push: t("hist.push"), pending: t("hist.pending") };
+
+  return (
+    <div style={{ border: "1px solid #24314a", borderRadius: 10, overflow: "hidden" }}>
+      {items.map((it, i) => (
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "10px 12px",
+            background: i % 2 ? "rgba(30,41,57,0.35)" : "transparent",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#e5e7eb" }}>{betLabel(it.betCode, t)}</div>
+            <div style={{ fontSize: 10, color: "#6a7282" }}>
+              {fmtHistTime(it.time)} · {formatMoney(it.betAmount, currency)}
+            </div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: color[it.outcome], fontVariantNumeric: "tabular-nums" }}>
+              {it.outcome === "win"
+                ? `+${formatMoney(it.net, currency)}`
+                : it.outcome === "loss"
+                  ? `-${formatMoney(it.betAmount, currency)}`
+                  : label[it.outcome]}
+            </div>
+            <div style={{ fontSize: 10, color: color[it.outcome], fontWeight: 700 }}>{label[it.outcome]}</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

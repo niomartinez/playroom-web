@@ -100,6 +100,7 @@ const en: Record<string, string> = {
   "menu.howToPlay": "How to Play",
   "menu.soundVideo": "Sound & Video",
   "menu.payouts": "Payouts & Limits",
+  "menu.history": "Game History",
   "menu.back": "Back",
   "menu.close": "Close",
 
@@ -140,6 +141,13 @@ const en: Record<string, string> = {
   "sv.reload": "Reload stream",
   "sv.reloadHint": "Reconnect if the video stalls or falls behind.",
 
+  /* Game history */
+  "hist.empty": "No bets yet.",
+  "hist.win": "Win",
+  "hist.loss": "Loss",
+  "hist.push": "Push",
+  "hist.pending": "Pending",
+
   /* Low balance */
   "low.title": "Low Balance",
   "low.body": "Your balance is below the minimum bet ({min}). Please deposit to keep playing.",
@@ -151,6 +159,9 @@ const en: Record<string, string> = {
   "session.expiredTitle": "Session Expired",
   "session.expiredBody": "You were removed from the table for inactivity. Please return to the site to rejoin.",
   "session.return": "Return to lobby",
+
+  /* Winners marquee */
+  "winners.title": "Winners",
 
   /* Win flash */
   "win.youWon": "YOU WON {amount}",
