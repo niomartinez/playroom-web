@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { WS_BASE } from "./ws-config";
 import { useGame, type RecentWinLine } from "./game-context";
+import { holdMoveBalance, isBetMoveInFlight } from "./bet-move";
 import { sendToParent } from "./iframe-bridge";
 import { betCodeLabel } from "./bet-codes";
 import { dispatchReverseFlyToBalance } from "./chip-fly";
@@ -137,23 +138,29 @@ export function useBalanceWs() {
               ? (data.balance as number)
               : null;
         if (balance !== null) {
-          // Avoid the "upward flicker" when the player rapid-fires bets:
-          // each placeBet does an optimistic local debit, but the server
-          // confirmations arrive one at a time. A WS push for bet 1's
-          // post-debit balance would otherwise overwrite local state
-          // that has already optimistically debited bets 2 and 3, causing
-          // the displayed balance to jump up before crawling back down.
-          //
-          // The ONLY race we need to protect against is the debit one —
-          // every other reason (initial "connected" snapshot, settlement
-          // credit/push, void refund, operator deposit/withdraw, future
-          // unknown reasons) is server-driven and authoritative. Apply
-          // those directly. Default-apply for unknown reasons keeps us
-          // from accidentally clamping a future server-side update we
-          // forgot to enumerate.
-          if (reason === "debit") {
+          // A drag-to-move is net-zero, but the server reports it as a refund
+          // of the source followed by a debit of the replacement. Applying
+          // those as they land made a moved chip look like a win followed by
+          // a fresh deduction (BalanceBar animates every change it sees).
+          // Hold them and let the move apply the final one when it settles —
+          // including on failure, where the refund IS the real balance.
+          if (isBetMoveInFlight()) {
+            holdMoveBalance(balance);
+          } else if (reason === "debit") {
+            // Avoid the "upward flicker" when the player rapid-fires bets:
+            // each placeBet does an optimistic local debit, but the server
+            // confirmations arrive one at a time. A WS push for bet 1's
+            // post-debit balance would otherwise overwrite local state
+            // that has already optimistically debited bets 2 and 3, causing
+            // the displayed balance to jump up before crawling back down.
             s.setBalance((current) => Math.min(current, balance));
           } else {
+            // Every other reason (initial "connected" snapshot, settlement
+            // credit/push, void refund, operator deposit/withdraw, future
+            // unknown reasons) is server-driven and authoritative. Apply
+            // those directly. Default-apply for unknown reasons keeps us
+            // from accidentally clamping a future server-side update we
+            // forgot to enumerate.
             s.setBalance(balance);
           }
           // The wallet has now spoken, so `balance` is authoritative rather

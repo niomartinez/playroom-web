@@ -3,7 +3,6 @@
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useT, type TFunction } from "@/lib/i18n";
-import { useCountdown } from "@/lib/use-countdown";
 import { useState, useEffect } from "react";
 
 /* ------------------------------------------------------------------ */
@@ -113,7 +112,7 @@ function EmptySlot({ isMobile }: { isMobile?: boolean }) {
 /*  Phase banner                                                       */
 /* ------------------------------------------------------------------ */
 
-function PhaseBanner({ roundStatus, countdown, hasCards, t }: { roundStatus: string; countdown: number | null; hasCards: boolean; t: TFunction }) {
+function PhaseBanner({ roundStatus, hasCards, t }: { roundStatus: string; hasCards: boolean; t: TFunction }) {
   let text = "";
   let bgColor = "rgba(255,255,255,0.06)";
   let textColor = "#99a1af";
@@ -121,9 +120,10 @@ function PhaseBanner({ roundStatus, countdown, hasCards, t }: { roundStatus: str
 
   switch (roundStatus) {
     case "betting_open":
-      // No countdown yet (betting open on a round we have no timing for) —
-      // state the phase without inventing a number.
-      text = countdown !== null ? t("viz.placeBetsCountdown", { seconds: countdown }) : t("viz.placeBets");
+      // Phase only — RoundCountdown owns the seconds during this phase and
+      // renders them big in the centre of the feed. Printing them here too
+      // put two live countdowns on one screen.
+      text = t("viz.placeBets");
       bgColor = "rgba(5,223,114,0.15)";
       textColor = "#05df72";
       pulse = true;
@@ -195,11 +195,7 @@ export default function DealVisualizer() {
   const bankerScore = currentRound?.bankerScore ?? 0;
   const winner = currentRound?.winner;
 
-  // Shared with the header pill and RoundCountdown — one server-derived
-  // clock, not a second decrementing timer of our own (which drifted against
-  // the ring and kept ticking to a stuck 0 on its own schedule).
-  const countdown = useCountdown();
-
+  const isBettingOpen = roundStatus === "betting_open";
   const hasCards = playerCards.length > 0 || bankerCards.length > 0;
 
   return (
@@ -238,9 +234,29 @@ export default function DealVisualizer() {
         />
       )}
 
-      {/* Phase banner */}
-      <div style={{ marginBottom: hasCards ? (isMobile ? 12 : 24) : 0 }}>
-        <PhaseBanner roundStatus={roundStatus} countdown={countdown} hasCards={hasCards} t={t} />
+      {/* Phase banner.
+
+          While betting is open the countdown ring owns the centre of the feed
+          (RoundCountdown renders over us), and we have no cards to show — so a
+          centred banner lands square on top of the ring's number. Top-anchor
+          it for that phase only; VideoPlayer's retry chip already uses the
+          same convention to stay clear of this component. Every other phase
+          keeps the banner centred above the cards. */}
+      <div
+        style={
+          isBettingOpen
+            ? {
+                position: "absolute",
+                top: isMobile ? 8 : 16,
+                left: 0,
+                right: 0,
+                display: "flex",
+                justifyContent: "center",
+              }
+            : { marginBottom: hasCards ? (isMobile ? 12 : 24) : 0 }
+        }
+      >
+        <PhaseBanner roundStatus={roundStatus} hasCards={hasCards} t={t} />
       </div>
 
       {/* Cards area — only visible when dealing or result */}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame } from "@/lib/game-context";
 import { useFeatures } from "@/lib/use-features";
@@ -58,15 +57,6 @@ export default function PlayerLayout() {
   const hasPlacedBets = placedBets.length > 0;
   const panelClass = isBettingOpen ? "prg-bet-panel--open" : "prg-bet-panel--closed";
 
-  // RoundCountdown is the countdown *for live video* — a big translucent ring
-  // that reads well over a dealer. When the stream isn't up, DealVisualizer
-  // takes the feed and owns its centre (its own phase banner carries the
-  // seconds, and VideoPlayer's retry chip already top-anchors to stay clear of
-  // it). Rendering both stamped the ring's number straight through the banner.
-  // So: ring over video, banner over the fallback — never both.
-  const [videoShowingFallback, setVideoShowingFallback] = useState(true);
-  const showRing = !videoShowingFallback;
-
   if (isMobile) {
     return (
       <div
@@ -104,9 +94,8 @@ export default function PlayerLayout() {
             webrtcUrl={webrtcUrl}
             hlsUrl={hlsUrl}
             fallback={<DealVisualizer />}
-            onFallbackChange={setVideoShowingFallback}
           />
-          {showRing && <RoundCountdown />}
+          <RoundCountdown />
           <WinnersMarquee />
           <LowBalanceGate />
         </div>
@@ -198,9 +187,8 @@ export default function PlayerLayout() {
           webrtcUrl={webrtcUrl}
           hlsUrl={hlsUrl}
           fallback={<DealVisualizer />}
-          onFallbackChange={setVideoShowingFallback}
         />
-        {showRing && <RoundCountdown />}
+        <RoundCountdown />
         <WinnersMarquee />
         <LowBalanceGate />
         {liveChatEnabled && <LiveChat />}

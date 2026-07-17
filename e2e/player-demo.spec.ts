@@ -116,6 +116,9 @@ async function stubDemo(page: Page) {
 const countdownRing = (page: Page) =>
   page.locator('div[aria-hidden]:has(> div > svg[viewBox="0 0 100 100"])').first();
 
+const ringOpacity = (page: Page) =>
+  countdownRing(page).evaluate((el) => Number(getComputedStyle(el).opacity));
+
 /** The ☰ trigger — `aria-label="Menu"`; the open panel's title reuses the text. */
 const menuButton = (page: Page) =>
   page.getByRole("button", { name: "Menu", exact: true });
@@ -137,21 +140,20 @@ test.describe("player demo — BOD batch", () => {
     await expect(page.getByText("₱10,000.00")).toBeVisible();
 
     // Nothing counts before a round opens.
-    await expect(page.getByText(/PLACE BETS/)).toHaveCount(0);
+    expect(await ringOpacity(page)).toBe(0);
 
     await demo.startRound();
 
-    // Demo has no stream, so DealVisualizer owns the feed and carries the
-    // seconds; the header pill runs off the same useCountdown clock.
-    await expect(page.getByText(/PLACE BETS\s+\d+s/)).toBeVisible();
+    // The ring is the countdown over the feed; the header pill mirrors it.
+    await expect.poll(() => ringOpacity(page)).toBe(1);
     await expect(page.getByText(/PLACE BETS \(\d+s\)/)).toBeVisible();
 
-    // Both read the same shared clock, so they must never disagree.
-    const feedSecs = async () =>
-      Number(/(\d+)s/.exec((await page.getByText(/PLACE BETS\s+\d+s/).textContent()) ?? "")![1]);
+    // Ring and pill read the same shared clock, so they must never disagree.
+    const ringSecs = async () =>
+      Number((await countdownRing(page).textContent())?.trim());
     const pillSecs = async () =>
       Number(/\((\d+)s\)/.exec((await page.getByText(/PLACE BETS \(\d+s\)/).textContent()) ?? "")![1]);
-    expect(Math.abs((await feedSecs()) - (await pillSecs()))).toBeLessThanOrEqual(1);
+    expect(Math.abs((await ringSecs()) - (await pillSecs()))).toBeLessThanOrEqual(1);
   });
 
   test("#1 a lobby_state snapshot with no round must not start a phantom countdown", async ({
@@ -171,12 +173,14 @@ test.describe("player demo — BOD batch", () => {
     // Long enough for the old phantom timer to have started and expired.
     await page.waitForTimeout(1500);
 
-    // The phase is honest — betting IS open — but no invented seconds, in
-    // the header pill or the feed.
+    // The phase is honest — betting IS open, so the banner says so — but no
+    // invented seconds anywhere: no ring, no numbers in the header pill.
+    expect(await ringOpacity(page)).toBe(0);
     await expect(page.getByText(/PLACE BETS\s*\(?\s*\d+\s*s/)).toHaveCount(0);
 
     // A real round still starts the clock normally.
     await demo.startRound();
+    await expect.poll(() => ringOpacity(page)).toBe(1);
     await expect(page.getByText(/PLACE BETS \(\d+s\)/)).toBeVisible();
   });
 
@@ -188,16 +192,21 @@ test.describe("player demo — BOD batch", () => {
     await expect(page.getByText("₱10,000.00")).toBeVisible();
 
     await demo.startRound();
-    await expect(page.getByText(/PLACE BETS\s+\d+s/)).toBeVisible();
+    await expect.poll(() => ringOpacity(page)).toBe(1);
 
-    // RoundCountdown is the countdown *for live video*. With no stream,
-    // DealVisualizer is the fallback and owns the centre of the feed — the
-    // ring used to render on top of it, stamping its huge number straight
-    // through the banner. Over a fallback there must be exactly one: the
-    // banner. (The ring over real video isn't reachable here — the demo
-    // route has no stream to put it over.)
-    await expect(countdownRing(page)).toHaveCount(0);
-    await expect(page.getByText(/PLACE BETS\s+\d+s/)).toHaveCount(1);
+    // The ring owns the seconds. DealVisualizer's fallback banner used to
+    // print them too AND centre itself, so the ring's huge number landed
+    // straight through the banner text. The banner now states the phase only
+    // and top-anchors while the ring is up.
+    await expect(page.getByText(/PLACE BETS\s+\d+s/)).toHaveCount(0);
+    await expect(page.getByText("PLACE BETS", { exact: true })).toHaveCount(1);
+
+    // And they must not overlap: banner sits clear of the ring's box.
+    const bannerBox = await page.getByText("PLACE BETS", { exact: true }).boundingBox();
+    const ringNumber = await countdownRing(page).locator("> div > div").last().boundingBox();
+    expect(bannerBox).not.toBeNull();
+    expect(ringNumber).not.toBeNull();
+    expect(bannerBox!.y + bannerBox!.height).toBeLessThanOrEqual(ringNumber!.y + 1);
   });
 
   test("#8/#9/#10/#11 ☰ menu opens and each section renders", async ({

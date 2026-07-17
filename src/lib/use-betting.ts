@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useGame, type BetCode, type PlacedBet } from "./game-context";
+import { beginBetMove, endBetMove } from "./bet-move";
 
 export interface BetResult {
   success: boolean;
@@ -151,6 +152,14 @@ export function useBetting() {
 
       const fightId = currentRound?.roundId;
 
+      // Hold balance pushes for the duration. The server reports this
+      // net-zero move as refund-then-debit, and applying each as it lands
+      // made the balance crawl up by the stake and back down — as if the
+      // player had won and then re-bet. endBetMove applies whatever the
+      // server actually settled on, so a half-completed move (source
+      // refunded, replacement rejected) still shows the money returning.
+      beginBetMove();
+
       // Roll the visible move back to "cancelled" (source already refunded).
       const dropMoved = () => {
         removePlacedBet(newId);
@@ -190,6 +199,11 @@ export function useBetting() {
       } catch (err) {
         dropMoved();
         return { success: false, error: err instanceof Error ? err.message : "Move failed" };
+      } finally {
+        // Runs on every path, including the early returns above — the held
+        // balance must never be stranded, or the player's displayed balance
+        // stops tracking the server for the rest of the session.
+        endBetMove((b) => setBalance(b));
       }
     },
     [
@@ -203,6 +217,7 @@ export function useBetting() {
       moveStackedChips,
       popStackedChip,
       addStackedChip,
+      setBalance,
     ],
   );
 
