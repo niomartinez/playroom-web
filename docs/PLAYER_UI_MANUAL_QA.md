@@ -81,27 +81,53 @@ flag stranded, and **the next real tap on any pad was silently swallowed**. It
 now self-clears. To confirm: do a Player→Banker drag, then immediately tap any
 pad — **that tap must place a bet.** Repeat a few times.
 
-### #4 — Low-balance modal · **needs a human**
+### #4 — Low-balance feed gate · **needs a human**
 
-Mint a deliberately broke player (table min is ₱10):
+Reworked 2026-07-17 from a dismissible modal into a gate on the feed: a player
+who can't meet the minimum doesn't get to watch the dealer. The feed blurs and
+darkens and a placard covers the middle. **There is no dismiss** — closing it
+would hand back the free stream the gate exists to stop.
+
+Mint a broke player. The minter is idempotent per index, so `--count 1` always
+targets `uitest-1` — this **overwrites** that player's balance rather than
+making a new one:
 
 ```bash
 python -m scripts.mint_test_tokens --count 1 --balance 5
 ```
 
-- [ ] When a round **opens**, a dismissible "Low Balance" modal appears.
-- [ ] It appears **at most once per round** (dismiss it; it stays gone until
-      the next round opens).
+- [ ] The feed is blurred and darkened; a placard reads
+      **TABLE MINIMUM ₱50 / SHORT BY ₱45 / Add funds**.
+- [ ] **₱50, not ₱10.** It keys off the *effective* minimum — the per-code
+      floor a bet is really validated against — not the raw ₱10 on the games
+      row. At ₱10 a ₱20 player would watch a table that rejects their every bet.
+- [ ] It **cannot be dismissed** — no close button, no tap-outside.
+- [ ] **Add funds** goes to the cashier (or posts `openCashier` to the parent
+      frame when embedded).
+- [ ] Nothing overlaps the bet pads; no horizontal scrolling.
+- [ ] Chat still opens and is usable on top of the gate.
 
-**Exercises two fixes:**
-- [ ] **No false fire.** Load a **normally funded** token (₱10,000) while a
-      round is open, several times, hard-refreshing. The modal must **never**
-      flash. `balance` starts at 0 until the wallet socket reports, and it used
-      to race — funded players got told they were short.
-- [ ] **Auto-close on recovery.** With the modal up on the broke player, top
-      them up (re-mint with `--balance 5000`, or credit the wallet). The modal
-      must **close itself** — it previously stayed on screen forever, despite
-      the component's own comment promising otherwise.
+**Verified already, no need to redo:** broke ₱5 shows the gate; funded ₱10,000
+shows no gate (no false fire); a player at ₱10 *with a live ₱50 stake* correctly
+shows **no** gate. Automated at 390px: the gate spans the feed box exactly and
+clears the bet pads by 318px.
+
+**What genuinely needs your eyes — the blur over a real dealer.** The stream
+never connected during validation, so the feed was black behind the scrim and
+*nobody has seen this over live video*. This is the whole point of the feature:
+
+- [ ] With the stream up, confirm the dealer is **not** identifiable through the
+      blur — not a silhouette you could follow. Check on a bright, well-lit
+      table, which is the hardest case.
+- [ ] The cover deliberately doesn't depend on `backdrop-filter` landing (the
+      scrim is opaque enough alone). If you can, check a browser without
+      backdrop-filter support and confirm the dealer is still hidden.
+
+**Recovery:** top the player back up (`--balance 10000`, or credit the wallet)
+and confirm the gate lifts on the next balance push. The old modal could strand
+on screen after the balance recovered; the gate is a pure function of balance,
+so it has no dismissal state to get stuck — but confirm the wallet push
+actually arrives.
 
 ### #5 — Idle warnings → frozen session · **needs a human** (~5 min)
 
@@ -221,15 +247,18 @@ Found in review, deliberately left alone because they're judgment, not defects:
    settlement resolves odds at runtime from `system_config.baccarat_odds`.
    Change that row and the published table silently diverges from what's paid.
    Fix = serve odds from the backend. *This one has regulatory teeth.*
-2. **Limits are advertised wrong.** Payouts & Limits shows the raw table
-   min/max (₱10 / ₱10,000), but bets are validated against the tightest of
-   (table, per-code) — where per-code is **₱50–₱500,000**. So the panel says min
-   ₱10 while a ₱10 bet is rejected. (It also means the #4 low-balance modal
-   fires at `< ₱10`, not at the ₱50 you actually need.)
-3. **38px touch targets** (above).
-4. **`npm run lint` is dead.** Next 16 removed `next lint` and eslint was never
+2. **38px touch targets** (above).
+3. **`npm run lint` is dead.** Next 16 removed `next lint` and eslint was never
    installed — the script only errors on a bogus path. Use `npx tsc --noEmit`.
    Adopting ESLint is its own task; expect a large first-run backlog.
+
+~~Limits are advertised wrong~~ — **fixed 2026-07-17.** The per-code table now
+lives in `app/services/bet_limits.py` as one source of truth, and table state
+publishes `min_bet_effective` / `max_bet_effective` alongside the raw config.
+Payouts & Limits and the #4 gate both read the effective floor, so the UI can no
+longer advertise a minimum the API rejects. BAC-TABLE-01: raw (10, 10000) →
+effective (50, 10000). Worth a glance during the pass: **Payouts & Limits should
+now show Min ₱50**, not ₱10.
 
 ---
 

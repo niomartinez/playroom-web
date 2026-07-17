@@ -24,14 +24,14 @@ the **`staging`** branch of both repos (frontend `playroom-web`, backend
 | 1 | Big low-opacity countdown on the feed | `src/lib/use-countdown.ts`, `src/components/player/RoundCountdown.tsx`, `PlayerLayout.tsx`, `PlayerHeader.tsx` | — |
 | 2 | Drag-to-move main bets | `src/lib/use-betting.ts` (`moveMainBet`), `src/components/player/MainBets.tsx`, `src/lib/game-context.tsx` (`moveStackedChips`), `src/app/api/bet/void/route.ts` | `app/api/internal/bets.py`, `app/schemas/bet.py` (optional `bet_code` on void) |
 | 3 | Exact balance (no rounding) | `src/lib/currency.ts` (`formatBalance`), `BalanceBar.tsx` | — |
-| 4 | Low-balance modal | `src/components/player/LowBalanceModal.tsx` | `app/api/internal/tables.py` (min/max in state) |
+| 4 | Low-balance feed gate | `src/components/player/LowBalanceGate.tsx` | `app/api/internal/tables.py` (min/max + `*_effective`), `app/services/bet_limits.py` |
 | 5 | Idle warnings + frozen "Session Expired" | `src/lib/use-idle-kick.ts` (`useIdleSession`), `src/components/player/SessionGuard.tsx`, `GameWrapper.tsx` | — |
 | 6 | Winners marquee | `src/components/player/WinnersMarquee.tsx`, `use-lobby-ws.ts`, `game-context.tsx` | `app/services/settlement_service.py` (`RoundWinners` broadcast) |
 | 7 | Minimized chat: last 3 float | `src/components/player/MobileChat.tsx` | — |
 | 8 | How to Play | `src/components/player/PlayerMenu.tsx` | — |
 | 9 | Sound & Video settings | `PlayerMenu.tsx`, `src/lib/media-prefs.ts`, `VideoPlayer.tsx` | — |
 | 10 | Game history | `PlayerMenu.tsx` (`HistoryPanel`), `src/app/api/me/bet-history/route.ts` | `app/api/internal/me.py` (`GET /me/bet-history`) |
-| 11 | Payouts & Limits | `PlayerMenu.tsx` | `app/api/internal/tables.py` (min/max) |
+| 11 | Payouts & Limits | `PlayerMenu.tsx` | `app/api/internal/tables.py` (min/max + `*_effective`), `app/services/bet_limits.py` |
 | 12 | Change name in chat settings | `MobileChat.tsx`, `LiveChat.tsx`, `GameWrapper.tsx` | — |
 | 13 | Mobile-first | (constraint throughout) | — |
 
@@ -106,14 +106,14 @@ Legend: 🟢 works on `/play/demo` · 🔴 needs a real token on `/play` (+ live
 | 1 | During betting, a big translucent countdown ring is centered on the feed; goes red for the last 5s; header pill matches; fades when betting closes. | 🟢 |
 | 3 | Balance shows exact cents (`₱10.61`), never rounded. | 🔴 (demo shows demo balance) |
 | 2 | With a placed main bet, press-drag the chip onto another main pad → a ghost follows, target highlights, on drop the bet moves (source cleared, target shows total). Side bets untouched. Try Player→Banker (opposing/disabled target must still accept the drop), Player→Tie, and stacked chips. A plain tap still places a bet. | 🔴 (real void+re-place) / 🟢 visual only in demo |
-| 4 | When a round opens and balance < table min, a dismissible "Low Balance" modal appears (once/round). | 🔴 |
+| 4 | Below the table minimum, the feed blurs/darkens and a placard covers the middle: **TABLE MINIMUM ₱50 / SHORT BY ₱45 / Add funds**. No dismiss — the gate exists to stop a player who can't bet watching the dealer for free. Keys off the *effective* min (₱50), not the raw games row (₱10). A live stake suppresses it, so you always see the hand you have money on. | 🔴 |
 | 5 | Skip betting for 4 rounds → amber warning; 5th → red warning; 6th → frozen "Session Expired" overlay (background dimmed/blocked, tab stays open, manual "Return to lobby"). Placing a bet resets it. | 🔴 |
 | 6 | After a round settles, a vertical winners marquee (screen name + net win) shows top-left, then auto-hides. Needs ≥1 winner. | 🔴 (2 devices best) |
 | 7 | Close the chat sheet → the last 3 incoming messages float bottom-left over the feed and fade (~5s). | 🔴 (2 devices) |
 | 8 | ☰ → How to Play renders rules (EN + 中文 via lang switch). | 🟢 |
 | 9 | ☰ → Sound & Video: mute + volume control the stream (in sync with the in-feed speaker), Reload stream reconnects. | 🟢 |
 | 10 | ☰ → Game History lists your own bets with win/loss/push + net. | 🔴 |
-| 11 | ☰ → Payouts & Limits shows the payout table + live table Min/Max. | 🟢 (limits need backend) |
+| 11 | ☰ → Payouts & Limits shows the payout table + live table Min/Max — the **effective** limits the API enforces (Min ₱50), not the raw games row. | 🟢 (limits need backend) |
 | 12 | Chat → gear → Settings shows your Screen name + Edit (opens rename); no floating button anymore. Desktop chat has an edit icon too. | 🔴 (name needs profile) |
 | 13 | Everything is usable one-handed on a phone; nothing overlaps the bet buttons. | 🟢/🔴 |
 
