@@ -21,11 +21,25 @@ export default function SessionGuard() {
 
   const showWarn = !expired && warnLevel > 0 && roundStatus === "betting_open";
 
+  // Return the player to wherever they launched from. Priority:
+  //   1. lobbyUrl — the operator's return URL, passed on launch
+  //      (?lobbyUrl=…). For OCMS / Time2bet this is the callback we send them
+  //      back to; navigating there hands them to their own lobby.
+  //   2. Embedded with no lobbyUrl — post `closeGame` to the operator frame
+  //      so their wrapper performs the return (also fires `gameError`
+  //      SESSION_EXPIRED so the operator can log it).
+  //   3. Neither (direct / QA launch) — reload to re-establish the session
+  //      rather than leave a dead button.
+  const embedded = typeof window !== "undefined" && window.self !== window.top;
   const returnToSite = () => {
-    if (lobbyUrl && typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    if (lobbyUrl) {
       window.location.href = lobbyUrl;
-    } else {
+    } else if (embedded) {
+      sendToParent("gameError", { code: "SESSION_EXPIRED", reason: "idle" });
       sendToParent("closeGame", { reason: "idle_expired" });
+    } else {
+      window.location.reload();
     }
   };
 

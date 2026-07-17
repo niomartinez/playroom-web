@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type CSSProperties, type KeyboardEvent } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useChatWs } from "@/lib/use-chat-ws";
+import { useChatFloats } from "@/lib/use-chat-floats";
 import { useT } from "@/lib/i18n";
 import {
   EMOJIS,
@@ -28,6 +29,31 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cooldownUntilRef = useRef(0);
+
+  // Own name, for excluding own messages from the floats. Best-effort: the
+  // profile fetch + the rename broadcast, same sources the mobile sheet uses.
+  const [myName, setMyName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j?.data?.display_name) setMyName(j.data.display_name);
+      })
+      .catch(() => undefined);
+    const onName = (e: Event) => {
+      const name = (e as CustomEvent<{ name?: string }>).detail?.name;
+      if (name) setMyName(name);
+    };
+    window.addEventListener("prg:name-changed", onName);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("prg:name-changed", onName);
+    };
+  }, []);
+
+  // Recent messages float over the feed while the panel is minimized (desktop).
+  const floats = useChatFloats(messages, !isOpen && !isMobile, myName);
 
   // Panel opacity — drives the --chat-opacity custom property so one control
   // changes every translucent surface at once. Restored from localStorage on
@@ -93,19 +119,43 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   };
 
   if (!isOpen && !isMobile) {
+    // Minimized: a Chat button plus the last few incoming messages floating
+    // just below it on the right, glassy, auto-fading. Clicking a bubble (or
+    // the button) opens the full panel — the intuitive path if you want to
+    // reply to what's floating by.
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="absolute right-4 top-4 z-20 rounded-xl px-4 py-2 text-sm font-semibold text-white transition cursor-pointer"
-        style={{
-          background: "rgba(30,41,57,0.8)",
-          border: "1px solid rgba(54,65,83,0.8)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-        }}
-      >
-        {t("chat.open")}
-      </button>
+      <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-2" style={{ maxWidth: 280 }}>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition cursor-pointer"
+          style={{
+            background: "rgba(30,41,57,0.8)",
+            border: "1px solid rgba(54,65,83,0.8)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+          }}
+        >
+          {floats.length > 0 ? `${t("chat.open")} · ${floats.length}` : t("chat.open")}
+        </button>
+        {floats.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setIsOpen(true)}
+            className="prg-float-msg text-left rounded-xl px-3 py-2 cursor-pointer transition"
+            style={{
+              maxWidth: "100%",
+              background: "rgba(16,24,40,0.55)",
+              border: "1px solid rgba(54,65,83,0.5)",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+            }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#93b8ff", marginRight: 6 }}>{f.user}</span>
+            <span style={{ fontSize: 12, color: "#e5e7eb", wordBreak: "break-word" }}>{f.text}</span>
+          </button>
+        ))}
+      </div>
     );
   }
 

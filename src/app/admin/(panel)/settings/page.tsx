@@ -42,6 +42,13 @@ export default function SettingsPage() {
   const [liveChatEnabled, setLiveChatEnabled] = useState(false);
   const [odds, setOdds] = useState<Record<string, string>>({});
 
+  // Inactivity / idle-session policy (rounds). expire = freeze after N idle
+  // rounds; warn1/warn2 = optional escalating warnings before that. Empty
+  // string = disabled (null).
+  const [idleExpire, setIdleExpire] = useState("1");
+  const [idleWarn1, setIdleWarn1] = useState("");
+  const [idleWarn2, setIdleWarn2] = useState("");
+
   /* Danger zone */
   const [showForceClose, setShowForceClose] = useState(false);
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
@@ -83,6 +90,14 @@ export default function SettingsPage() {
                   o[k] = String(v);
                 }
                 setOdds(o);
+              }
+              break;
+            case "player_idle_policy":
+              if (typeof val === "object" && val !== null) {
+                const p = val as { expire?: number; warn1?: number | null; warn2?: number | null };
+                if (p.expire != null) setIdleExpire(String(p.expire));
+                setIdleWarn1(p.warn1 != null ? String(p.warn1) : "");
+                setIdleWarn2(p.warn2 != null ? String(p.warn2) : "");
               }
               break;
           }
@@ -310,6 +325,80 @@ export default function SettingsPage() {
             />
           </button>
         </div>
+      </div>
+
+      {/* Inactivity / idle-session policy */}
+      <div
+        className="rounded-xl p-6 space-y-4"
+        style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
+            Inactivity
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            A player who sits out (places no bet) for this many rounds is frozen
+            with a &ldquo;seat released&rdquo; overlay. Warnings are optional and must be
+            fewer rounds than the freeze. Applies to all tables; takes effect on
+            the next round after Save.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              Freeze after (idle rounds)
+            </label>
+            <input
+              type="number" min={1} max={50}
+              value={idleExpire}
+              onChange={(e) => setIdleExpire(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              1st warning at (blank = off)
+            </label>
+            <input
+              type="number" min={1} max={49}
+              value={idleWarn1}
+              onChange={(e) => setIdleWarn1(e.target.value)}
+              placeholder="—"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              Final warning at (blank = off)
+            </label>
+            <input
+              type="number" min={1} max={49}
+              value={idleWarn2}
+              onChange={(e) => setIdleWarn2(e.target.value)}
+              placeholder="—"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const expire = Math.max(1, parseInt(idleExpire) || 1);
+            const w1 = idleWarn1.trim() === "" ? null : parseInt(idleWarn1);
+            const w2 = idleWarn2.trim() === "" ? null : parseInt(idleWarn2);
+            // A warning at or past the freeze can never fire — drop it so we
+            // never save a rung the client will ignore anyway.
+            const clean = (w: number | null) => (w != null && w > 0 && w < expire ? w : null);
+            saveKey("player_idle_policy", { expire, warn1: clean(w1), warn2: clean(w2) });
+          }}
+          disabled={saving === "player_idle_policy"}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          style={{ backgroundColor: "#f0b100" }}
+        >
+          {saving === "player_idle_policy" ? "Applying..." : "Apply"}
+        </button>
       </div>
 
       {/* Payout Odds */}

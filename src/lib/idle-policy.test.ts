@@ -13,9 +13,9 @@ import { resolveIdlePolicy, DEFAULT_IDLE_POLICY, urlOverrideAllowed } from "./id
 // Default: one missed round and you're out, no warnings.
 {
   const p = resolveIdlePolicy(null, "");
-  assert.equal(p.expire, 6, "default freeze is the prod default (6)");
-  assert.equal(p.warn1, 4);
-  assert.equal(p.warn2, 5);
+  assert.equal(p.expire, 1, "default freeze is 1 idle round");
+  assert.equal(p.warn1, null, "no warnings at expire=1");
+  assert.equal(p.warn2, null, "no warnings at expire=1");
 }
 
 // The original BOD ladder is restorable from the URL, no deploy.

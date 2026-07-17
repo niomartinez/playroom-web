@@ -50,7 +50,7 @@ function DealCard({ card, isMobile }: { card: string; isMobile?: boolean }) {
   return (
     <div
       style={{
-        width: isMobile ? "12%" : "clamp(36px, 5vw, 56px)",
+        width: isMobile ? "clamp(34px, 11vw, 52px)" : "clamp(36px, 5vw, 56px)",
         height: isMobile ? "auto" : "clamp(52px, 7vw, 80px)",
         aspectRatio: isMobile ? "9 / 13" : undefined,
         backgroundColor: "#fff",
@@ -97,7 +97,7 @@ function EmptySlot({ isMobile }: { isMobile?: boolean }) {
   return (
     <div
       style={{
-        width: isMobile ? "12%" : "clamp(36px, 5vw, 56px)",
+        width: isMobile ? "clamp(34px, 11vw, 52px)" : "clamp(36px, 5vw, 56px)",
         height: isMobile ? "auto" : "clamp(52px, 7vw, 80px)",
         aspectRatio: isMobile ? "9 / 13" : undefined,
         borderRadius: isMobile ? 4 : "0.5vw",

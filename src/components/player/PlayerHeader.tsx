@@ -102,24 +102,30 @@ export default function PlayerHeader() {
         }}
       >
         {/* Left: Logo */}
-        <button onClick={handleBack} style={{ cursor: "pointer", background: "none", border: "none", padding: 0, zIndex: 1 }}>
+        <button onClick={handleBack} style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
           <img src="/logo.png" alt="Play Room Gaming" style={{ height: 22, objectFit: "contain" }} />
         </button>
 
-        {/* Center: LIVE badge + Table label — absolutely centered, single row */}
+        {/* Center: LIVE badge + Table label — a real flex column, NOT absolutely
+            positioned. Absolute centering ignored the siblings' widths, so on a
+            phone the opaque menu/language controls painted over the tail of
+            "Live Baccarat" and shredded it into gibberish. It now lives in flow,
+            centered, and the label truncates cleanly instead of overlapping. */}
         <div
           style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
+            flex: 1,
+            minWidth: 0,
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
+            padding: "0 8px",
+            overflow: "hidden",
           }}
         >
           <div
             style={{
+              flexShrink: 0,
               display: "flex",
               alignItems: "center",
               gap: 5,
@@ -141,14 +147,26 @@ export default function PlayerHeader() {
             />
             <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: 0.4 }}>{t("status.live")}</span>
           </div>
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#99A1AF" }}>{t("header.liveBaccarat")}</span>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: "#99A1AF",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+            }}
+          >
+            {t("header.liveBaccarat")}
+          </span>
         </div>
 
         {/* Right: menu + language switcher + round number */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
           <PlayerMenu />
           <LanguageSelect compact />
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff" }}>{roundLabel}</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff", whiteSpace: "nowrap" }}>{roundLabel}</span>
         </div>
       </header>
     );

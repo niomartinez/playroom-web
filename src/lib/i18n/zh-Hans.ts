@@ -156,10 +156,10 @@ const zhHans: Record<string, string> = {
   "gate.addFunds": "充值",
 
   /* Session / idle */
-  "session.warn1": "请下注，以免被移出牌桌。",
-  "session.warn2": "本局请立即下注以保留您的座位。",
-  "session.expiredTitle": "会话已过期",
-  "session.expiredBody": "由于长时间未操作，您已被移出牌桌。请返回站点重新加入。",
+  "session.warn1": "本局请下注，否则可能因长时间未下注而被移出座位。",
+  "session.warn2": "最后提醒——请立即下注，否则将因未参与而被移出座位。",
+  "session.expiredTitle": "座位已释放——长时间未下注",
+  "session.expiredBody": "您连续多局未下注，座位已被释放以保持牌桌活跃。下次请每局下注以保留座位。返回大厅可重新加入牌桌。",
   "session.return": "返回大厅",
 
   /* Winners marquee */

@@ -156,10 +156,10 @@ const en: Record<string, string> = {
   "gate.addFunds": "Add funds",
 
   /* Session / idle */
-  "session.warn1": "Please place bets to avoid being removed from the table.",
-  "session.warn2": "Place a bet now to keep your seat this round.",
-  "session.expiredTitle": "Session Expired",
-  "session.expiredBody": "You were removed from the table for inactivity. Please return to the site to rejoin.",
+  "session.warn1": "Place a bet this round, or your seat may be released for inactivity.",
+  "session.warn2": "Final warning — place a bet now or you'll be removed for sitting out.",
+  "session.expiredTitle": "Seat Released — Inactive",
+  "session.expiredBody": "You sat out too many rounds in a row, so your seat was released to keep the table active. To keep your seat next time, place a bet every round. Return to the lobby to rejoin a table.",
   "session.return": "Return to lobby",
 
   /* Winners marquee */
