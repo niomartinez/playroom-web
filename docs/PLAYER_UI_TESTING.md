@@ -4,6 +4,12 @@ Adapts EVO-Live behaviours to our UI, mobile-first. All 13 items below are on
 the **`staging`** branch of both repos (frontend `playroom-web`, backend
 `topless-casino-backend`) and are **not** on prod yet.
 
+> **Doing the sign-off pass? Start with [`PLAYER_UI_MANUAL_QA.md`](./PLAYER_UI_MANUAL_QA.md).**
+> A 2026-07-17 validation pass automated everything it honestly could (see §6)
+> and fixed 9 bugs. That doc is the remainder — only the checks that need eyes
+> or a real phone — plus the open decisions. This file stays the reference for
+> what shipped and how the pieces fit.
+
 > Chat/bets/settlement/session features need **real session tokens** on the
 > real `/play` route. `/play/demo` uses a `"demo"` token that skips the chat
 > WebSocket and places bets client-side only — good for UI/menu/timer/drag, not
