@@ -10,7 +10,7 @@ Scope note — what's already done, so you don't redo it:
 
 | Verified without a human | How |
 |---|---|
-| #1 countdown ring, #8 How to Play, #9 panel renders, #10 empty state, #11 payouts + live limits | `e2e/player-demo.spec.ts` (3 specs, green) |
+| #1 betting countdown, #8 How to Play, #9 panel renders, #10 empty state, #11 payouts + live limits | `e2e/player-demo.spec.ts` (5 specs, green) |
 | #3 exact balance | e2e + live token (`₱10,000.00`, bet 100 → payoff 200 → 10,100) |
 | #6 marquee **payload** | captured the live `RoundWinners` frame: `"user": "TesterA_5aba"` (real name, not the `"Player"` fallback) |
 | #2 void **API round-trip** | targeted void refunded, side bet survived, re-place worked, `void_refund` ledger row written |
@@ -32,9 +32,17 @@ Two terminals from the **backend repo root**, venv active.
 python -m scripts.mock_dealer --betting-time 30
 ```
 
-Loops real rounds (start → betting → deal → settle → close). A 30s window
-gives you time to drag and fiddle. Ctrl-C to stop. Leave it running for
-everything below.
+Loops real rounds (start → betting → close betting → deal → settle → close).
+A 30s window gives you time to drag and fiddle. Ctrl-C to stop. Leave it
+running for everything below.
+
+> **The token URLs in `/tmp/mint3.txt` are on `BAC-TABLE-01`, so deal there
+> — that is the default.** If you instead want the **`/play/demo`** route,
+> note it only lists `TEST-`prefixed tables (`DemoWrapper.tsx` filters on the
+> prefix), so a dealer on `BAC-TABLE-01` never shows up there. Use
+> `--table TEST-BAC-TABLE-01` for demo. That table starts with **no round
+> history at all**, so it sits on "waiting" until your first round lands —
+> that is the dealer not started, not a bug.
 
 **2. Mint tokens** (TTL 8h):
 
@@ -55,6 +63,34 @@ private window or a second browser.
 ---
 
 ## The checks
+
+### #1 — Countdown · **fixed 2026-07-17, worth a look**
+
+Two bugs found during the staging pass, both fixed. The old `#1 countdown
+ring` row in the table above was **wrong** — the e2e injected a well-formed
+`RoundStarted` and so passed against the broken code too. It never exercised
+the path that was actually broken. Both new specs fail on the old code.
+
+- [ ] Watch a full round. The countdown reaches 0 and the banner flips to
+      **NO MORE BETS** promptly — it must not sit at **"PLACE BETS 0s"**.
+      (`/internal/emulator/deal` never called `close_betting`, so no
+      `BettingClosed` was ever broadcast on a mock-dealer round and the UI
+      had nothing to move it off `betting_open`. Bet pads stayed live in
+      that window too.)
+- [ ] **Refresh mid-betting.** The countdown resumes at roughly the *real*
+      remaining time and still reaches 0 exactly when betting closes. With
+      `--betting-time 30` on a table whose `default_betting_time` is 15,
+      a mid-round refresh used to be told betting ended at +15s and stranded
+      at 0 for the back half of every window.
+- [ ] Only **one** countdown over the feed — not a ring and a banner
+      stamped through each other.
+
+**The ring now needs a live stream to see at all.** It is the countdown
+*for live video*; with no stream the DealVisualizer fallback owns the feed
+and carries the seconds in its own banner. So on a streamless table you get
+the banner, not the ring — that is intended. **The ring itself is unverified
+over real video** (same blocker as #4's blur and #9): nobody has seen it
+over a dealer. Check it when the stream is up.
 
 ### #2 — Drag-to-move: the gesture · **needs a human**
 
@@ -272,9 +308,16 @@ git checkout main && git pull && git merge --ff-only staging && git push origin 
 git checkout staging
 ```
 
-**The backend migration must be applied to the prod DB *before* the code
-deploys.** `supabase/migrations/20260717120000_void_player_bets_atomic_bet_code.sql`
-drops the 2-arg `void_player_bets_atomic` and recreates it with
-`p_bet_code TEXT DEFAULT NULL`. The default keeps the old call site working, so
-migration-first is safe both ways; code-first fails **every void** until it
-lands.
+**Two backend migrations must be applied to the prod DB *before* the code
+deploys.** Both are already applied to staging.
+
+1. `20260717120000_void_player_bets_atomic_bet_code.sql` — drops the 2-arg
+   `void_player_bets_atomic` and recreates it with
+   `p_bet_code TEXT DEFAULT NULL`. The default keeps the old call site working,
+   so migration-first is safe both ways; code-first fails **every void** until
+   it lands.
+2. `20260717150000_add_fights_betting_countdown_seconds.sql` — adds a nullable
+   `fights.betting_countdown_seconds`. Additive and tolerant in both
+   directions (old code ignores it; new code falls back to
+   `games.default_betting_time` when NULL) — but **code-first breaks every
+   round start**, because `start_round` writes the column. Migration first.
