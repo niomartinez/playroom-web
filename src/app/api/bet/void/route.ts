@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         session_token: sessionToken,
         fight_id: body.fight_id,
+        bet_code: body.bet_code,
       }),
     });
 

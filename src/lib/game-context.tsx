@@ -250,6 +250,8 @@ export interface GameState {
    */
   popStackedChip: (betCode: BetCode) => void;
   clearStackedChips: () => void;
+  /** #2 — move all stacked chips from one bet code to another (drag-to-move). */
+  moveStackedChips: (from: BetCode, to: BetCode) => void;
   setRecentWin: (w: RecentWin | null) => void;
   setRoundWinners: (w: RoundWinners | null) => void;
 }
@@ -499,6 +501,17 @@ export function GameProvider({
     setStackedChips({});
   }, []);
 
+  const moveStackedChips = useCallback((from: BetCode, to: BetCode) => {
+    setStackedChips((prev) => {
+      const src = prev[from];
+      if (!src || src.length === 0) return prev;
+      const next = { ...prev };
+      next[to] = [...(next[to] ?? []), ...src];
+      delete next[from];
+      return next;
+    });
+  }, []);
+
   const value: GameState = {
     token,
     gameId,
@@ -548,6 +561,7 @@ export function GameProvider({
     addStackedChip,
     popStackedChip,
     clearStackedChips,
+    moveStackedChips,
     setRecentWin,
     setRoundWinners,
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useBetting } from "@/lib/use-betting";
 import { useGame, type BetCode } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
@@ -68,12 +68,94 @@ const COUNTS_KEY: Record<BetCode, "Player" | "Tie" | "Banker" | null> = {
   BAC_PerfectPair: null,
 };
 
+/** #2 — only the three main bets are draggable/droppable. */
+const MAIN_CODES = new Set<BetCode>(["BAC_Player", "BAC_Tie", "BAC_Banker"]);
+
 export default function MainBets() {
-  const { placeBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
+  const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
   const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   const sym = symbolFor(currency);
+
+  // #2 — drag-to-move a placed main bet to another main pad.
+  const [drag, setDrag] = useState<{ from: BetCode; x: number; y: number; over: BetCode | null } | null>(null);
+  const dragStartRef = useRef<{ from: BetCode; x: number; y: number; active: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const findPadCode = (x: number, y: number): BetCode | null => {
+    if (typeof document === "undefined") return null;
+    const el = document.elementFromPoint(x, y) as HTMLElement | null;
+    const pad = el?.closest("[data-bet-code]") as HTMLElement | null;
+    const code = pad?.getAttribute("data-bet-code") as BetCode | null;
+    return code && MAIN_CODES.has(code) ? code : null;
+  };
+
+  const onPadPointerDown = (betCode: BetCode, e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!isBettingOpen) return;
+    const myTotal = placedBets.filter((b) => b.betCode === betCode).reduce((s, b) => s + b.amount, 0);
+    if (myTotal <= 0) return; // nothing to drag — leave it a normal tap
+    dragStartRef.current = { from: betCode, x: e.clientX, y: e.clientY, active: false };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const onPadPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const st = dragStartRef.current;
+    if (!st) return;
+    if (!st.active && Math.hypot(e.clientX - st.x, e.clientY - st.y) < 8) return;
+    st.active = true;
+    const over = findPadCode(e.clientX, e.clientY);
+    setDrag({ from: st.from, x: e.clientX, y: e.clientY, over: over && over !== st.from ? over : null });
+  };
+
+  const onPadPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const st = dragStartRef.current;
+    dragStartRef.current = null;
+    if (!st || !st.active) {
+      setDrag(null);
+      return;
+    }
+    suppressClickRef.current = true; // it was a drag, not a tap
+    const over = findPadCode(e.clientX, e.clientY);
+    setDrag(null);
+    if (over && over !== st.from) void moveMainBet(st.from, over);
+  };
+
+  const onPadPointerCancel = () => {
+    dragStartRef.current = null;
+    setDrag(null);
+  };
+
+  const dragGhost = drag ? (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        left: drag.x,
+        top: drag.y,
+        transform: "translate(-50%, -50%)",
+        zIndex: 300,
+        pointerEvents: "none",
+        width: 42,
+        height: 42,
+        borderRadius: "50%",
+        background: "radial-gradient(circle at 50% 35%, #ffd34d, #c98a00)",
+        border: "2px solid #fff",
+        boxShadow: "0 6px 16px rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#5a3d00" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+    </div>
+  ) : null;
 
   // Only trust the live counts when they line up with the round currently
   // displayed. After RoundClosed we deliberately KEEP the last counts (so the
@@ -91,6 +173,11 @@ export default function MainBets() {
 
   const handleBet = useCallback(
     async (betCode: BetCode, targetEl: HTMLElement | null) => {
+      // Swallow the click that trails a drag-move so it doesn't place a bet.
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        return;
+      }
       if (!isBettingOpen) return;
       // Snapshot the chip denom we'll animate (selectedChip can change after placeBet)
       const flyDenom = selectedChip;
@@ -132,12 +219,18 @@ export default function MainBets() {
               key={bet.name}
               data-bet-code={bet.betCode}
               onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
+              onPointerDown={(e) => onPadPointerDown(bet.betCode, e)}
+              onPointerMove={onPadPointerMove}
+              onPointerUp={onPadPointerUp}
+              onPointerCancel={onPadPointerCancel}
               disabled={disabled}
               style={{
                 position: "relative",
                 height: 96,
                 borderRadius: 14,
-                border: `1.6px solid ${bet.mobileBorder}`,
+                border: `1.6px solid ${drag?.over === bet.betCode ? "#ffffff" : bet.mobileBorder}`,
+                boxShadow: drag?.over === bet.betCode ? "0 0 0 2px rgba(255,255,255,0.9), 0 0 16px rgba(255,255,255,0.45)" : undefined,
+                touchAction: myTotal > 0 ? "none" : undefined,
                 background: bet.mobileGradient,
                 overflow: "hidden",
                 display: "flex",
@@ -262,6 +355,7 @@ export default function MainBets() {
             </button>
           );
         })}
+        {dragGhost}
       </div>
     );
   }
@@ -293,9 +387,18 @@ export default function MainBets() {
             key={bet.name}
             data-bet-code={bet.betCode}
             onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
+            onPointerDown={(e) => onPadPointerDown(bet.betCode, e)}
+            onPointerMove={onPadPointerMove}
+            onPointerUp={onPadPointerUp}
+            onPointerCancel={onPadPointerCancel}
             disabled={disabled}
             className="relative transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer overflow-hidden h-full flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ border: `1.6px solid ${bet.border}`, borderRadius: "0.7vw" }}
+            style={{
+              border: `1.6px solid ${drag?.over === bet.betCode ? "#ffffff" : bet.border}`,
+              borderRadius: "0.7vw",
+              boxShadow: drag?.over === bet.betCode ? "0 0 0 2px rgba(255,255,255,0.9), 0 0 16px rgba(255,255,255,0.45)" : undefined,
+              touchAction: myTotal > 0 ? "none" : undefined,
+            }}
           >
             <BetStackedChips betCode={bet.betCode} size={22} />
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
@@ -340,6 +443,7 @@ export default function MainBets() {
           </button>
         );
       })}
+      {dragGhost}
     </div>
   );
 }

@@ -20,6 +20,9 @@ export function useBetting() {
     removePlacedBet,
     setBalance,
     popStackedChip,
+    addStackedChip,
+    moveStackedChips,
+    stackedChips,
   } = useGame();
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -117,10 +120,97 @@ export function useBetting() {
     [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
   );
 
+  // #2 — drag-to-move a MAIN bet from one pad to another. Under the hood it
+  // voids the source bet code (refund) and re-places the same total on the
+  // target (debit) — side bets are untouched. Balance is net-zero, so no
+  // wallet->pad chip is animated; the chips simply relocate. Betting-open only.
+  const moveMainBet = useCallback(
+    async (fromCode: BetCode, toCode: BetCode): Promise<BetResult> => {
+      if (!isBettingOpen) return { success: false, error: "Betting is closed" };
+      if (fromCode === toCode) return { success: false, error: "Same pad" };
+
+      const fromBets = placedBets.filter((b) => b.betCode === fromCode);
+      const total = fromBets.reduce((s, b) => s + b.amount, 0);
+      if (total <= 0) return { success: false, error: "No bet to move" };
+
+      const srcChips = [...(stackedChips[fromCode] ?? [])];
+      const movedChipCount = srcChips.length;
+      const newId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `move-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      // Optimistic reposition (money moves pad->pad, so balance is net-zero).
+      fromBets.forEach((b) => {
+        if (b.id) removePlacedBet(b.id);
+      });
+      addPlacedBet({ id: newId, betCode: toCode, amount: total });
+      moveStackedChips(fromCode, toCode);
+
+      if (isDemo) return { success: true };
+
+      const fightId = currentRound?.roundId;
+
+      // Roll the visible move back to "cancelled" (source already refunded).
+      const dropMoved = () => {
+        removePlacedBet(newId);
+        for (let i = 0; i < movedChipCount; i++) popStackedChip(toCode);
+      };
+      // Roll all the way back to the source (server unchanged).
+      const restoreSource = () => {
+        dropMoved();
+        fromBets.forEach((b) => addPlacedBet(b));
+        srcChips.forEach((c) => addStackedChip(fromCode, c.denom));
+      };
+
+      try {
+        const vres = await fetch("/api/bet/void", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fight_id: fightId, bet_code: fromCode }),
+        });
+        const vdata = await vres.json().catch(() => ({}));
+        if (!vres.ok || (vdata.error_code && vdata.error_code !== "0")) {
+          restoreSource();
+          return { success: false, error: vdata.message || "Move failed" };
+        }
+
+        const pres = await fetch("/api/bet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fight_id: fightId, bet_code: toCode, bet_amount: total }),
+        });
+        const pdata = await pres.json().catch(() => ({}));
+        if (!pres.ok || (pdata.error_code && pdata.error_code !== "0")) {
+          // Source was voided + refunded; the replacement didn't land.
+          dropMoved();
+          return { success: false, error: pdata.message || "Move failed" };
+        }
+        return { success: true };
+      } catch (err) {
+        dropMoved();
+        return { success: false, error: err instanceof Error ? err.message : "Move failed" };
+      }
+    },
+    [
+      isBettingOpen,
+      isDemo,
+      placedBets,
+      stackedChips,
+      currentRound,
+      addPlacedBet,
+      removePlacedBet,
+      moveStackedChips,
+      popStackedChip,
+      addStackedChip,
+    ],
+  );
+
   const totalBet = placedBets.reduce((sum, b) => sum + b.amount, 0);
 
   return {
     placeBet,
+    moveMainBet,
     isBettingOpen,
     isOpposingBlocked,
     selectedChip,
