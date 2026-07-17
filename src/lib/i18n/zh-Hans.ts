@@ -147,6 +147,7 @@ const zhHans: Record<string, string> = {
   "hist.loss": "输",
   "hist.push": "和局退还",
   "hist.pending": "结算中",
+  "hist.void": "已作废",
 
   /* Low balance */
   "low.title": "余额不足",

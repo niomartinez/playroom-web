@@ -147,6 +147,7 @@ const en: Record<string, string> = {
   "hist.loss": "Loss",
   "hist.push": "Push",
   "hist.pending": "Pending",
+  "hist.void": "Void",
 
   /* Low balance */
   "low.title": "Low Balance",

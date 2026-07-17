@@ -15,7 +15,12 @@ const RELOAD_EVT = "prg:video-reload";
 /** Persisted stream volume, 0..1 (defaults to 1). */
 export function getVolume(): number {
   if (typeof window === "undefined") return 1;
-  const v = Number(window.localStorage.getItem(VOLUME_KEY));
+  const raw = window.localStorage.getItem(VOLUME_KEY);
+  // Check for the absent key explicitly: Number(null) is 0, which is finite
+  // and inside 0..1, so it would sail past the guard below and hand every
+  // first-time player a silent stream that unmuting cannot rescue.
+  if (raw === null) return 1;
+  const v = Number(raw);
   return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 1;
 }
 

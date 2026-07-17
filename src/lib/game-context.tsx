@@ -190,6 +190,8 @@ export interface GameState {
 
   /* Live state */
   balance: number;
+  /** False until the balance socket delivers the wallet's real figure. */
+  balanceLoaded: boolean;
   /**
    * ISO-4217 currency code for the player's wallet. Drives the money symbol
    * across the UI (see lib/currency.ts). Defaults to "PHP"; the balance WS
@@ -224,6 +226,7 @@ export interface GameState {
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
+  setBalanceLoaded: (v: boolean) => void;
   setCurrency: (c: string) => void;
   /**
    * Change the active UI language and persist it. A persisted choice takes
@@ -295,6 +298,11 @@ export function GameProvider({
   const [minBet, setMinBet] = useState<number | null>(null);
   const [maxBet, setMaxBet] = useState<number | null>(null);
   const [balance, setBalance] = useState(0);
+  // Whether `balance` is the wallet's authoritative figure yet, or still the
+  // initial 0. Consumers can't infer this from the value: a broke player
+  // legitimately has 0. #4 needs the distinction so it doesn't accuse a funded
+  // player of being short before the balance socket has said a word.
+  const [balanceLoaded, setBalanceLoaded] = useState(false);
   const [currency, setCurrency] = useState("PHP");
 
   /**
@@ -531,6 +539,7 @@ export function GameProvider({
     setMinBet,
     setMaxBet,
     balance,
+    balanceLoaded,
     currency,
     roundStatus,
     currentRound,
@@ -545,6 +554,7 @@ export function GameProvider({
     setTableName,
     setDealerName,
     setBalance,
+    setBalanceLoaded,
     setCurrency,
     setLang,
     setRoundStatus,

@@ -15,7 +15,7 @@ import { formatMoney } from "@/lib/currency";
  * known (plumbed from table state), so it never false-fires.
  */
 export default function LowBalanceModal() {
-  const { balance, minBet, currency, roundStatus, currentRound, token } = useGame();
+  const { balance, balanceLoaded, minBet, currency, roundStatus, currentRound, token } = useGame();
   const t = useT();
   const [open, setOpen] = useState(false);
   const [dismissedRound, setDismissedRound] = useState<string | null>(null);
@@ -25,11 +25,20 @@ export default function LowBalanceModal() {
   useEffect(() => {
     if (token === "demo") return;
     if (minBet == null || minBet <= 0) return;
+    // `balance` is 0 until the balance socket reports in, and that socket can
+    // lose the race against min-bet recovery + the lobby's betting_open.
+    // Without this gate a fully-funded player gets told they're short on load.
+    if (!balanceLoaded) return;
     if (roundStatus !== "betting_open") return;
-    if (balance >= minBet) return;
+    // Recovered (deposit, settlement credit) — honour the contract above and
+    // stand down instead of leaving a stale warning on screen.
+    if (balance >= minBet) {
+      setOpen(false);
+      return;
+    }
     if (roundKey && dismissedRound === roundKey) return;
     setOpen(true);
-  }, [roundStatus, roundKey, balance, minBet, token, dismissedRound]);
+  }, [roundStatus, roundKey, balance, balanceLoaded, minBet, token, dismissedRound]);
 
   if (!open) return null;
 

@@ -119,7 +119,16 @@ export default function MainBets() {
       setDrag(null);
       return;
     }
-    suppressClickRef.current = true; // it was a drag, not a tap
+    // It was a drag, not a tap — swallow the click the browser fires next.
+    // Self-clear on the following macrotask (the trailing click dispatches
+    // before it): the flag is only otherwise consumed by handleBet, and a
+    // Player<->Banker move can leave the source pad disabled by the opposing-
+    // bet rule, so no click ever arrives and the flag would strand — eating
+    // the player's next real tap on any pad.
+    suppressClickRef.current = true;
+    setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
     const over = findPadCode(e.clientX, e.clientY);
     setDrag(null);
     if (over && over !== st.from) void moveMainBet(st.from, over);

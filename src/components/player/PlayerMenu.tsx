@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useT, type TFunction } from "@/lib/i18n";
-import { formatMoney } from "@/lib/currency";
+import { formatBalance, formatMoney } from "@/lib/currency";
 import {
   getMuted,
   getVolume,
@@ -35,7 +35,7 @@ interface HistItem {
   betAmount: number;
   payoff: number;
   net: number;
-  outcome: "win" | "loss" | "push" | "pending";
+  outcome: "win" | "loss" | "push" | "pending" | "void";
   time: string | null;
 }
 
@@ -478,8 +478,8 @@ function HistoryPanel({ t, currency, isDemo }: { t: TFunction; currency: string;
     return <div style={{ textAlign: "center", fontSize: 13, color: "#6a7282", padding: "28px 0" }}>{t("hist.empty")}</div>;
   }
 
-  const color: Record<string, string> = { win: "#05df72", loss: "#fb2c36", push: "#9ca3af", pending: "#f0b100" };
-  const label: Record<string, string> = { win: t("hist.win"), loss: t("hist.loss"), push: t("hist.push"), pending: t("hist.pending") };
+  const color: Record<string, string> = { win: "#05df72", loss: "#fb2c36", push: "#9ca3af", pending: "#f0b100", void: "#9ca3af" };
+  const label: Record<string, string> = { win: t("hist.win"), loss: t("hist.loss"), push: t("hist.push"), pending: t("hist.pending"), void: t("hist.void") };
 
   return (
     <div style={{ border: "1px solid #24314a", borderRadius: 10, overflow: "hidden" }}>
@@ -503,10 +503,13 @@ function HistoryPanel({ t, currency, isDemo }: { t: TFunction; currency: string;
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: color[it.outcome], fontVariantNumeric: "tabular-nums" }}>
+              {/* formatBalance, not formatMoney: a net can carry cents (a
+                  ₱50 banker win nets ₱47.50) and rounding it to ₱48 is the
+                  exact misreport item #3 exists to prevent. */}
               {it.outcome === "win"
-                ? `+${formatMoney(it.net, currency)}`
+                ? `+${formatBalance(it.net, currency)}`
                 : it.outcome === "loss"
-                  ? `-${formatMoney(it.betAmount, currency)}`
+                  ? `-${formatBalance(it.betAmount, currency)}`
                   : label[it.outcome]}
             </div>
             <div style={{ fontSize: 10, color: color[it.outcome], fontWeight: 700 }}>{label[it.outcome]}</div>

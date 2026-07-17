@@ -30,6 +30,7 @@ export function useBalanceWs() {
   const {
     token,
     setBalance,
+    setBalanceLoaded,
     setCurrency,
     setRecentWin,
     stackedChips,
@@ -41,6 +42,7 @@ export function useBalanceWs() {
   // Refs avoid stale closures inside ws.onmessage without forcing reconnects.
   const settersRef = useRef({
     setBalance,
+    setBalanceLoaded,
     setCurrency,
     setRecentWin,
     stackedChips,
@@ -50,6 +52,7 @@ export function useBalanceWs() {
   });
   settersRef.current = {
     setBalance,
+    setBalanceLoaded,
     setCurrency,
     setRecentWin,
     stackedChips,
@@ -153,6 +156,9 @@ export function useBalanceWs() {
           } else {
             s.setBalance(balance);
           }
+          // The wallet has now spoken, so `balance` is authoritative rather
+          // than the initial 0 (see #4 / LowBalanceModal).
+          s.setBalanceLoaded(true);
           sendToParent("balanceUpdate", { balance });
         }
 
