@@ -30,6 +30,7 @@ export default function BetStackedChips({
   return (
     <div
       aria-hidden="true"
+      data-stacked-chips=""
       style={{
         position: "absolute",
         bottom: 4,

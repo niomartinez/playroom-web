@@ -75,15 +75,62 @@ const MAIN_CODES = new Set<BetCode>(["BAC_Player", "BAC_Tie", "BAC_Banker"]);
 export default function MainBets() {
   const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
   const { toast } = useToast();
-  const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound } = useGame();
+  const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound, stackedChips } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   const sym = symbolFor(currency);
 
+  // Drag ghost sizing. Chips overlap into a stack rather than sitting in a
+  // row so the whole thing stays thumb-sized while dragging.
+  const DRAG_CHIP_SIZE = 40;
+  /** Vertical gap between chips in the carried stack. */
+  const DRAG_CHIP_STAGGER = 7;
+  /** How far above the finger the stack rides, so it isn't under the thumb. */
+  const DRAG_LIFT = 26;
+  /** How long a chip takes to reach the cursor — this lag IS the weight. */
+  const DRAG_FOLLOW_MS = 90;
+  /** Each chip up the stack lags a little more, so the stack flexes. */
+  const DRAG_FOLLOW_STAGGER_MS = 45;
+  /** How long the chips take to settle into the pad after you let go. */
+  const DRAG_LAND_MS = 260;
+
   // #2 — drag-to-move a placed main bet to another main pad.
-  const [drag, setDrag] = useState<{ from: BetCode; x: number; y: number; over: BetCode | null } | null>(null);
-  const dragStartRef = useRef<{ from: BetCode; x: number; y: number; active: boolean } | null>(null);
+  const [drag, setDrag] = useState<{
+    from: BetCode;
+    x: number;
+    y: number;
+    over: BetCode | null;
+    /**
+     * Denominations under the finger, snapshotted when the drag starts.
+     * Deliberately NOT read live off stackedChips: the move is optimistic, so
+     * the source pad is already empty by the time the landing animation runs
+     * and the ghost would render as nothing mid-flight.
+     */
+    denoms: number[];
+    /** Set on drop: the ghost is gliding into the target pad, not tracking a finger. */
+    landing?: boolean;
+  } | null>(null);
+  const dragStartRef = useRef<{
+    from: BetCode;
+    x: number;
+    y: number;
+    active: boolean;
+    /** Where the chips physically sit on the pad — the stack lifts from here. */
+    originX: number;
+    originY: number;
+  } | null>(null);
   const suppressClickRef = useRef(false);
+
+  /**
+   * The real denominations sitting on a pad, highest first — the same set
+   * BetStackedChips draws on the button, so what you pick up looks like what
+   * was there. The ghost used to be a generic gold disc with a right-arrow
+   * glyph in it, which read as a cursor rather than as the player's money.
+   */
+  const padDenoms = (code: BetCode): number[] =>
+    Array.from(new Set((stackedChips[code] ?? []).map((c) => c.denom)))
+      .sort((a, b) => b - a)
+      .slice(0, 3);
 
   const findPadCode = (x: number, y: number): BetCode | null => {
     if (typeof document === "undefined") return null;
@@ -97,7 +144,19 @@ export default function MainBets() {
     if (!isBettingOpen) return;
     const myTotal = placedBets.filter((b) => b.betCode === betCode).reduce((s, b) => s + b.amount, 0);
     if (myTotal <= 0) return; // nothing to drag — leave it a normal tap
-    dragStartRef.current = { from: betCode, x: e.clientX, y: e.clientY, active: false };
+    // Lift from where the chips actually are, not from the fingertip: the
+    // stack should look picked UP off the felt rather than conjured under
+    // the cursor.
+    const chipsEl = e.currentTarget.querySelector("[data-stacked-chips]") as HTMLElement | null;
+    const cr = (chipsEl ?? e.currentTarget).getBoundingClientRect();
+    dragStartRef.current = {
+      from: betCode,
+      x: e.clientX,
+      y: e.clientY,
+      active: false,
+      originX: cr.left + cr.width / 2,
+      originY: cr.top + cr.height / 2,
+    };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -109,9 +168,30 @@ export default function MainBets() {
     const st = dragStartRef.current;
     if (!st) return;
     if (!st.active && Math.hypot(e.clientX - st.x, e.clientY - st.y) < 8) return;
+    const justStarted = !st.active;
     st.active = true;
     const over = findPadCode(e.clientX, e.clientY);
-    setDrag({ from: st.from, x: e.clientX, y: e.clientY, over: over && over !== st.from ? over : null });
+    const nextOver = over && over !== st.from ? over : null;
+
+    if (justStarted) {
+      // First frame: park the stack on the pad. The very next frame moves it
+      // to the cursor, and because position is transitioned the chips visibly
+      // lift off the felt and fly to the hand instead of teleporting.
+      const denoms = padDenoms(st.from);
+      setDrag({ from: st.from, x: st.originX, y: st.originY, over: nextOver, denoms });
+      const { clientX, clientY } = e;
+      requestAnimationFrame(() =>
+        setDrag((prev) => (prev ? { ...prev, x: clientX, y: clientY } : prev)),
+      );
+      return;
+    }
+    setDrag((prev) => ({
+      from: st.from,
+      x: e.clientX,
+      y: e.clientY,
+      over: nextOver,
+      denoms: prev?.denoms ?? padDenoms(st.from),
+    }));
   };
 
   const onPadPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
@@ -132,14 +212,40 @@ export default function MainBets() {
       suppressClickRef.current = false;
     }, 0);
     const over = findPadCode(e.clientX, e.clientY);
-    setDrag(null);
-    // Tell the player when the move is refused. This result used to be
-    // discarded, so a rejected drag was indistinguishable from a missed one:
-    // the chips snapped back and nothing said why.
+
     if (over && over !== st.from) {
-      void moveMainBet(st.from, over).then((r) => {
-        if (!r.success && r.error) toast({ type: "error", message: r.error });
+      // Glide the chips into the pad rather than blinking them out of
+      // existence at the fingertip. Re-target the same ghost at the pad's
+      // centre and let CSS carry it there; the pad's own BetStackedChips
+      // have already appeared underneath (the move is optimistic), so the
+      // landing reads as the stack settling onto the felt.
+      const padEl =
+        typeof document !== "undefined"
+          ? (document.querySelector(`[data-bet-code="${over}"]`) as HTMLElement | null)
+          : null;
+      const r = padEl?.getBoundingClientRect();
+      if (r) {
+        setDrag((prev) => ({
+          from: st.from,
+          x: r.left + r.width / 2,
+          y: r.top + r.height / 2,
+          over,
+          denoms: prev?.denoms ?? padDenoms(st.from),
+          landing: true,
+        }));
+        window.setTimeout(() => setDrag(null), DRAG_LAND_MS);
+      } else {
+        setDrag(null);
+      }
+
+      // Tell the player when the move is refused. This result used to be
+      // discarded, so a rejected drag was indistinguishable from a missed
+      // one: the chips snapped back and nothing said why.
+      void moveMainBet(st.from, over).then((res) => {
+        if (!res.success && res.error) toast({ type: "error", message: res.error });
       });
+    } else {
+      setDrag(null);
     }
   };
 
@@ -148,30 +254,51 @@ export default function MainBets() {
     setDrag(null);
   };
 
+  const dragDenoms = drag?.denoms ?? [];
+
   const dragGhost = drag ? (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        left: drag.x,
-        top: drag.y,
-        transform: "translate(-50%, -50%)",
-        zIndex: 300,
-        pointerEvents: "none",
-        width: 42,
-        height: 42,
-        borderRadius: "50%",
-        background: "radial-gradient(circle at 50% 35%, #ffd34d, #c98a00)",
-        border: "2px solid #fff",
-        boxShadow: "0 6px 16px rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#5a3d00" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-      </svg>
+    <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: 300, pointerEvents: "none" }}>
+      {dragDenoms.map((denom, i) => {
+        // Every chip chases the cursor on its own transition, each a little
+        // slower than the one below it. Nothing here is scripted frame by
+        // frame — the browser is always interpolating toward the latest
+        // pointer position, so a fast flick stretches the stack out behind
+        // the hand and a pause lets it gather back together. That lag is the
+        // whole effect: it gives the chips weight, so they read as something
+        // soft being carried rather than a cursor icon pinned to the mouse.
+        const lag = DRAG_FOLLOW_MS + i * DRAG_FOLLOW_STAGGER_MS;
+        const lift = drag.landing ? 0 : DRAG_LIFT + i * DRAG_CHIP_STAGGER;
+        const scale = drag.landing ? 0.7 : drag.over ? 1.1 : 1;
+        return (
+          <img
+            key={denom}
+            src={`/mobile-assets/chip-${denom}.png`}
+            alt=""
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: DRAG_CHIP_SIZE,
+              height: DRAG_CHIP_SIZE,
+              borderRadius: "50%",
+              // translate3d keeps this on the compositor; animating left/top
+              // would relayout the whole overlay on every pointer event.
+              transform: `translate3d(${drag.x}px, ${drag.y}px, 0) translate(-50%, -50%) translateY(${-lift}px) scale(${scale})`,
+              transition: drag.landing
+                ? `transform ${DRAG_LAND_MS}ms cubic-bezier(0.2,0.75,0.3,1) ${i * 30}ms, opacity ${DRAG_LAND_MS}ms ease-in ${i * 30}ms`
+                : `transform ${lag}ms cubic-bezier(0.22,1,0.36,1)`,
+              // Fade out as they settle: the pad's own BetStackedChips are
+              // already underneath (the move is optimistic), so this hands
+              // the stack over rather than stacking two copies of it.
+              opacity: drag.landing ? 0 : 1,
+              zIndex: dragDenoms.length - i,
+              filter: drag.over
+                ? "drop-shadow(0 8px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 7px rgba(255,255,255,0.6))"
+                : "drop-shadow(0 8px 16px rgba(0,0,0,0.65))",
+            }}
+          />
+        );
+      })}
     </div>
   ) : null;
 

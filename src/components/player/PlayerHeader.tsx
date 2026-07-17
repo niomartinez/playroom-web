@@ -66,7 +66,15 @@ export default function PlayerHeader() {
 
   const statusLabel: Record<string, string> = {
     waiting: t("status.waiting"),
-    betting_open: countdown !== null ? t("status.placeBetsCountdown", { seconds: countdown }) : t("status.placeBets"),
+    // `countdown > 0`, not just non-null: betting stays open for a grace
+    // window past zero (BETTING_CLOSE_GRACE_SECONDS) so a late gesture the
+    // player made while the timer was still up is still honoured. During it
+    // the honest label is "PLACE BETS" — betting really is open — rather than
+    // a "(0s)" that reads as a stuck clock.
+    betting_open:
+      countdown !== null && countdown > 0
+        ? t("status.placeBetsCountdown", { seconds: countdown })
+        : t("status.placeBets"),
     dealing: t("status.dealing"),
     result: t("status.result"),
   };
