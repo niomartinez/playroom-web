@@ -8,6 +8,8 @@ import { useStateRecovery } from "@/lib/use-state-recovery";
 import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 import UsernameModal from "@/components/player/UsernameModal";
 import SessionGuard from "@/components/player/SessionGuard";
+import BetToasts from "@/components/player/BetToasts";
+import { ToastProvider } from "@/lib/toast-context";
 
 /* ------------------------------------------------------------------ */
 /*  Username gate                                                      */
@@ -171,11 +173,14 @@ function GameConnections({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <>
+    <ToastProvider>
       <UsernameGate>{children}</UsernameGate>
       {/* #5 — idle warnings + frozen "Session Expired" overlay. */}
       <SessionGuard />
-    </>
+      {/* Speaks when a bet action is refused — a drag that the server won't
+          take used to snap back silently. */}
+      <BetToasts />
+    </ToastProvider>
   );
 }
 

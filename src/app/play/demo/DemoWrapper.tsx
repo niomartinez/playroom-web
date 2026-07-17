@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { GameProvider, useGame } from "@/lib/game-context";
+import { ToastProvider } from "@/lib/toast-context";
+import BetToasts from "@/components/player/BetToasts";
 import { useLobbyWs } from "@/lib/use-lobby-ws";
 
 const DEMO_BALANCE = 10000;
@@ -109,6 +111,7 @@ export default function DemoWrapper({ children }: { children: ReactNode }) {
       cashierUrl={null}
       key={selectedTable}
     >
+      <ToastProvider>
       <DemoConnections>
         {/* Table selector — small dropdown, demo only */}
         <div
@@ -139,7 +142,11 @@ export default function DemoWrapper({ children }: { children: ReactNode }) {
           <span style={{ color: "#f0b100", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em" }}>DEMO</span>
         </div>
         {children}
+        {/* MainBets calls useToast to report a refused drag; the provider has
+            to exist on this route too or the whole page throws. */}
+        <BetToasts />
       </DemoConnections>
+      </ToastProvider>
     </GameProvider>
   );
 }

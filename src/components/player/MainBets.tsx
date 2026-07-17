@@ -8,6 +8,7 @@ import { dispatchChipFly } from "@/lib/chip-fly";
 import { symbolFor } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
+import { useToast } from "@/lib/toast-context";
 
 const BETS: Array<{
   name: string;
@@ -73,6 +74,7 @@ const MAIN_CODES = new Set<BetCode>(["BAC_Player", "BAC_Tie", "BAC_Banker"]);
 
 export default function MainBets() {
   const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
+  const { toast } = useToast();
   const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
@@ -131,7 +133,14 @@ export default function MainBets() {
     }, 0);
     const over = findPadCode(e.clientX, e.clientY);
     setDrag(null);
-    if (over && over !== st.from) void moveMainBet(st.from, over);
+    // Tell the player when the move is refused. This result used to be
+    // discarded, so a rejected drag was indistinguishable from a missed one:
+    // the chips snapped back and nothing said why.
+    if (over && over !== st.from) {
+      void moveMainBet(st.from, over).then((r) => {
+        if (!r.success && r.error) toast({ type: "error", message: r.error });
+      });
+    }
   };
 
   const onPadPointerCancel = () => {

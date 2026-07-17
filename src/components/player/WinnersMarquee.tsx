@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
-import { formatMoney } from "@/lib/currency";
+import { formatBalance } from "@/lib/currency";
 
 /** How long the winners list stays up after a round settles. */
 const SHOW_MS = 9000;
@@ -106,7 +106,11 @@ export default function WinnersMarquee() {
                 {w.user}
               </span>
               <span style={{ fontSize: 11, fontWeight: 800, color: "#05df72", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-                +{formatMoney(w.amount, currency)}
+                {/* formatBalance, not formatMoney: the backend broadcasts the
+                    NET win to the cent (a P50 banker win nets P47.50), and
+                    formatMoney rounds — it showed +P48. Same defect #3 exists
+                    to prevent, in a spot #3's fix didn't reach. */}
+                +{formatBalance(w.amount, currency)}
               </span>
             </div>
           ))}

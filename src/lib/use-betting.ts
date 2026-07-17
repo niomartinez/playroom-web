@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useGame, type BetCode, type PlacedBet } from "./game-context";
 import { beginBetMove, endBetMove } from "./bet-move";
 
@@ -28,6 +28,11 @@ export function useBetting() {
 
   const isBettingOpen = roundStatus === "betting_open";
   const isDemo = token === "demo";
+
+  // Guards against a second drag starting while one is still in flight.
+  // A ref, not state: the check and the set must be atomic within one
+  // handler, and a re-render between them would let both moves through.
+  const moveInFlightRef = useRef(false);
 
   // Check if a bet code is blocked due to opposing bet rule
   const isOpposingBlocked = useCallback(
@@ -121,14 +126,34 @@ export function useBetting() {
     [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
   );
 
-  // #2 — drag-to-move a MAIN bet from one pad to another. Under the hood it
-  // voids the source bet code (refund) and re-places the same total on the
-  // target (debit) — side bets are untouched. Balance is net-zero, so no
-  // wallet->pad chip is animated; the chips simply relocate. Betting-open only.
+  /**
+   * #2 — drag-to-move a MAIN bet from one pad to another. Side bets are never
+   * touched. Balance is net-zero, so no wallet->pad chip is animated; the
+   * chips simply relocate. Betting-open only.
+   *
+   * ONE server call. This used to be a client-side void-then-place pair, and
+   * the gap between them was a way to lose real money:
+   *
+   *  - A void that found nothing (the source bet was still in flight from a
+   *    tap a moment earlier) came back as SUCCESS, so we placed the target
+   *    and the original bet then landed — the player held two live bets,
+   *    double-debited, with only one on screen.
+   *  - Source voided but replacement rejected (over max as a consolidated
+   *    single bet, betting closed, opposing rule, network drop) → the round
+   *    was played with no bet at all, silently.
+   *
+   * /api/bet/move does both halves under one lock, validates the total
+   * against the target's limits BEFORE voiding anything, and returns a real
+   * error when the source isn't on the books.
+   */
   const moveMainBet = useCallback(
     async (fromCode: BetCode, toCode: BetCode): Promise<BetResult> => {
       if (!isBettingOpen) return { success: false, error: "Betting is closed" };
       if (fromCode === toCode) return { success: false, error: "Same pad" };
+      // Serialise moves. Two overlapping drags raced each other's void the
+      // same way a drag races a tap, and the second one's void found the
+      // first one's bet missing.
+      if (moveInFlightRef.current) return { success: false, error: "Move already in progress" };
 
       const fromBets = placedBets.filter((b) => b.betCode === fromCode);
       const total = fromBets.reduce((s, b) => s + b.amount, 0);
@@ -152,57 +177,49 @@ export function useBetting() {
 
       const fightId = currentRound?.roundId;
 
-      // Hold balance pushes for the duration. The server reports this
-      // net-zero move as refund-then-debit, and applying each as it lands
-      // made the balance crawl up by the stake and back down — as if the
-      // player had won and then re-bet. endBetMove applies whatever the
-      // server actually settled on, so a half-completed move (source
-      // refunded, replacement rejected) still shows the money returning.
-      beginBetMove();
-
-      // Roll the visible move back to "cancelled" (source already refunded).
-      const dropMoved = () => {
+      // Put the chips back exactly where they were. The server either moved
+      // the bet or it didn't — there is no half-done state to reconcile now
+      // that the move is atomic, so every failure restores the source.
+      const restoreSource = () => {
         removePlacedBet(newId);
         for (let i = 0; i < movedChipCount; i++) popStackedChip(toCode);
-      };
-      // Roll all the way back to the source (server unchanged).
-      const restoreSource = () => {
-        dropMoved();
         fromBets.forEach((b) => addPlacedBet(b));
         srcChips.forEach((c) => addStackedChip(fromCode, c.denom));
       };
 
+      // Hold balance pushes for the duration: the server ledgers a move as a
+      // refund of the source plus a debit of the replacement, and applying
+      // each as it landed made the balance crawl up by the stake and back
+      // down — reading as a payout followed by a fresh deduction.
+      moveInFlightRef.current = true;
+      beginBetMove();
       try {
-        const vres = await fetch("/api/bet/void", {
+        const res = await fetch("/api/bet/move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fight_id: fightId, bet_code: fromCode }),
+          body: JSON.stringify({
+            fight_id: fightId,
+            from_code: fromCode,
+            to_code: toCode,
+          }),
         });
-        const vdata = await vres.json().catch(() => ({}));
-        if (!vres.ok || (vdata.error_code && vdata.error_code !== "0")) {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || (data.error_code && data.error_code !== "0")) {
           restoreSource();
-          return { success: false, error: vdata.message || "Move failed" };
-        }
-
-        const pres = await fetch("/api/bet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fight_id: fightId, bet_code: toCode, bet_amount: total }),
-        });
-        const pdata = await pres.json().catch(() => ({}));
-        if (!pres.ok || (pdata.error_code && pdata.error_code !== "0")) {
-          // Source was voided + refunded; the replacement didn't land.
-          dropMoved();
-          return { success: false, error: pdata.message || "Move failed" };
+          return { success: false, error: data.message || "Move failed" };
         }
         return { success: true };
       } catch (err) {
-        dropMoved();
+        // The request may or may not have reached the server. Restore the
+        // visible source and let state recovery reconcile on next mount —
+        // the atomic move means the server is in one of two clean states.
+        restoreSource();
         return { success: false, error: err instanceof Error ? err.message : "Move failed" };
       } finally {
-        // Runs on every path, including the early returns above — the held
-        // balance must never be stranded, or the player's displayed balance
-        // stops tracking the server for the rest of the session.
+        moveInFlightRef.current = false;
+        // Runs on every path — a held balance must never be stranded, or the
+        // displayed balance stops tracking the server for the rest of the
+        // session.
         endBetMove((b) => setBalance(b));
       }
     },
