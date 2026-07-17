@@ -182,11 +182,15 @@ export default function MobileChat() {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cooldownUntilRef = useRef(0);
-  const seenRef = useRef(0);
+  // Seen-message tracking keys off message IDs, not an index into `messages`.
+  // The array is capped at 100 and REPLACED wholesale on reconnect, so an
+  // index watermark pinned at 100 (or shrunk on reconnect) permanently killed
+  // unread + floats mid-session. A Set of ids survives both.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const floatSeenIdsRef = useRef<Set<string>>(new Set());
   const hydratedRef = useRef(false);
   const prevUnreadRef = useRef(0);
   const focusExpandRef = useRef(false);
-  const floatSeenRef = useRef(0);
   const nameFetchedRef = useRef(false);
   const dragRef = useRef<{ startY: number; moved: number; active: boolean }>({
     startY: 0,
@@ -263,22 +267,26 @@ export default function MobileChat() {
   useEffect(() => {
     if (historyLoaded && !hydratedRef.current) {
       hydratedRef.current = true;
-      seenRef.current = messages.length;
-      floatSeenRef.current = messages.length;
+      for (const m of messages) {
+        seenIdsRef.current.add(m.id);
+        floatSeenIdsRef.current.add(m.id);
+      }
       setUnread(0);
     }
-  }, [historyLoaded, messages.length]);
+  }, [historyLoaded, messages]);
 
-  // Recompute the unread badge as messages arrive or the sheet opens.
+  // Recompute the unread badge as messages arrive or the sheet opens. Counts
+  // messages whose id we haven't marked seen — so a reconnect that replaces
+  // history with older lines (already-seen ids) doesn't spuriously badge them.
   useEffect(() => {
     if (!hydratedRef.current) return;
     if (isOpen) {
-      seenRef.current = messages.length;
+      for (const m of messages) seenIdsRef.current.add(m.id);
       setUnread(0);
     } else {
-      setUnread(Math.max(0, messages.length - seenRef.current));
+      setUnread(messages.reduce((n, m) => (seenIdsRef.current.has(m.id) ? n : n + 1), 0));
     }
-  }, [messages.length, isOpen]);
+  }, [messages, isOpen]);
 
   // Wiggle the button whenever a fresh unread arrives while closed.
   useEffect(() => {
@@ -292,17 +300,25 @@ export default function MobileChat() {
     if (!hydratedRef.current) return;
     if (isOpen) {
       setFloating([]);
-      floatSeenRef.current = messages.length;
+      for (const m of messages) floatSeenIdsRef.current.add(m.id);
       return;
     }
-    if (messages.length <= floatSeenRef.current) return;
-    const fresh = messages.slice(floatSeenRef.current);
-    floatSeenRef.current = messages.length;
+    // Fresh = ids not yet floated. Robust to the 100-cap and to a reconnect
+    // replacing the array: old ids are already in the set, so a reconnect
+    // never floods the feed with history, and the counter can't get stuck.
+    const fresh = messages.filter((m) => !floatSeenIdsRef.current.has(m.id));
+    if (fresh.length === 0) return;
+    for (const m of fresh) floatSeenIdsRef.current.add(m.id);
+    // Your OWN messages don't float back at you (spec). Best-effort by name —
+    // the only signal the wire gives us; when myName is unknown nothing is
+    // wrongly suppressed, it just can't filter yet.
+    const incoming = myName ? fresh.filter((m) => m.user !== myName) : fresh;
+    if (incoming.length === 0) return;
     const now = Date.now();
     setFloating((prev) =>
-      [...prev, ...fresh.map((m) => ({ key: m.id, user: m.user, text: m.text, expires: now + 5000 }))].slice(-3),
+      [...prev, ...incoming.map((m) => ({ key: m.id, user: m.user, text: m.text, expires: now + 5000 }))].slice(-3),
     );
-  }, [messages.length, isOpen]);
+  }, [messages, isOpen, myName]);
 
   // Prune expired floating bubbles.
   useEffect(() => {

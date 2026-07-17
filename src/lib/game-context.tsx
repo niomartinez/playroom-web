@@ -216,6 +216,9 @@ export interface GameState {
   recentWin: RecentWin | null;
   /** #6 — per-round winners for the marquee. */
   roundWinners: RoundWinners | null;
+  /** roundId of the most recent SERVER-CONFIRMED bet. Drives idle reset —
+   *  a rejected (rolled-back) bet must not count as activity. */
+  confirmedBetRoundId: string | null;
 
   /* Setters — accept direct values or functional updaters */
   setWebrtcUrl: (u: string | null) => void;
@@ -257,6 +260,7 @@ export interface GameState {
   moveStackedChips: (from: BetCode, to: BetCode) => void;
   setRecentWin: (w: RecentWin | null) => void;
   setRoundWinners: (w: RoundWinners | null) => void;
+  setConfirmedBetRoundId: (id: string | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -354,6 +358,7 @@ export function GameProvider({
   const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
   const [recentWin, setRecentWin] = useState<RecentWin | null>(null);
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
+  const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -551,6 +556,7 @@ export function GameProvider({
     stackedChips,
     recentWin,
     roundWinners,
+    confirmedBetRoundId,
     setTableName,
     setDealerName,
     setBalance,
@@ -574,6 +580,7 @@ export function GameProvider({
     moveStackedChips,
     setRecentWin,
     setRoundWinners,
+    setConfirmedBetRoundId,
   };
 
   return <GameContext value={value}>{children}</GameContext>;

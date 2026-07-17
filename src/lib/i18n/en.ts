@@ -152,6 +152,7 @@ const en: Record<string, string> = {
   /* Low balance */
   "gate.minimum": "Table minimum",
   "gate.short": "Short by",
+  "gate.addFundsHint": "Add funds through your operator to keep playing.",
   "gate.addFunds": "Add funds",
 
   /* Session / idle */

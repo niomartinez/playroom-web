@@ -27,6 +27,7 @@ export function useBetting() {
     addStackedChip,
     moveStackedChips,
     stackedChips,
+    setConfirmedBetRoundId,
   } = useGame();
 
   const isBettingOpen = roundStatus === "betting_open";
@@ -93,6 +94,8 @@ export function useBetting() {
       setBalance((b) => b - chipAmount);
 
       if (isDemo) {
+        // Demo bets never hit a server, so they're confirmed on the spot.
+        setConfirmedBetRoundId(String(currentRound?.roundId ?? ""));
         return { success: true };
       }
 
@@ -132,6 +135,11 @@ export function useBetting() {
           const data = await res.json().catch(() => ({}));
           if (!res.ok || (data.error_code && data.error_code !== "0")) {
             rollback(data.message || res.statusText || "rejected");
+          } else {
+            // Confirmed by the server. This — NOT the optimistic placement —
+            // is what counts as activity for the idle timer, so a bet that
+            // gets rejected can't keep a walked-away player in their seat.
+            setConfirmedBetRoundId(String(currentRound?.roundId ?? ""));
           }
         })
         .catch((err) => {
@@ -140,7 +148,7 @@ export function useBetting() {
 
       return { success: true };
     },
-    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, maxBet, currency, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, maxBet, currency, addPlacedBet, removePlacedBet, setBalance, popStackedChip, setConfirmedBetRoundId],
   );
 
   /**

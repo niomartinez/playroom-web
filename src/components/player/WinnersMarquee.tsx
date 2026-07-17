@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { formatBalance } from "@/lib/currency";
 
 /** How long the winners list stays up after a round settles. */
 const SHOW_MS = 9000;
+
+/**
+ * The last round whose winners we already showed — module-level on purpose,
+ * so it SURVIVES a remount. `roundWinners` lives in context and is never
+ * cleared, so a component-state guard resets to null when this unmounts
+ * (a mobile/desktop breakpoint flip, e.g. rotating a phone across 640px) and
+ * the effect re-fires against the stale value — replaying a round's winners
+ * that settled minutes ago. A module ref outlives the remount and won't.
+ */
+let lastShownRoundId: string | null = null;
 
 const STYLES = `
 @keyframes prgMarqueeV {
@@ -24,12 +34,12 @@ export default function WinnersMarquee() {
   const { roundWinners, currency } = useGame();
   const t = useT();
   const [visible, setVisible] = useState(false);
-  const lastRoundRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!roundWinners || roundWinners.winners.length === 0) return;
-    if (roundWinners.roundId && roundWinners.roundId === lastRoundRef.current) return;
-    lastRoundRef.current = roundWinners.roundId;
+    // Only show a round's winners ONCE, ever — tracked across remounts.
+    if (roundWinners.roundId && roundWinners.roundId === lastShownRoundId) return;
+    lastShownRoundId = roundWinners.roundId;
     setVisible(true);
     const id = setTimeout(() => setVisible(false), SHOW_MS);
     return () => clearTimeout(id);

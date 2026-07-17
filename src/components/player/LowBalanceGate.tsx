@@ -45,10 +45,21 @@ export default function LowBalanceGate() {
 
   if (!gated) return null;
 
+  // Whether ADD FUNDS can actually do anything:
+  //   - a launch cashierUrl → navigate there;
+  //   - embedded in an operator iframe → postMessage, the parent opens its
+  //     cashier (sendToParent is a NO-OP when we're the top window, which is
+  //     exactly the QA / direct-launch case that made the button look dead).
+  // With neither we must not render a bright CTA that goes nowhere; show the
+  // instruction instead so the placard is still honest.
+  const embedded =
+    typeof window !== "undefined" && window.self !== window.top;
+  const canAddFunds = Boolean(cashierUrl) || embedded;
+
   const addFunds = () => {
     if (cashierUrl && typeof window !== "undefined") {
       window.location.href = cashierUrl;
-    } else {
+    } else if (embedded) {
       sendToParent("openCashier", { reason: "below_table_minimum" });
     }
   };
@@ -112,25 +123,42 @@ export default function LowBalanceGate() {
         <Stat label={t("gate.minimum")} value={formatMoney(minBet!, currency)} />
         <Stat label={t("gate.short")} value={formatMoney(short, currency)} accent />
 
-        <button
-          onClick={addFunds}
-          style={{
-            flexShrink: 0,
-            minHeight: 44, // iOS touch target
-            padding: "0 clamp(20px, 6vw, 34px)",
-            border: "none",
-            borderRadius: 8,
-            background: "#f0b100",
-            color: "#0b0b0b",
-            fontSize: "clamp(14px, 1.6vh, 15px)",
-            fontWeight: 800,
-            letterSpacing: "0.01em",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          {t("gate.addFunds")}
-        </button>
+        {canAddFunds ? (
+          <button
+            onClick={addFunds}
+            style={{
+              flexShrink: 0,
+              minHeight: 44, // iOS touch target
+              padding: "0 clamp(20px, 6vw, 34px)",
+              border: "none",
+              borderRadius: 8,
+              background: "#f0b100",
+              color: "#0b0b0b",
+              fontSize: "clamp(14px, 1.6vh, 15px)",
+              fontWeight: 800,
+              letterSpacing: "0.01em",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {t("gate.addFunds")}
+          </button>
+        ) : (
+          // No cashier reachable (direct/QA launch). A dead yellow button
+          // reads as broken; a plain instruction reads as intended.
+          <div
+            data-prg-placard
+            style={{
+              flexShrink: 0,
+              fontSize: "clamp(12px, 1.5vh, 14px)",
+              fontWeight: 600,
+              color: "#9aa4b2",
+              maxWidth: 220,
+            }}
+          >
+            {t("gate.addFundsHint")}
+          </div>
+        )}
       </div>
     </div>
   );

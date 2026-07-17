@@ -152,6 +152,7 @@ const zhHans: Record<string, string> = {
   /* Low balance */
   "gate.minimum": "台面最低",
   "gate.short": "还差",
+  "gate.addFundsHint": "请通过您的运营商充值以继续游戏。",
   "gate.addFunds": "充值",
 
   /* Session / idle */

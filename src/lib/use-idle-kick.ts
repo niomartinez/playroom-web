@@ -30,7 +30,7 @@ export interface IdleSessionState {
 }
 
 export function useIdleSession(): IdleSessionState {
-  const { token, roundStatus, currentRound, placedBets } = useGame();
+  const { token, roundStatus, currentRound, placedBets, confirmedBetRoundId } = useGame();
 
   // Resolved once per mount: reading window.location during render would
   // differ between server and client and trip hydration.
@@ -45,14 +45,29 @@ export function useIdleSession(): IdleSessionState {
   const lastRoundIdRef = useRef<string | null>(null);
   const placedThisRoundRef = useRef(false);
 
-  // Track whether at least one bet was placed during the current round.
-  // Betting also clears any active warning immediately for responsive feedback.
+  // Clear an active warning the instant a chip goes down — responsive, and
+  // harmless if the bet is later rejected (the warning just returns next
+  // transition). This does NOT decide whether the round counts as active.
   useEffect(() => {
     if (placedBets.length > 0) {
-      placedThisRoundRef.current = true;
       setWarnLevel((w) => (w === 0 ? w : 0));
     }
   }, [placedBets.length]);
+
+  // What actually resets the idle counter: a bet the SERVER confirmed for the
+  // current round. Keying off the optimistic placement let a rejected bet
+  // (below min, over max, wallet 5xx) count as activity — so a player who
+  // taps a rejected bet each round never idled out. With freeze now at a
+  // single missed round, that gap was the whole rule.
+  useEffect(() => {
+    if (
+      confirmedBetRoundId &&
+      currentRound?.roundId != null &&
+      String(currentRound.roundId) === confirmedBetRoundId
+    ) {
+      placedThisRoundRef.current = true;
+    }
+  }, [confirmedBetRoundId, currentRound?.roundId]);
 
   // Evaluate at every transition into a fresh betting_open round.
   useEffect(() => {
