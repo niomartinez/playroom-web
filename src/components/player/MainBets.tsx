@@ -326,16 +326,24 @@ export default function MainBets() {
       if (!isBettingOpen) return;
       // Snapshot the chip denom we'll animate (selectedChip can change after placeBet)
       const flyDenom = selectedChip;
-      // Pre-check: don't animate if the bet would be rejected
+      // Pre-check: don't animate a chip fly if the bet would be rejected —
+      // the fly would land a marker on a pad that gets no bet.
       if (selectedChip > balance || isOpposingBlocked(betCode)) {
-        await placeBet(betCode);
+        const res = await placeBet(betCode);
+        if (!res.success && res.error) toast({ type: "error", message: res.error });
         return;
       }
       // Fire the fly first so origin coords come from the still-active chip.
       dispatchChipFly({ betCode, denom: flyDenom, targetEl, addFlyingChip });
-      await placeBet(betCode);
+      const res = await placeBet(betCode);
+      // Every rejection now says why. This was silent: a bet over the table
+      // max optimistically debited, crawled the balance down, got rejected,
+      // crawled it back up — with no word to the player about what happened.
+      // placeBet now refuses an over-max chip before any debit, so there's
+      // no crawl; this surfaces the reason.
+      if (!res.success && res.error) toast({ type: "error", message: res.error });
     },
-    [isBettingOpen, placeBet, selectedChip, balance, isOpposingBlocked, addFlyingChip],
+    [isBettingOpen, placeBet, selectedChip, balance, isOpposingBlocked, addFlyingChip, toast],
   );
 
   /* ── Mobile layout ── */

@@ -7,6 +7,7 @@ import { useGame, type BetCode } from "@/lib/game-context";
 import { dispatchChipFly } from "@/lib/chip-fly";
 import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
+import { useToast } from "@/lib/toast-context";
 
 const SIDE_BETS: Array<{
   name: string;
@@ -63,6 +64,7 @@ const SIDE_BETS: Array<{
 export default function SideBets() {
   const { placeBet, isBettingOpen, placedBets, selectedChip } = useBetting();
   const { balance, addFlyingChip } = useGame();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const t = useT();
 
@@ -71,13 +73,15 @@ export default function SideBets() {
       if (!isBettingOpen) return;
       const flyDenom = selectedChip;
       if (selectedChip > balance) {
-        await placeBet(betCode);
+        const res = await placeBet(betCode);
+        if (!res.success && res.error) toast({ type: "error", message: res.error });
         return;
       }
       dispatchChipFly({ betCode, denom: flyDenom, targetEl, addFlyingChip });
-      await placeBet(betCode);
+      const res = await placeBet(betCode);
+      if (!res.success && res.error) toast({ type: "error", message: res.error });
     },
-    [isBettingOpen, placeBet, selectedChip, balance, addFlyingChip],
+    [isBettingOpen, placeBet, selectedChip, balance, addFlyingChip, toast],
   );
 
   if (isMobile) {

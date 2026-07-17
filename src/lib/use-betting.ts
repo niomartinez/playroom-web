@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useGame, type BetCode, type PlacedBet } from "./game-context";
 import { beginBetMove, endBetMove } from "./bet-move";
+import { formatBalance } from "./currency";
 
 export interface BetResult {
   success: boolean;
@@ -17,6 +18,8 @@ export function useBetting() {
     selectedChip,
     placedBets,
     balance,
+    maxBet,
+    currency,
     addPlacedBet,
     removePlacedBet,
     setBalance,
@@ -55,11 +58,25 @@ export function useBetting() {
       if (!isBettingOpen) {
         return { success: false, error: "Betting is closed" };
       }
+      // Check the table ceiling BEFORE the optimistic debit. The backend caps
+      // each bet at max_bet, so a chip over it is rejected — and if we debit
+      // first and roll back after the round-trip, the balance visibly crawls
+      // down and then back up, reading as money lost and returned. Refuse it
+      // up front instead: no debit, no crawl, just the reason.
+      if (maxBet != null && maxBet > 0 && selectedChip > maxBet) {
+        return {
+          success: false,
+          error: `Max bet is ${formatBalance(maxBet, currency)} on this table`,
+        };
+      }
       if (selectedChip > balance) {
-        return { success: false, error: "Insufficient balance" };
+        return { success: false, error: "Not enough balance for that chip" };
       }
       if (isOpposingBlocked(betCode)) {
-        return { success: false, error: "Opposing bets are not allowed" };
+        return {
+          success: false,
+          error: "You can't bet Player and Banker in the same round",
+        };
       }
 
       // Optimistic UI: deduct + place chip immediately so the click feels snappy.
@@ -123,7 +140,7 @@ export function useBetting() {
 
       return { success: true };
     },
-    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, maxBet, currency, addPlacedBet, removePlacedBet, setBalance, popStackedChip],
   );
 
   /**
@@ -158,6 +175,17 @@ export function useBetting() {
       const fromBets = placedBets.filter((b) => b.betCode === fromCode);
       const total = fromBets.reduce((s, b) => s + b.amount, 0);
       if (total <= 0) return { success: false, error: "No bet to move" };
+      // A move consolidates the whole pad into ONE bet, so a stack that was
+      // fine as several taps can exceed the table max as a single bet. Catch
+      // it here for an instant, clean message — the server enforces it too
+      // (and does so before voiding anything, so nothing is lost either way),
+      // but the round-trip error box is what looked broken.
+      if (maxBet != null && maxBet > 0 && total > maxBet) {
+        return {
+          success: false,
+          error: `Max bet is ${formatBalance(maxBet, currency)} — that stack is ${formatBalance(total, currency)}`,
+        };
+      }
 
       const srcChips = [...(stackedChips[fromCode] ?? [])];
       const movedChipCount = srcChips.length;
@@ -235,6 +263,8 @@ export function useBetting() {
       popStackedChip,
       addStackedChip,
       setBalance,
+      maxBet,
+      currency,
     ],
   );
 
