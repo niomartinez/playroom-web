@@ -44,10 +44,24 @@ desktop) → How to Play / Payouts & Limits / Sound & Video / Game History.
    Items that need the backend deployed: **#11/#4** (table min/max), **#6**
    (winners), **#10** (bet history), **#2** (targeted void). They degrade
    gracefully until then (limits show "—", low-balance dormant, no marquee).
-2. A **studio dealer must be running rounds on the table you test** (e.g.
-   `BAC-TABLE-01`) — otherwise the market never opens (this bit us before: the
-   studio was dealing `TEST-BAC-TABLE-01` while OCMS players were on
-   `BAC-TABLE-01`).
+2. **Rounds must be running on the table you test.** No human dealer needed —
+   from the backend repo root with the venv active:
+   ```bash
+   python -m scripts.mock_dealer                     # loop BAC-TABLE-01, Ctrl-C to stop
+   python -m scripts.mock_dealer --betting-time 30   # wider window to bet/drag in
+   ```
+   It loops `POST /internal/emulator/deal`, which runs a full round through the
+   same pipeline as the real Angel Eye bridge. Without rounds the market never
+   opens and #2/#4/#5/#6/#10 are all inert.
+3. **The player's operator MUST own the table.** The lobby WS filters every
+   round broadcast by `operator_id`: a mismatched player connects, gets the
+   initial snapshot, then receives *nothing* — no error, just a frozen UI. On
+   staging `BAC-TABLE-01`/`-02` belong to **OCMS Philippines**; the `TEST*`
+   tables are operator-less (unscoped, so any player receives them).
+   `mint_test_tokens` now derives the operator from the table, so this is
+   handled — but if round events ever go missing, check this first. (Quick
+   triage: a `role:"studio"` ticket is unscoped, so if studio sees frames and
+   the player doesn't, it's scoping — not the socket.)
 
 ---
 
@@ -105,7 +119,9 @@ Run these in `playroom-web` unless noted:
 
 ```bash
 npm run build            # must compile clean
-npm run lint             # must pass
+npx tsc --noEmit         # must pass. NOT `npm run lint` — that script is still
+                         # `next lint`, which Next 16 removed, and eslint isn't
+                         # installed, so it only ever errors on a bogus path.
 ```
 
 Backend (`topless-casino-backend`, venv active):
@@ -117,10 +133,10 @@ pytest tests/test_bet_void.py tests/test_bet.py -q      # bet/void + place paths
 Backend endpoint smoke (needs a minted token = the `token` from a `/play` URL):
 ```bash
 TOKEN=... ; curl -s https://staging-api.playroomgaming.ph/internal/me/bet-history \
-  -H "X-Service-Key: $API_SERVICE_KEY" -H "X-Session-Token: $TOKEN" | jq .
+  -H "X-Service-Key: $INTERNAL_SERVICE_KEY" -H "X-Session-Token: $TOKEN" | jq .
 # table limits present:
 curl -s https://staging-api.playroomgaming.ph/internal/tables/BAC-TABLE-01/state \
-  -H "X-Service-Key: $API_SERVICE_KEY" | jq '.data.table | {min_bet, max_bet}'
+  -H "X-Service-Key: $INTERNAL_SERVICE_KEY" | jq '.data.table | {min_bet, max_bet}'
 ```
 
 **Playwright (demo route, no token needed).** There's no player e2e yet
