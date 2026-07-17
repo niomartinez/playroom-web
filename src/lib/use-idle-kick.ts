@@ -11,10 +11,9 @@ import { resolveIdlePolicy, type IdlePolicy } from "./idle-policy";
  *   - `warn2` idle rounds  → warnLevel 2 ("place a bet to keep your seat")
  *   - `expire` idle rounds → expired (frozen "Session Expired" overlay)
  *
- * The thresholds are config, not constants — see `idle-policy.ts`. Today's
- * rule is one missed round: bet a round, skip the next, and the overlay lands
- * as the round after that opens. Warnings are off at that setting because
- * they'd fire on the same transition as the freeze.
+ * The thresholds are SERVER-OWNED — delivered in table state (idlePolicy) and
+ * resolved in `idle-policy.ts`. A QA URL override is honoured off-prod only, so
+ * a production player can't lengthen or disable their own freeze via the URL.
  *
  * Placing at least one bet in a round resets the counter. Demo mode is exempt.
  *
@@ -30,12 +29,12 @@ export interface IdleSessionState {
 }
 
 export function useIdleSession(): IdleSessionState {
-  const { token, roundStatus, currentRound, placedBets, confirmedBetRoundId } = useGame();
+  const { token, roundStatus, currentRound, placedBets, confirmedBetRoundId, idlePolicy } = useGame();
 
   // Resolved once per mount: reading window.location during render would
   // differ between server and client and trip hydration.
   const policyRef = useRef<IdlePolicy | null>(null);
-  if (policyRef.current === null) policyRef.current = resolveIdlePolicy();
+  if (policyRef.current === null) policyRef.current = resolveIdlePolicy(idlePolicy);
   const policy = policyRef.current;
 
   const [warnLevel, setWarnLevel] = useState<0 | 1 | 2>(0);

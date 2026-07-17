@@ -1,25 +1,25 @@
 "use client";
 
+import { API_BASE } from "./ws-config";
+
 /**
  * How many consecutive no-bet rounds a player gets before the session
  * escalates, and how far it escalates.
  *
- * Configurable rather than hardcoded because this number is a product
- * decision that gets retuned, and because testing it costs a full round per
- * step — proving a 6-round ladder against a 25s round loop is two and a half
- * minutes of sitting on your hands, per attempt.
+ * SOURCE OF TRUTH IS THE SERVER. The backend sends `idle_policy` in table
+ * state (from system_config, see backend config_cache.get_idle_policy). The
+ * client must not decide its own enforcement thresholds — a value the player
+ * controls can be bypassed.
  *
- * Resolution order (first wins):
- *   1. URL params — `?idleExpire=6&idleWarn1=4&idleWarn2=5`
- *   2. Env — NEXT_PUBLIC_IDLE_EXPIRE / _WARN_1 / _WARN_2
- *   3. DEFAULT_IDLE_POLICY below
+ * The `?idleExpire=…&idleWarn1=…&idleWarn2=…` URL override exists ONLY for QA
+ * and is honoured ONLY off-production (staging / localhost). In production the
+ * URL is ignored outright, so a player cannot lengthen or disable their own
+ * idle freeze by editing the address bar. Fail-closed: anything that isn't
+ * clearly a non-prod API host is treated as prod.
  *
- * The URL override is the one that matters for QA: it re-tunes a live
- * session with a reload, no redeploy. It is read-only and affects nothing
- * server-side — a player who sets `?idleExpire=999` only postpones their own
- * overlay, they don't gain a seat they'd otherwise lose. Idle removal isn't
- * enforced by the backend at all today, so this grants nothing that wasn't
- * already available by simply not loading our page.
+ * (Reminder: idle removal is a client-side UX behaviour today — it blocks the
+ * player's own view. It is NOT server-enforced, so it frees no seat and stops
+ * no payout on its own. Real enforcement would be a backend feature.)
  */
 export interface IdlePolicy {
   /** Idle rounds before the amber warning. `null` disables it. */
@@ -31,22 +31,20 @@ export interface IdlePolicy {
 }
 
 /**
- * Current rule: one missed round and you're out.
- *
- * Bet a round, skip the next, and the overlay lands as the round after that
- * opens. The warnings are off because there is nowhere to put them — at
- * `expire: 1` any warning would fire on the same round transition as the
- * freeze itself, which is just a freeze with extra steps.
- *
- * This replaces the original BOD ladder (warn 4 / final 5 / freeze 6). To get
- * that back for a demo, no deploy needed:
- *   /play?...&idleWarn1=4&idleWarn2=5&idleExpire=6
+ * Last-resort default, used only if the server sends nothing (e.g. a demo
+ * table). Mirrors the backend default so the two never silently disagree.
  */
 export const DEFAULT_IDLE_POLICY: IdlePolicy = {
-  warn1: null,
-  warn2: null,
-  expire: 1,
+  warn1: 4,
+  warn2: 5,
+  expire: 6,
 };
+
+/** Whether the QA URL override is allowed — non-prod API hosts only. */
+export function urlOverrideAllowed(apiBase: string = API_BASE): boolean {
+  // Explicit allow-list, fail-closed. Only staging / preview / local dev.
+  return /staging|localhost|127\.0\.0\.1|\bpreview\b/i.test(apiBase);
+}
 
 /** Parse a positive integer, or null if absent/junk. Never throws. */
 function readInt(raw: string | null | undefined): number | null {
@@ -55,34 +53,40 @@ function readInt(raw: string | null | undefined): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export function resolveIdlePolicy(search?: string): IdlePolicy {
+function clamp(p: IdlePolicy): IdlePolicy {
+  // A warning at or past the freeze can never fire — drop it.
+  const warn1 = p.warn1 != null && p.warn1 < p.expire ? p.warn1 : null;
+  const warn2 = p.warn2 != null && p.warn2 < p.expire ? p.warn2 : null;
+  return { warn1, warn2, expire: p.expire };
+}
+
+/**
+ * Resolve the effective policy.
+ *
+ * @param serverPolicy  what table state delivered (the authority), or null.
+ * @param search        location.search, for the QA override (off-prod only).
+ */
+export function resolveIdlePolicy(
+  serverPolicy?: Partial<IdlePolicy> | null,
+  search?: string,
+): IdlePolicy {
+  // Base = server value, falling back field-by-field to the default.
+  const base: IdlePolicy = {
+    expire: serverPolicy?.expire ?? DEFAULT_IDLE_POLICY.expire,
+    warn1: serverPolicy?.warn1 ?? DEFAULT_IDLE_POLICY.warn1,
+    warn2: serverPolicy?.warn2 ?? DEFAULT_IDLE_POLICY.warn2,
+  };
+
+  if (!urlOverrideAllowed()) {
+    // Production: the address bar cannot touch this.
+    return clamp(base);
+  }
+
   const qs =
-    search ??
-    (typeof window !== "undefined" ? window.location.search : "");
+    search ?? (typeof window !== "undefined" ? window.location.search : "");
   const params = new URLSearchParams(qs);
-
-  const expire =
-    readInt(params.get("idleExpire")) ??
-    readInt(process.env.NEXT_PUBLIC_IDLE_EXPIRE) ??
-    DEFAULT_IDLE_POLICY.expire;
-
-  // A warning at or past the freeze can never fire, so drop it rather than
-  // leave a rung that silently does nothing.
-  const clampWarn = (v: number | null): number | null =>
-    v != null && v < expire ? v : null;
-
-  const warn1 =
-    clampWarn(
-      readInt(params.get("idleWarn1")) ??
-        readInt(process.env.NEXT_PUBLIC_IDLE_WARN_1) ??
-        DEFAULT_IDLE_POLICY.warn1,
-    );
-  const warn2 =
-    clampWarn(
-      readInt(params.get("idleWarn2")) ??
-        readInt(process.env.NEXT_PUBLIC_IDLE_WARN_2) ??
-        DEFAULT_IDLE_POLICY.warn2,
-    );
-
-  return { warn1, warn2, expire };
+  const expire = readInt(params.get("idleExpire")) ?? base.expire;
+  const warn1 = params.has("idleWarn1") ? readInt(params.get("idleWarn1")) : base.warn1;
+  const warn2 = params.has("idleWarn2") ? readInt(params.get("idleWarn2")) : base.warn2;
+  return clamp({ expire, warn1, warn2 });
 }

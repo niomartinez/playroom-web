@@ -37,6 +37,7 @@ interface TableStatePayload {
   };
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
+  idle_policy?: { expire: number; warn1: number | null; warn2: number | null } | null;
   main_bet_counts: Record<
     string,
     { players: number; amount: number }
@@ -106,6 +107,7 @@ export function useStateRecovery() {
     setVideoDelayMs,
     setMinBet,
     setMaxBet,
+    setIdlePolicy,
   } = useGame();
 
   useEffect(() => {
@@ -141,6 +143,8 @@ export function useStateRecovery() {
         // `?? min_bet` keeps this working against a backend without the field.
         setMinBet(payload.table?.min_bet_effective ?? payload.table?.min_bet ?? null);
         setMaxBet(payload.table?.max_bet_effective ?? payload.table?.max_bet ?? null);
+        // Server-owned idle thresholds — the client never invents these.
+        if (payload.idle_policy) setIdlePolicy(payload.idle_policy);
 
         const fight = payload.fight;
         if (!fight) {

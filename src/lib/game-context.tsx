@@ -1,5 +1,6 @@
 "use client";
 
+import type { IdlePolicy } from "./idle-policy";
 import {
   createContext,
   useContext,
@@ -219,6 +220,8 @@ export interface GameState {
   /** roundId of the most recent SERVER-CONFIRMED bet. Drives idle reset —
    *  a rejected (rolled-back) bet must not count as activity. */
   confirmedBetRoundId: string | null;
+  /** Server-delivered idle thresholds (table state). null = use default. */
+  idlePolicy: IdlePolicy | null;
 
   /* Setters — accept direct values or functional updaters */
   setWebrtcUrl: (u: string | null) => void;
@@ -261,6 +264,7 @@ export interface GameState {
   setRecentWin: (w: RecentWin | null) => void;
   setRoundWinners: (w: RoundWinners | null) => void;
   setConfirmedBetRoundId: (id: string | null) => void;
+  setIdlePolicy: (p: IdlePolicy | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -359,6 +363,7 @@ export function GameProvider({
   const [recentWin, setRecentWin] = useState<RecentWin | null>(null);
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
+  const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -557,6 +562,7 @@ export function GameProvider({
     recentWin,
     roundWinners,
     confirmedBetRoundId,
+    idlePolicy,
     setTableName,
     setDealerName,
     setBalance,
@@ -581,6 +587,7 @@ export function GameProvider({
     setRecentWin,
     setRoundWinners,
     setConfirmedBetRoundId,
+    setIdlePolicy,
   };
 
   return <GameContext value={value}>{children}</GameContext>;
