@@ -52,3 +52,17 @@ npm run build  # production build
 - JWT session cookie (12h expiry)
 - IP whitelist via STUDIO_ALLOWED_IPS env var
 - Player: no auth (operator manages sessions via seamless wallet)
+
+## Player UI (BOD batch — on `staging`, not prod)
+EVO-style additions to `/play`, mobile-first. Header **☰ menu** (bottom sheet
+mobile / card desktop) → How to Play, Payouts & Limits, Sound & Video, Game
+History. Also: big feed countdown (`RoundCountdown` + `use-countdown`),
+drag-to-move main bets (`useBetting.moveMainBet` + `MainBets`), exact balance
+(`formatBalance`), low-balance modal, idle warnings + frozen "Session Expired"
+(`SessionGuard` + `useIdleSession`), winners marquee (`WinnersMarquee`, fed by
+the `RoundWinners` lobby event), floating recent chat when minimized, and
+change-name moved into chat settings.
+- **Testing + tokens + prod-promote steps:** `docs/PLAYER_UI_TESTING.md`.
+- Mint tokens from the backend repo: `python -m scripts.mint_test_tokens --count 2`.
+- Chat/bets/settlement need a real `/play?token=...` — `/play/demo` skips the
+  chat WS and settles nothing.
