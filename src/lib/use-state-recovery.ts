@@ -28,8 +28,12 @@ interface TableStatePayload {
     webrtc_url?: string | null;
     hls_url?: string | null;
     video_delay_ms?: number | null;
+    /** Raw config from the games row. Prefer the *_effective pair below. */
     min_bet?: number | null;
     max_bet?: number | null;
+    /** Tighter of (table, per-bet-code) — what a bet is validated against. */
+    min_bet_effective?: number | null;
+    max_bet_effective?: number | null;
   };
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
@@ -130,8 +134,13 @@ export function useStateRecovery() {
         setWebrtcUrl(payload.table?.webrtc_url ?? null);
         setHlsUrl(payload.table?.hls_url ?? null);
         setVideoDelayMs(payload.table?.video_delay_ms ?? 0);
-        setMinBet(payload.table?.min_bet ?? null);
-        setMaxBet(payload.table?.max_bet ?? null);
+        // Effective, not raw: what a bet is actually validated against (the
+        // tighter of table and per-bet-code). The raw games row can say min 10
+        // while the ₱50 per-code floor rejects every ₱10 bet — advertising the
+        // raw number strands a ₱20 player who can see the table but can't bet.
+        // `?? min_bet` keeps this working against a backend without the field.
+        setMinBet(payload.table?.min_bet_effective ?? payload.table?.min_bet ?? null);
+        setMaxBet(payload.table?.max_bet_effective ?? payload.table?.max_bet ?? null);
 
         const fight = payload.fight;
         if (!fight) {

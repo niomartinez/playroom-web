@@ -150,9 +150,9 @@ const zhHans: Record<string, string> = {
   "hist.void": "已作废",
 
   /* Low balance */
-  "low.title": "余额不足",
-  "low.body": "您的余额低于最低投注额（{min}）。请充值后继续游戏。",
-  "low.close": "关闭",
+  "gate.minimum": "台面最低",
+  "gate.short": "还差",
+  "gate.addFunds": "充值",
 
   /* Session / idle */
   "session.warn1": "请下注，以免被移出牌桌。",

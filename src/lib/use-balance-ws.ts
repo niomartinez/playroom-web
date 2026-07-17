@@ -157,7 +157,7 @@ export function useBalanceWs() {
             s.setBalance(balance);
           }
           // The wallet has now spoken, so `balance` is authoritative rather
-          // than the initial 0 (see #4 / LowBalanceModal).
+          // than the initial 0 (see #4 / LowBalanceGate).
           s.setBalanceLoaded(true);
           sendToParent("balanceUpdate", { balance });
         }

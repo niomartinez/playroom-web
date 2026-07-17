@@ -45,8 +45,9 @@ function DemoConnections({ children }: { children: ReactNode }) {
         setWebrtcUrl(t.webrtc_url ?? null);
         setHlsUrl(t.hls_url ?? null);
         setVideoDelayMs(t.video_delay_ms ?? 0);
-        setMinBet(t.min_bet ?? null);
-        setMaxBet(t.max_bet ?? null);
+        // Effective limits, matching the real /play path (see use-state-recovery).
+        setMinBet(t.min_bet_effective ?? t.min_bet ?? null);
+        setMaxBet(t.max_bet_effective ?? t.max_bet ?? null);
       })
       .catch(() => undefined);
     return () => { cancelled = true; };

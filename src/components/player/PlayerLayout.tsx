@@ -17,7 +17,7 @@ import RoundCountdown from "./RoundCountdown";
 import WinnersMarquee from "./WinnersMarquee";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
-import LowBalanceModal from "./LowBalanceModal";
+import LowBalanceGate from "./LowBalanceGate";
 
 /**
  * Inline keyframes for the betting-open pulse on the bet panel border.
@@ -97,6 +97,7 @@ export default function PlayerLayout() {
           />
           <RoundCountdown />
           <WinnersMarquee />
+          <LowBalanceGate />
         </div>
 
         {/* Roadmap — moved ABOVE the bet panel so the road is the first
@@ -163,7 +164,6 @@ export default function PlayerLayout() {
 
         <FlyingChips />
         <WinFlash />
-        <LowBalanceModal />
       </div>
     );
   }
@@ -190,6 +190,7 @@ export default function PlayerLayout() {
         />
         <RoundCountdown />
         <WinnersMarquee />
+        <LowBalanceGate />
         {liveChatEnabled && <LiveChat />}
       </div>
 
@@ -232,7 +233,6 @@ export default function PlayerLayout() {
 
       <FlyingChips />
       <WinFlash />
-      <LowBalanceModal />
     </div>
   );
 }

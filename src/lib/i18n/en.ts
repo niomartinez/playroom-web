@@ -150,9 +150,9 @@ const en: Record<string, string> = {
   "hist.void": "Void",
 
   /* Low balance */
-  "low.title": "Low Balance",
-  "low.body": "Your balance is below the minimum bet ({min}). Please deposit to keep playing.",
-  "low.close": "Close",
+  "gate.minimum": "Table minimum",
+  "gate.short": "Short by",
+  "gate.addFunds": "Add funds",
 
   /* Session / idle */
   "session.warn1": "Please place bets to avoid being removed from the table.",

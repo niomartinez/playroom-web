@@ -38,8 +38,13 @@ async function stubDemo(page: Page) {
           table: {
             id: TABLE_ID,
             external_game_id: TABLE_ID,
+            // Raw config vs what a bet is actually validated against. The UI
+            // must advertise the effective floor: a ₱10 bet on this table is
+            // rejected by the ₱50 per-code minimum.
             min_bet: 10,
             max_bet: 10000,
+            min_bet_effective: 50,
+            max_bet_effective: 10000,
             webrtc_url: null,
             hls_url: null,
             video_delay_ms: 0,
@@ -151,7 +156,8 @@ test.describe("player demo — BOD batch", () => {
     await expect(menu.getByText("0.95 : 1")).toBeVisible(); // Banker, 5% commission
     // Limits come from the stubbed state — must render, not fall back to "—".
     // Stakes use formatMoney (whole numbers) — only the balance carries cents.
-    await expect(menu.getByText("₱10", { exact: true })).toBeVisible(); // min
+    // ₱50, not the raw ₱10: advertising a floor the API rejects is the bug.
+    await expect(menu.getByText("₱50", { exact: true })).toBeVisible(); // min
     await expect(menu.getByText("₱10,000", { exact: true })).toBeVisible(); // max
     await back();
 
