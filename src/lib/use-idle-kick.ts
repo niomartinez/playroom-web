@@ -31,11 +31,16 @@ export interface IdleSessionState {
 export function useIdleSession(): IdleSessionState {
   const { token, roundStatus, currentRound, placedBets, confirmedBetRoundId, idlePolicy } = useGame();
 
-  // Resolved once per mount: reading window.location during render would
-  // differ between server and client and trip hydration.
-  const policyRef = useRef<IdlePolicy | null>(null);
-  if (policyRef.current === null) policyRef.current = resolveIdlePolicy(idlePolicy);
-  const policy = policyRef.current;
+  // The server value (idlePolicy) arrives from table-state recovery a moment
+  // AFTER mount, so it's null on the first render. Resolving once on that
+  // first render (the old bug) permanently pinned the client to the
+  // compile-time default and the admin-set value never took effect. Instead:
+  // seed with the default, then re-resolve in an effect whenever idlePolicy
+  // lands. Effect (not render) keeps window.location out of the SSR pass.
+  const [policy, setPolicy] = useState<IdlePolicy>(() => resolveIdlePolicy(null));
+  useEffect(() => {
+    setPolicy(resolveIdlePolicy(idlePolicy));
+  }, [idlePolicy]);
 
   const [warnLevel, setWarnLevel] = useState<0 | 1 | 2>(0);
   const [expired, setExpired] = useState(false);

@@ -42,7 +42,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
       })
       .catch(() => undefined);
     const onName = (e: Event) => {
-      const name = (e as CustomEvent<{ name?: string }>).detail?.name;
+      // GameWrapper dispatches prg:name-changed with detail = the name STRING
+      // (not an object), so read the string; tolerate the object shape too.
+      const d = (e as CustomEvent<unknown>).detail;
+      const name = typeof d === "string" ? d : (d as { name?: string } | null)?.name;
       if (name) setMyName(name);
     };
     window.addEventListener("prg:name-changed", onName);
