@@ -3,7 +3,8 @@
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useT, type TFunction } from "@/lib/i18n";
-import { useState, useEffect, useRef } from "react";
+import { useCountdown } from "@/lib/use-countdown";
+import { useState, useEffect } from "react";
 
 /* ------------------------------------------------------------------ */
 /*  Card parsing helpers                                               */
@@ -120,6 +121,8 @@ function PhaseBanner({ roundStatus, countdown, hasCards, t }: { roundStatus: str
 
   switch (roundStatus) {
     case "betting_open":
+      // No countdown yet (betting open on a round we have no timing for) —
+      // state the phase without inventing a number.
       text = countdown !== null ? t("viz.placeBetsCountdown", { seconds: countdown }) : t("viz.placeBets");
       bgColor = "rgba(5,223,114,0.15)";
       textColor = "#05df72";
@@ -192,33 +195,10 @@ export default function DealVisualizer() {
   const bankerScore = currentRound?.bankerScore ?? 0;
   const winner = currentRound?.winner;
 
-  // Countdown timer that counts down from the server-sent value
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (roundStatus === "betting_open") {
-      const initial = currentRound?.countdown ?? 15;
-      setCountdown(initial);
-      timerRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === null || prev <= 0) return 0;
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      setCountdown(null);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [roundStatus, currentRound?.countdown]);
+  // Shared with the header pill and RoundCountdown — one server-derived
+  // clock, not a second decrementing timer of our own (which drifted against
+  // the ring and kept ticking to a stuck 0 on its own schedule).
+  const countdown = useCountdown();
 
   const hasCards = playerCards.length > 0 || bankerCards.length > 0;
 

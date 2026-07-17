@@ -38,6 +38,14 @@ interface VideoPlayerProps {
   webrtcUrl: string | null;
   hlsUrl: string | null;
   fallback: ReactNode;
+  /**
+   * Fires whenever we switch between showing video and showing `fallback`.
+   * Lets the parent avoid stacking its own centered overlays on top of a
+   * fallback that already owns the centre of the feed (see PlayerLayout).
+   * Note "showing the fallback" is not the same as "no stream configured" —
+   * a configured stream whose publisher is offline lands here too.
+   */
+  onFallbackChange?: (showingFallback: boolean) => void;
 }
 
 type PlaybackState = "connecting" | "playing" | "fallback" | "error";
@@ -45,7 +53,7 @@ type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 /** How long to wait before re-attempting a failed/ended stream connection. */
 const RECONNECT_DELAY_MS = 6000;
 
-export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayerProps) {
+export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback, onFallbackChange }: VideoPlayerProps) {
   const t = useT();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [state, setState] = useState<PlaybackState>("connecting");
@@ -56,6 +64,15 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Bumped to re-run the connection effect after a failure. Monotonic —
   // every retry tears down the previous attempt via the effect cleanup.
   const [attempt, setAttempt] = useState(0);
+
+  // Keep the parent in step with what we're actually rendering. Ref'd so a
+  // caller passing an inline arrow doesn't re-fire this on every render.
+  const onFallbackChangeRef = useRef(onFallbackChange);
+  onFallbackChangeRef.current = onFallbackChange;
+  const showingFallback = state === "fallback";
+  useEffect(() => {
+    onFallbackChangeRef.current?.(showingFallback);
+  }, [showingFallback]);
 
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
