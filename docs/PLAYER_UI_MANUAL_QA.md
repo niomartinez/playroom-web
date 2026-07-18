@@ -1,5 +1,14 @@
 # Player UI — what still needs a human
 
+> **Master handoff (2026-07-18):** the full session log — every bug fixed, the
+> audit findings, the DB migrations + prod-promotion order, the staging data
+> changes, and the two open infra items (cut-stream-for-expired-sessions, video
+> quality) — lives in the backend repo:
+> `topless-casino-backend/docs/SESSION_2026-07-18_QA_HARDENING.md`.
+> Reusable verify tooling: `topless-casino-backend/qa-tools/`.
+> Durable automated proofs (token-free): `e2e/proof/*.spec.ts` (run
+> `npx playwright test e2e/proof`).
+
 Everything in the BOD batch has been checked as far as automation honestly can.
 This is the remainder: checks that need eyes on a screen or hands on a phone.
 
