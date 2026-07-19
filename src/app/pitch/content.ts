@@ -3,17 +3,20 @@
  *
  * This is the ONLY file you should need to edit to change the words.
  *   {{double braces}} -> renders a gold "fill me in" chip (operator-supplied
- *     figures: commercials, live metrics, contacts). Search for "{{".
+ *     figures: commercials, live metrics, certifications, contacts).
  *   [[double brackets]] -> italic red emphasis inside a headline.
  *
  * Positioning follows the agreed wording rules: "adult-first", "premium adult
  * entertainment", "topless live baccarat". Every TECHNICAL claim is grounded in
  * the backend repo. Market figures come from the sources cited on that slide;
  * verify before an external send. Do not add hard metrics (uptime, tables,
- * volume) as plain text — keep them as {{placeholders}} until measured.
+ * volume, certifications) as plain text until measured or granted.
  *
  * Product visuals live in /public/pitch/ (see that folder's README). The
  * showcase + demo slides gate them behind an 18+ click-to-reveal.
+ *
+ * Order is deliberate: opportunity -> problem -> product -> PROOF (showcase,
+ * demo, traction) -> differentiation -> technical -> commercial -> close.
  */
 
 export type Slide =
@@ -61,7 +64,7 @@ export const DECK: Slide[] = [
     type: "statement",
     kicker: "The Operator Problem",
     title: "Live casino has scale. It lacks [[meaningful differentiation]].",
-    body: "Most live products compete on the same axes: more tables, more languages, more variants, more studio capacity. To the player, one baccarat table looks like the next. Operators are fighting for the same attention in a crowded lobby, with content that is hard to make a marketing story out of. Playroom does not reinvent baccarat. It reinvents how baccarat is presented, discovered, and remembered.",
+    body: "Most live products compete on the same axes: more tables, more languages, more variants. To the player, one baccarat table looks like the next. You end up fighting for the same attention with content you cannot build a campaign around. Playroom does not reinvent baccarat. It reinvents how baccarat is presented, discovered, and remembered.",
   },
   {
     type: "feature",
@@ -72,7 +75,7 @@ export const DECK: Slide[] = [
       "Professionally hosted, adult-only live baccarat in a controlled broadcast studio.",
       "The exact mechanics players know: Player, Banker, Tie, pairs, and premium side bets.",
       "Real-time video, betting, results, roadmaps, and live chat in one clean, mobile-first UI.",
-      "Operator-ready integration with configurable branding, currencies, languages, and limits.",
+      "Distributed only through licensed operators, age-gated by jurisdiction, with performer consent and welfare safeguarded.",
     ],
   },
   {
@@ -94,6 +97,17 @@ export const DECK: Slide[] = [
     poster: "/pitch/demo-poster.jpg",
   },
   {
+    type: "stats",
+    kicker: "Where We Are",
+    title: "Not a concept. [[Deployed and integrating]].",
+    lead: "Playroom runs on production infrastructure and is in live integration with an aggregator through the VP / GameLink standard. Support runs {{24/7}} with a {{response time}} first-response target. Replace every figure below with your current, real numbers before presenting.",
+    stats: [
+      { num: "{{N}}", lbl: "Live tables running today" },
+      { num: "{{99.x%}}", lbl: "Measured uptime over {{period}}, against a {{99.x%}} contractual SLA" },
+      { num: "{{N}} / {{N}}", lbl: "Currencies and languages live today" },
+    ],
+  },
+  {
     type: "pillars",
     kicker: "Why Playroom Wins Attention",
     title: "Built to be seen, remembered, and [[reopened]].",
@@ -106,8 +120,8 @@ export const DECK: Slide[] = [
   {
     type: "odds",
     kicker: "The Bet Menu",
-    title: "A full baccarat table, [[side bets included]].",
-    note: "Odds and limits are configurable per table. Defaults shown.",
+    title: "More ways to bet, more [[reasons to stay]].",
+    note: "Thirteen bet types including high-payout side bets. Deeper menus lift hold and lengthen sessions. Odds and limits are configurable per table; defaults shown.",
     odds: [
       { name: "Player", pay: "1 : 1", accent: "player" },
       { name: "Banker", pay: "0.95 : 1", accent: "banker" },
@@ -133,28 +147,17 @@ export const DECK: Slide[] = [
       "Signed operator endpoints (HMAC-SHA256) for auth, game, and bet.",
       "A single API key for the data APIs: lobby, history, classification, and streaming.",
       "One tokenized launch URL you embed as an iframe.",
-      "A VP / GameLink aggregator path if you reach us through an aggregator.",
+      "A VP / GameLink aggregator path, already in live integration, if you reach us through an aggregator.",
     ],
   },
   {
     type: "split",
-    kicker: "Wallet",
-    title: "Your wallet, [[your way]].",
-    foot: "One flag at onboarding. You can change your mind without re-integrating.",
-    cols: [
-      { tag: "Option A", h: "Seamless / One Wallet", p: "Keep a single balance. We call your wallet, or your aggregator calls ours, and each bet and settlement lands in one atomic, idempotent call." },
-      { tag: "Option B", h: "Transfer wallet", p: "Prefer to pre-fund? Deposit into the game balance, let players play, and withdraw the rest. No per-bet wallet calls at all." },
-    ],
-  },
-  {
-    type: "feature",
-    kicker: "Trust",
+    kicker: "Wallet & Settlement",
     title: "Money that never [[double-counts]].",
-    lead: "The parts operators are audited on are the parts we hardened first.",
-    items: [
-      "Bet and settlement run as one atomic, idempotent transaction. A retried call can never pay twice.",
-      "Settlement answers inside a 2.5 second window, or it safely rolls back.",
-      "Every movement is written to an immutable ledger, with full request and response audit trails.",
+    foot: "One flag at onboarding sets your wallet mode. You can change it later without re-integrating.",
+    cols: [
+      { tag: "Your wallet, your way", h: "Seamless or transfer", p: "Keep a single balance and let the wallet calls flow through on every bet, or pre-fund the game balance and skip per-bet calls entirely. Both modes are supported in production." },
+      { tag: "Settlement integrity", h: "Atomic and idempotent", p: "Bet and settlement run as one transaction, so a retried call can never pay twice. Settlement answers inside a 2.5 second window or safely rolls back, and every movement lands in an immutable ledger with full audit trails." },
     ],
   },
   {
@@ -171,11 +174,11 @@ export const DECK: Slide[] = [
   {
     type: "pillars",
     kicker: "Value For Operators",
-    title: "A product designed to create [[commercial leverage]].",
+    title: "A lobby feature you can [[market]], not another tile you bury.",
     cards: [
-      { idx: "Acquire", h: "A campaign hook, not another tile", p: "A high-visibility lobby feature and differentiated creatives for affiliate, VIP, and launch-event marketing." },
-      { idx: "Engage", h: "Attention that comes back", p: "Human presence, live chat, themed tables and events, and mobile-first play built to reduce friction and deepen sessions." },
-      { idx: "Monetize", h: "Aligned upside", p: "More reasons to enter the live lobby, room for VIP and premium tables, and revenue share aligned between us and you." },
+      { idx: "01", h: "A campaign you can actually run", p: "Launch events, exclusive-table promotions, and affiliate and VIP creatives built around a product nobody else in your lobby has." },
+      { idx: "02", h: "VIP and premium headroom", p: "Dedicated tables, branded studios, and high-limit rooms give you somewhere to take your highest-value players." },
+      { idx: "03", h: "Aligned economics", p: "Revenue share that moves with your performance, structured around how you actually monetize the vertical." },
     ],
   },
   {
@@ -195,21 +198,10 @@ export const DECK: Slide[] = [
     title: "Provocative product. [[Professional operation]].",
     lead: "Adult entertainment demands a higher standard of control. We treat compliance as a product feature, not a footer.",
     items: [
+      "Game logic and shoe integrity tested by {{lab}}. Provider licensed in {{jurisdiction}}, with certification underway for {{target markets}}.",
       "Age-gated access (18+ / 21+ by jurisdiction) and distribution only through licensed or approved operators.",
       "Operator KYC, AML, self-exclusion, and responsible-gaming integrations, with jurisdiction-level content controls.",
-      "Full game, bet, and settlement audit trails, plus studio security and game-integrity procedures.",
-      "Performer consent, welfare, contracts, and privacy safeguards; no marketing to minors.",
-    ],
-  },
-  {
-    type: "stats",
-    kicker: "Where We Are",
-    title: "Deployed, and integrating with a [[live aggregator]].",
-    lead: "Playroom is deployed to production infrastructure and is integrating with a live aggregator through the VP / GameLink standard. Fill these with your current, real figures before presenting.",
-    stats: [
-      { num: "{{N}}", lbl: "Live tables running today" },
-      { num: "{{99.xx%}}", lbl: "Measured uptime over {{period}}" },
-      { num: "{{₱ / mo}}", lbl: "Handle processed per month" },
+      "Full game, bet, and settlement audit trails, plus studio security, performer consent, welfare, and privacy safeguards.",
     ],
   },
   {
@@ -219,7 +211,7 @@ export const DECK: Slide[] = [
     foot: "Present only the models you actually offer. Replace before sending.",
     cols: [
       { tag: "Revenue share", h: "{{XX%}} of GGR", p: "No hidden platform fees. We win when you win. {{Add minimum guarantee, tiers, or hybrid structure here.}}" },
-      { tag: "Onboarding", h: "{{Setup terms}}", p: "{{Describe setup, timeline, and what is included: dedicated tables, branded studio, support SLA.}}" },
+      { tag: "Onboarding & support", h: "{{X-X weeks}} to live", p: "{{Describe setup and what is included: dedicated tables, branded studio, launch support.}} Support runs {{24/7}} with a {{response time}} first response and a {{resolution time}} resolution target." },
     ],
   },
   {
