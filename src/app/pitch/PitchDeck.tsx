@@ -12,11 +12,9 @@ import "./pitch.css";
 import { DECK, type Slide } from "./content";
 import Reveal from "./Reveal";
 import Watermark from "./Watermark";
+import AdultGate from "./AdultGate";
 
-/**
- * Renders {{placeholder}} as a gold "fill me in" chip and [[emphasis]]
- * as an italic gold accent inside a headline. Everything else is plain.
- */
+/** {{placeholder}} -> gold chip, [[emphasis]] -> italic red accent. */
 function fmt(text: string): ReactNode[] {
   return text.split(/(\{\{.*?\}\}|\[\[.*?\]\])/g).map((part, i) => {
     if (part.startsWith("{{") && part.endsWith("}}")) {
@@ -46,16 +44,91 @@ function RI({ i, children }: { i: number; children: ReactNode }) {
   );
 }
 
+/** Product screenshot with a graceful "drop your asset here" fallback. */
+function Shot({ src, cap }: { src: string; cap: string }) {
+  const [err, setErr] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // The <img> is server-rendered, so a 404 can fire its error event before
+  // React hydrates and attaches onError. Re-check the broken state on mount.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth === 0) setErr(true);
+  }, []);
+
+  if (err) {
+    return (
+      <div className="shot">
+        <div className="asset-empty">
+          <span className="big">Add your screenshot</span>
+          <code>public{src}</code>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="shot">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        src={src}
+        alt=""
+        onError={() => setErr(true)}
+        onLoad={(e) => {
+          if (e.currentTarget.naturalWidth === 0) setErr(true);
+        }}
+      />
+      {cap ? <span className="cap">{cap}</span> : null}
+    </div>
+  );
+}
+
+/** Demo video with 18+ gate + graceful fallback when demo.mp4 is absent. */
+function DemoPlayer({ video, poster }: { video: string; poster: string }) {
+  const [err, setErr] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
+  return (
+    <div className="demo-frame">
+      {err ? (
+        <div className="asset-empty">
+          <span className="big">Add your demo clip</span>
+          <code>public/pitch/demo.mp4</code>
+          <span style={{ fontSize: "0.75rem" }}>
+            ffmpeg command in /public/pitch/README.md
+          </span>
+        </div>
+      ) : (
+        <video
+          ref={ref}
+          src={video}
+          poster={poster}
+          controls={revealed}
+          playsInline
+          preload="none"
+          onError={() => setErr(true)}
+        />
+      )}
+      <AdultGate
+        label="Live gameplay · 18+"
+        onReveal={() => {
+          setRevealed(true);
+          ref.current?.play?.().catch(() => {});
+        }}
+      />
+    </div>
+  );
+}
+
 function SlideBody({ s }: { s: Slide }) {
   switch (s.type) {
     case "cover":
       return (
         <Reveal className="slide-inner stack">
           <RI i={0}>
-            <div className="cover-brand">
-              <span>{s.brand[0]}</span>
-              <span className="dot">.</span>
-              <span className="thin">{s.brand[1]}</span>
+            <div className="cover-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="Playroom Gaming" />
             </div>
           </RI>
           <RI i={1}>
@@ -75,6 +148,40 @@ function SlideBody({ s }: { s: Slide }) {
                 </span>
               ))}
             </div>
+          </RI>
+          <RI i={5}>
+            <div className="cover-note">{s.note}</div>
+          </RI>
+        </Reveal>
+      );
+
+    case "market":
+      return (
+        <Reveal className="slide-inner stack">
+          <RI i={0}>
+            <span className="kicker">{s.kicker}</span>
+          </RI>
+          <RI i={1}>
+            <h2 className="display d-lg">{fmt(s.title)}</h2>
+          </RI>
+          <RI i={2}>
+            <div className="market-grid">
+              {s.cards.map((c, k) => (
+                <div className="mcard" key={k}>
+                  <div className="big">{c.big}</div>
+                  <div className="cap">{c.cap}</div>
+                </div>
+              ))}
+            </div>
+          </RI>
+          <RI i={3}>
+            <p
+              className="market-insight"
+              dangerouslySetInnerHTML={{ __html: s.insight }}
+            />
+          </RI>
+          <RI i={4}>
+            <p className="source-note">{s.source}</p>
           </RI>
         </Reveal>
       );
@@ -137,6 +244,53 @@ function SlideBody({ s }: { s: Slide }) {
                 <li key={k}>{fmt(it)}</li>
               ))}
             </ul>
+          </RI>
+        </Reveal>
+      );
+
+    case "showcase":
+      return (
+        <Reveal className="slide-inner stack">
+          <RI i={0}>
+            <span className="kicker">{s.kicker}</span>
+          </RI>
+          <RI i={1}>
+            <h2 className="display d-lg">{fmt(s.title)}</h2>
+          </RI>
+          <RI i={2}>
+            <div className="gated">
+              <div className="showcase">
+                {s.shots.map((sh, k) => (
+                  <Shot key={k} src={sh.src} cap={sh.cap} />
+                ))}
+              </div>
+              <AdultGate label="Live product · 18+" />
+            </div>
+          </RI>
+          <RI i={3}>
+            <p className="lead" style={{ fontSize: "0.85rem" }}>
+              {s.note}
+            </p>
+          </RI>
+        </Reveal>
+      );
+
+    case "demo":
+      return (
+        <Reveal className="slide-inner stack">
+          <RI i={0}>
+            <span className="kicker">{s.kicker}</span>
+          </RI>
+          <RI i={1}>
+            <h2 className="display d-lg">{fmt(s.title)}</h2>
+          </RI>
+          <RI i={2}>
+            <DemoPlayer video={s.video} poster={s.poster} />
+          </RI>
+          <RI i={3}>
+            <p className="lead" style={{ fontSize: "0.85rem" }}>
+              {s.note}
+            </p>
           </RI>
         </Reveal>
       );
@@ -225,6 +379,33 @@ function SlideBody({ s }: { s: Slide }) {
         </Reveal>
       );
 
+    case "phases":
+      return (
+        <Reveal className="slide-inner stack">
+          <RI i={0}>
+            <span className="kicker">{s.kicker}</span>
+          </RI>
+          <RI i={1}>
+            <h2 className="display d-lg">{fmt(s.title)}</h2>
+          </RI>
+          <RI i={2}>
+            <div className="phases">
+              {s.items.map((p, k) => (
+                <div className="phase" key={k}>
+                  <span className="p-tag">{p.tag}</span>
+                  <h4>{p.h}</h4>
+                  <ul>
+                    {p.points.map((pt, j) => (
+                      <li key={j}>{pt}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </RI>
+        </Reveal>
+      );
+
     case "steps":
       return (
         <Reveal className="slide-inner stack">
@@ -288,7 +469,6 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     });
   }, []);
 
-  // Track which slide is centered for the progress rail.
   useEffect(() => {
     const root = scrollerRef.current;
     if (!root || typeof IntersectionObserver === "undefined") return;
@@ -307,10 +487,8 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     return () => io.disconnect();
   }, []);
 
-  // Keyboard navigation + print/save deterrent hardening.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Deterrent hardening: block quick save / print.
       if ((e.ctrlKey || e.metaKey) && ["p", "s"].includes(e.key.toLowerCase())) {
         e.preventDefault();
         return;
@@ -347,6 +525,7 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     <div className="pitch-root" onContextMenu={(e) => e.preventDefault()}>
       <div className="pitch-atmos" aria-hidden="true" />
       <div className="pitch-grain" aria-hidden="true" />
+      <div className="age-badge">18+</div>
       <Watermark operator={who} />
 
       <nav className="rail" aria-label="Slides">

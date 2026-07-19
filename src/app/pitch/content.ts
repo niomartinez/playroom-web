@@ -1,76 +1,112 @@
 /**
- * Operator pitch deck content.
+ * Operator pitch deck content — Playroom Gaming (adult-first live baccarat).
  *
  * This is the ONLY file you should need to edit to change the words.
- * Anything wrapped in {{double braces}} renders as a gold "fill me in"
- * chip — those are the numbers/terms only Playroom can supply
- * (commercials, live metrics, contacts). Search this file for "{{" to
- * find every open placeholder before a real pitch.
+ *   {{double braces}} -> renders a gold "fill me in" chip (operator-supplied
+ *     figures: commercials, live metrics, contacts). Search for "{{".
+ *   [[double brackets]] -> italic red emphasis inside a headline.
  *
- * Wrap a word in [[double brackets]] to render it as an italic gold
- * emphasis inside a headline.
+ * Positioning follows the agreed wording rules: "adult-first", "premium adult
+ * entertainment", "topless live baccarat". Every TECHNICAL claim is grounded in
+ * the backend repo. Market figures come from the sources cited on that slide;
+ * verify before an external send. Do not add hard metrics (uptime, tables,
+ * volume) as plain text — keep them as {{placeholders}} until measured.
  *
- * Every factual claim here is grounded in the backend repo docs. Do not
- * add hard metrics (uptime %, table counts, volume) as plain text — keep
- * them as {{placeholders}} until they are real.
+ * Product visuals live in /public/pitch/ (see that folder's README). The
+ * showcase + demo slides gate them behind an 18+ click-to-reveal.
  */
 
 export type Slide =
-  | { type: "cover"; kicker: string; brand: [string, string]; title: string; sub: string; foot: { k: string; v: string }[] }
+  | { type: "cover"; kicker: string; title: string; sub: string; foot: { k: string; v: string }[]; note: string }
+  | { type: "market"; kicker: string; title: string; cards: { big: string; cap: string }[]; insight: string; source: string }
   | { type: "statement"; kicker: string; title: string; body: string }
   | { type: "pillars"; kicker: string; title: string; cards: { idx: string; h: string; p: string }[] }
   | { type: "feature"; kicker: string; title: string; lead?: string; items: string[] }
+  | { type: "showcase"; kicker: string; title: string; note: string; shots: { src: string; cap: string }[] }
+  | { type: "demo"; kicker: string; title: string; note: string; video: string; poster: string }
   | { type: "odds"; kicker: string; title: string; note: string; odds: { name: string; pay: string; accent?: "banker" | "player" | "tie" }[] }
   | { type: "split"; kicker: string; title: string; foot?: string; cols: { tag: string; h: string; p: string }[] }
   | { type: "stats"; kicker: string; title: string; lead?: string; stats: { num: string; lbl: string }[] }
+  | { type: "phases"; kicker: string; title: string; items: { tag: string; h: string; points: string[] }[] }
   | { type: "steps"; kicker: string; title: string; steps: { h: string; p: string }[] }
   | { type: "close"; kicker: string; title: string; contacts: { k: string; v: string }[] };
 
 export const DECK: Slide[] = [
   {
     type: "cover",
-    kicker: "Live Dealer Baccarat · Game Provider",
-    brand: ["PLAYROOM", "GAMING"],
-    title: "Real baccarat, real dealers, built to the standard your platform [[already speaks]].",
-    sub: "A live baccarat game provider you can put on your floor in days, not quarters.",
+    kicker: "Adult-First Live Casino · B2B Game Provider",
+    title: "Live casino, [[reimagined]] for adult audiences.",
+    sub: "Premium topless live baccarat, built on real game-provider infrastructure, ready to drop into your platform.",
     foot: [
       { k: "Prepared for", v: "{{Operator name}}" },
       { k: "Presented by", v: "{{Your name}}" },
       { k: "Date", v: "{{Month YYYY}}" },
     ],
+    note: "18+ / 21+ where required · For licensed operators and approved jurisdictions only",
+  },
+  {
+    type: "market",
+    kicker: "The Opportunity",
+    title: "Live casino is already a [[€30B+]] global category.",
+    cards: [
+      { big: "€105.2B", cap: "Global online casino gross gaming revenue, 2025." },
+      { big: "29%", cap: "Live casino's share of the online casino market." },
+      { big: "~€30.5B", cap: "Implied global live casino market, 2025 (29% x €105.2B)." },
+      { big: "14.3%", cap: "Live casino's five-year compound annual growth rate." },
+    ],
+    insight: "Asia is roughly <b>€46.4B, about 44%</b> of the global online casino market, and it is exactly where a differentiated live product travels fastest.",
+    source: "Source: Evolution Annual Report 2025 (H2 Gambling Capital estimates, 26 Feb 2026), pp. 10, 12-13, 24-25. €30.5B is an implied figure (share x total), not a directly reported one. Verify before external use.",
   },
   {
     type: "statement",
-    kicker: "The Opportunity",
-    title: "Baccarat is the table your players keep [[asking for]].",
-    body: "In this region, live baccarat is the highest-trust, highest-retention format on the casino floor. Players want a real dealer, real cards, and a stream they can believe. When your platform cannot serve that, the demand quietly leaves to find it somewhere else.",
-  },
-  {
-    type: "pillars",
-    kicker: "What We Are",
-    title: "A drop-in live baccarat studio for [[your platform]].",
-    cards: [
-      { idx: "01", h: "A real studio", p: "Live dealers dealing real cards in a broadcast studio, with every card machine-read for accuracy. Not an RNG animation." },
-      { idx: "02", h: "A standard integration", p: "Built to the Evolution / EvoLive model your team likely already integrates against. The mental model transfers directly." },
-      { idx: "03", h: "Full reconciliation", p: "Every bet, settlement, and dispute is traceable down to the peso, with reports and signed round links out of the box." },
-    ],
+    kicker: "The Operator Problem",
+    title: "Live casino has scale. It lacks [[meaningful differentiation]].",
+    body: "Most live products compete on the same axes: more tables, more languages, more variants, more studio capacity. To the player, one baccarat table looks like the next. Operators are fighting for the same attention in a crowded lobby, with content that is hard to make a marketing story out of. Playroom does not reinvent baccarat. It reinvents how baccarat is presented, discovered, and remembered.",
   },
   {
     type: "feature",
     kicker: "The Product",
-    title: "On the [[floor]].",
-    lead: "A complete live baccarat table, engineered so the game never stalls and the numbers never drift.",
+    title: "Topless baccarat, engineered as a [[premium live product]].",
+    lead: "Familiar gameplay. Distinctive entertainment. Frictionless execution.",
     items: [
-      "Real dealers dealing real cards, with every card read by an Angel Eye shoe so the result is never in question.",
-      "Sub-second HD video, with automatic fallback so the table never goes dark mid-shoe.",
-      "A full bet menu: main bets, pairs, and premium side bets.",
-      "A player interface that drops straight into your site as an iframe.",
+      "Professionally hosted, adult-only live baccarat in a controlled broadcast studio.",
+      "The exact mechanics players know: Player, Banker, Tie, pairs, and premium side bets.",
+      "Real-time video, betting, results, roadmaps, and live chat in one clean, mobile-first UI.",
+      "Operator-ready integration with configurable branding, currencies, languages, and limits.",
+    ],
+  },
+  {
+    type: "showcase",
+    kicker: "The Live Product",
+    title: "This is the real table, [[live today]].",
+    note: "Actual product UI. Adult content is gated behind an 18+ reveal. Drop your approved crops into /public/pitch/ (see README).",
+    shots: [
+      { src: "/pitch/screen-1.jpg", cap: "Live table — video, bet menu, roads, chat" },
+      { src: "/pitch/screen-2.jpg", cap: "Mobile-first player view" },
+    ],
+  },
+  {
+    type: "demo",
+    kicker: "See It In Play",
+    title: "A round of topless baccarat, [[end to end]].",
+    note: "Short gameplay clip. Gated behind an 18+ reveal, no autoplay. Add demo.mp4 + demo-poster.jpg to /public/pitch/ (see README).",
+    video: "/pitch/demo.mp4",
+    poster: "/pitch/demo-poster.jpg",
+  },
+  {
+    type: "pillars",
+    kicker: "Why Playroom Wins Attention",
+    title: "Built to be seen, remembered, and [[reopened]].",
+    cards: [
+      { idx: "01", h: "Immediate differentiation", p: "A visually distinct live table that does not disappear among dozens of near-identical baccarat games in the lobby." },
+      { idx: "02", h: "Familiar conversion path", p: "Players already know baccarat. The entertainment layer creates novelty without asking them to learn a new game." },
+      { idx: "03", h: "Modern, mobile-first performance", p: "Clean betting states, readable roadmaps, fast loading, and stable streaming on mobile networks." },
     ],
   },
   {
     type: "odds",
     kicker: "The Bet Menu",
-    title: "A full table, [[side bets included]].",
+    title: "A full baccarat table, [[side bets included]].",
     note: "Odds and limits are configurable per table. Defaults shown.",
     odds: [
       { name: "Player", pay: "1 : 1", accent: "player" },
@@ -114,11 +150,11 @@ export const DECK: Slide[] = [
     type: "feature",
     kicker: "Trust",
     title: "Money that never [[double-counts]].",
-    lead: "The parts operators worry about are the parts we hardened first.",
+    lead: "The parts operators are audited on are the parts we hardened first.",
     items: [
       "Bet and settlement run as one atomic, idempotent transaction. A retried call can never pay twice.",
       "Settlement answers inside a 2.5 second window, or it safely rolls back.",
-      "Every movement is written to an immutable ledger you can audit.",
+      "Every movement is written to an immutable ledger, with full request and response audit trails.",
     ],
   },
   {
@@ -133,37 +169,36 @@ export const DECK: Slide[] = [
     ],
   },
   {
-    type: "feature",
-    kicker: "Reporting",
-    title: "Reconcile every [[peso]].",
-    lead: "Enough reporting to close your books and settle any dispute without a phone call.",
-    items: [
-      "Daily GGR reports and bet logs, ready to pull on your schedule.",
-      "Transaction-status lookup for any single bet.",
-      "Signed, expiring per-round links for clean dispute resolution.",
-      "A full request and response audit trail.",
+    type: "pillars",
+    kicker: "Value For Operators",
+    title: "A product designed to create [[commercial leverage]].",
+    cards: [
+      { idx: "Acquire", h: "A campaign hook, not another tile", p: "A high-visibility lobby feature and differentiated creatives for affiliate, VIP, and launch-event marketing." },
+      { idx: "Engage", h: "Attention that comes back", p: "Human presence, live chat, themed tables and events, and mobile-first play built to reduce friction and deepen sessions." },
+      { idx: "Monetize", h: "Aligned upside", p: "More reasons to enter the live lobby, room for VIP and premium tables, and revenue share aligned between us and you." },
     ],
   },
   {
-    type: "stats",
-    kicker: "Built For The Region",
-    title: "Tuned for the [[Philippine market]].",
-    stats: [
-      { num: "PHP", lbl: "Settled in peso, two decimal places" },
-      { num: "₱10 – ₱10k", lbl: "Default table limits, configurable per table" },
-      { num: "10 – 30s", lbl: "Configurable betting windows per round" },
+    type: "phases",
+    kicker: "Roadmap",
+    title: "Start with baccarat. Build an [[adult live category]].",
+    items: [
+      { tag: "Phase 1", h: "Flagship", points: ["Topless live baccarat", "Mobile + desktop", "Core side bets", "Live chat + roadmaps", "Shared tables"] },
+      { tag: "Phase 2", h: "Localize + VIP", points: ["Local-language dealers", "Market-specific limits", "VIP + high-limit rooms", "Dedicated operator tables", "Branded studios"] },
+      { tag: "Phase 3", h: "Portfolio", points: ["Adult live blackjack", "Adult live roulette", "Speed + squeeze baccarat", "Themed dealer lineups", "Scheduled events"] },
+      { tag: "Phase 4", h: "Proprietary", points: ["Adult live game shows", "Hosted tables where permitted", "Loyalty + jackpot formats", "Data-driven table personalization"] },
     ],
   },
   {
     type: "feature",
-    kicker: "Security",
-    title: "Production-grade, [[secure by default]].",
-    lead: "Not a prototype in front of your players. A hardened service with the controls operators are audited on.",
+    kicker: "Trust & Compliance",
+    title: "Provocative product. [[Professional operation]].",
+    lead: "Adult entertainment demands a higher standard of control. We treat compliance as a product feature, not a footer.",
     items: [
-      "IP allowlisting on the operator and aggregator surfaces.",
-      "Row-level database security and split, per-surface secrets.",
-      "Redis-backed rate limiting and idempotency on every money call.",
-      "Full request auditing, with separate production and staging environments.",
+      "Age-gated access (18+ / 21+ by jurisdiction) and distribution only through licensed or approved operators.",
+      "Operator KYC, AML, self-exclusion, and responsible-gaming integrations, with jurisdiction-level content controls.",
+      "Full game, bet, and settlement audit trails, plus studio security and game-integrity procedures.",
+      "Performer consent, welfare, contracts, and privacy safeguards; no marketing to minors.",
     ],
   },
   {
@@ -181,31 +216,20 @@ export const DECK: Slide[] = [
     type: "split",
     kicker: "Commercials",
     title: "Simple terms, [[aligned incentives]].",
-    foot: "Replace with your commercial model before presenting.",
+    foot: "Present only the models you actually offer. Replace before sending.",
     cols: [
-      { tag: "Revenue share", h: "{{XX%}} of GGR", p: "No hidden platform fees. We win when you win. {{Add minimum guarantee or tier detail here.}}" },
-      { tag: "Onboarding", h: "{{No setup fee}}", p: "{{Describe setup, timeline, and what is included: dedicated support, custom limits, co-branding.}}" },
-    ],
-  },
-  {
-    type: "steps",
-    kicker: "Getting Started",
-    title: "Live in [[four steps]].",
-    steps: [
-      { h: "Exchange credentials", p: "We issue your keys and you pick a wallet mode. Half a day of paperwork." },
-      { h: "Integrate the sandbox", p: "Build against our staging API and interactive Swagger docs." },
-      { h: "Run test rounds", p: "Bet, settle, void, and reconcile end to end before a peso is real." },
-      { h: "Embed and go live", p: "Drop the table into your site and open it to your players." },
+      { tag: "Revenue share", h: "{{XX%}} of GGR", p: "No hidden platform fees. We win when you win. {{Add minimum guarantee, tiers, or hybrid structure here.}}" },
+      { tag: "Onboarding", h: "{{Setup terms}}", p: "{{Describe setup, timeline, and what is included: dedicated tables, branded studio, support SLA.}}" },
     ],
   },
   {
     type: "close",
-    kicker: "Let's Play",
-    title: "Put a live table on [[your floor]].",
+    kicker: "Launch Playroom Gaming",
+    title: "The table is familiar. The [[experience is not]].",
     contacts: [
       { k: "Contact", v: "{{Your name}}" },
       { k: "Email", v: "{{email}}" },
-      { k: "WhatsApp / Viber", v: "{{number}}" },
+      { k: "Telegram / WhatsApp", v: "{{number}}" },
       { k: "Docs", v: "{{api.playroomgaming.ph/docs}}" },
     ],
   },
