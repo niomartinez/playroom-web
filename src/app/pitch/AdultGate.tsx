@@ -3,17 +3,20 @@
 import { useState } from "react";
 
 /**
- * 18+ click-to-reveal overlay. Place it as the last child of a
- * position:relative media container. Nothing adult is visible until the
- * presenter clicks, which is the right behaviour for a deck that may be
- * opened in public or shared by link. `onReveal` fires once (e.g. to start
- * video playback).
+ * 18+ click-to-reveal overlay, styled per the approved design: near-opaque
+ * blurred scrim, Anton red-gradient "18+", mono caption lines. Place as the
+ * last child of a position:relative media frame. Fully obscures the media
+ * until tapped; `onReveal` fires once (e.g. to start muted video playback).
  */
 export default function AdultGate({
-  label,
+  line,
+  sub = "adults only",
+  large = false,
   onReveal,
 }: {
-  label: string;
+  line: string;
+  sub?: string;
+  large?: boolean;
   onReveal?: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
@@ -21,16 +24,16 @@ export default function AdultGate({
   return (
     <button
       type="button"
-      className={`adult-gate ${revealed ? "hidden" : ""}`}
+      className={`adult-gate ${large ? "lg" : ""} ${revealed ? "hidden" : ""}`}
       aria-label="Reveal adult product preview, 18 plus"
       onClick={() => {
         setRevealed(true);
         onReveal?.();
       }}
     >
-      <span className="ring">18+</span>
-      <span className="g-title">Adults only</span>
-      <span className="g-sub">{label} — tap to reveal</span>
+      <span className="g-18 grad-text">18+</span>
+      <span className="g-line">{line}</span>
+      {sub ? <span className="g-sub">{sub}</span> : null}
     </button>
   );
 }

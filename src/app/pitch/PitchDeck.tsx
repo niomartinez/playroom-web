@@ -1,570 +1,796 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import "./pitch.css";
-import { DECK, type Slide } from "./content";
-import Reveal from "./Reveal";
-import Watermark from "./Watermark";
+import { DECK, FOOTER, type Slide } from "./content";
 import AdultGate from "./AdultGate";
+import Watermark from "./Watermark";
 
-/** {{placeholder}} -> gold chip, [[emphasis]] -> italic red accent. */
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+const N = DECK.length;
+
+/** [[emphasis]] -> solid red span inside an Anton headline. */
 function fmt(text: string): ReactNode[] {
-  return text.split(/(\{\{.*?\}\}|\[\[.*?\]\])/g).map((part, i) => {
-    if (part.startsWith("{{") && part.endsWith("}}")) {
-      return (
-        <span className="ph" key={i}>
-          {part.slice(2, -2).trim()}
-        </span>
-      );
-    }
-    if (part.startsWith("[[") && part.endsWith("]]")) {
-      return (
-        <span className="em" key={i}>
-          {part.slice(2, -2)}
-        </span>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
+  return text.split(/(\[\[.*?\]\])/g).map((part, i) =>
+    part.startsWith("[[") && part.endsWith("]]") ? (
+      <span className="em" key={i}>
+        {part.slice(2, -2)}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
 }
 
-/** Reveal item with a stagger index. */
-function RI({ i, children }: { i: number; children: ReactNode }) {
+/** Reveal-on-activation wrapper with stagger index. */
+function RV({
+  i,
+  big = false,
+  children,
+}: {
+  i: number;
+  big?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="reveal-item" style={{ "--i": i } as CSSProperties}>
+    <div className={big ? "rv-big" : "rv"} style={{ "--i": i } as React.CSSProperties}>
       {children}
     </div>
   );
 }
 
-/** Product screenshot with a graceful "drop your asset here" fallback. */
-function Shot({ src, cap }: { src: string; cap: string }) {
-  const [err, setErr] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // The <img> is server-rendered, so a 404 can fire its error event before
-  // React hydrates and attaches onError. Re-check the broken state on mount.
-  useEffect(() => {
-    const img = imgRef.current;
-    if (img && img.complete && img.naturalWidth === 0) setErr(true);
-  }, []);
-
-  if (err) {
-    return (
-      <div className="shot">
-        <div className="asset-empty">
-          <span className="big">Add your screenshot</span>
-          <code>public{src}</code>
-        </div>
-      </div>
-    );
-  }
+function ChromeTop({
+  num,
+  label,
+  pair,
+}: {
+  num?: string;
+  label?: string;
+  pair?: [string, string];
+}) {
   return (
-    <div className="shot">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={imgRef}
-        src={src}
-        alt=""
-        onError={() => setErr(true)}
-        onLoad={(e) => {
-          if (e.currentTarget.naturalWidth === 0) setErr(true);
-        }}
-      />
-      {cap ? <span className="cap">{cap}</span> : null}
+    <div className="chrome-top">
+      <div className="kicker">
+        {pair ? (
+          <>
+            <span className="num">{pair[0]}</span>
+            <span className="lbl">{pair[1]}</span>
+          </>
+        ) : (
+          <>
+            <span className="num">{num}</span>
+            <span className="lbl"> · {label}</span>
+          </>
+        )}
+      </div>
+      <span className="badge-18">18+</span>
     </div>
   );
 }
 
-/** Demo video with 18+ gate + graceful fallback when demo.mp4 is absent. */
-function DemoPlayer({ video, poster }: { video: string; poster: string }) {
-  const [err, setErr] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const ref = useRef<HTMLVideoElement>(null);
+function ChromeFoot({ left }: { left?: ReactNode }) {
   return (
-    <div className="demo-frame">
-      {err ? (
-        <div className="asset-empty">
-          <span className="big">Add your demo clip</span>
-          <code>public/pitch/demo.mp4</code>
-          <span style={{ fontSize: "0.75rem" }}>
-            ffmpeg command in /public/pitch/README.md
-          </span>
-        </div>
-      ) : (
+    <div className={`chrome-foot ${left ? "" : "end"}`}>
+      {left ? <div className="foot-left">{left}</div> : null}
+      <span className="foot-brand">{FOOTER}</span>
+    </div>
+  );
+}
+
+/** Demo video: gated, muted, no autoplay; resumes from last position. */
+function DemoVideo({ s }: { s: Extract<Slide, { type: "demo" }> }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="demo-wrap">
+      <div className="demo-frame">
         <video
           ref={ref}
-          src={video}
-          poster={poster}
-          controls={revealed}
-          playsInline
+          src={s.video}
           preload="none"
-          onError={() => setErr(true)}
+          muted
+          playsInline
+          controls={revealed}
+          onTimeUpdate={(e) => {
+            try {
+              localStorage.setItem(
+                "playroom-prg-pos",
+                String(e.currentTarget.currentTime),
+              );
+            } catch {}
+          }}
+          onLoadedMetadata={(e) => {
+            try {
+              const t = parseFloat(localStorage.getItem("playroom-prg-pos") ?? "");
+              const el = e.currentTarget;
+              if (!isNaN(t) && t > 0 && t < el.duration - 1) el.currentTime = t;
+            } catch {}
+          }}
         />
-      )}
-      <AdultGate
-        label="Live gameplay · 18+"
-        onReveal={() => {
-          setRevealed(true);
-          ref.current?.play?.().catch(() => {});
-        }}
-      />
+        <AdultGate
+          line={s.gateLine}
+          sub=""
+          large
+          onReveal={() => {
+            setRevealed(true);
+            const v = ref.current;
+            if (v) {
+              v.muted = true;
+              v.play().catch(() => {});
+            }
+          }}
+        />
+      </div>
+      <div className="demo-caps">
+        <span>{s.capLeft}</span>
+        <span>{s.capRight}</span>
+      </div>
     </div>
   );
 }
 
-function SlideBody({ s }: { s: Slide }) {
+function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
   switch (s.type) {
     case "cover":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <div className="cover-logo">
+        <>
+          <div className="chrome-top">
+            <div className="kicker">
+              <span className="num">{s.kicker[0]}</span>
+              <span className="lbl">{s.kicker[1]}</span>
+            </div>
+            <span className="badge-18">18+</span>
+          </div>
+          <div className="cover-center">
+            <RV i={0}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="Playroom Gaming" />
-            </div>
-          </RI>
-          <RI i={1}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={2}>
-            <h1 className="display d-xl">{fmt(s.title)}</h1>
-          </RI>
-          <RI i={3}>
-            <p className="lead eyebrow-lead">{s.sub}</p>
-          </RI>
-          <RI i={4}>
-            <div className="cover-foot">
-              {s.foot.map((f, k) => (
-                <span key={k}>
-                  {f.k} <b>{fmt(f.v)}</b>
+              <img className="cover-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
+            </RV>
+            <RV i={1}>
+              <div className="cover-title">{s.titleTop}</div>
+            </RV>
+            <RV i={2}>
+              <div className="cover-sub grad-text">{s.titleSub}</div>
+            </RV>
+            <RV i={3}>
+              <div className="cover-prepared">
+                <span className="chip">
+                  {s.preparedForPrefix}
+                  {(operator ?? "OPERATOR NAME").toUpperCase()}
                 </span>
-              ))}
-            </div>
-          </RI>
-          <RI i={5}>
-            <div className="cover-note">{s.note}</div>
-          </RI>
-        </Reveal>
+              </div>
+            </RV>
+            <RV i={4}>
+              <div className="cover-legal">{s.legal}</div>
+            </RV>
+          </div>
+          <div className="ui-strip">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/pitch/ui-strip.png" alt="Playroom live table interface" />
+          </div>
+        </>
       );
 
     case "market":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="market-grid">
-              {s.cards.map((c, k) => (
-                <div className="mcard" key={k}>
-                  <div className="big">{c.big}</div>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display" style={{ maxWidth: 1500 }}>
+              {fmt(s.title)}
+            </h1>
+          </RV>
+          <div className="market-grid">
+            {s.cards.map((c, k) => (
+              <RV i={k} big key={k}>
+                <div className="mcard">
+                  <div className="big grad-text">{c.big}</div>
                   <div className="cap">{c.cap}</div>
                 </div>
-              ))}
-            </div>
-          </RI>
-          <RI i={3}>
-            <p
-              className="market-insight"
-              dangerouslySetInnerHTML={{ __html: s.insight }}
-            />
-          </RI>
-          <RI i={4}>
-            <p className="source-note">{s.source}</p>
-          </RI>
-        </Reveal>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot
+            left={
+              <>
+                <span className="foot-note" style={{ letterSpacing: "0.14em" }}>
+                  SOURCES:
+                </span>
+                <span className="chip">{s.sourcesChip}</span>
+              </>
+            }
+          />
+        </>
       );
 
     case "statement":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <p className="lead">{s.body}</p>
-          </RI>
-        </Reveal>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <div className="stmt-center">
+            <RV i={0}>
+              <div className="stmt-line">{s.lines[0]}</div>
+            </RV>
+            <RV i={1}>
+              <div className="stmt-line">{s.lines[1]}</div>
+            </RV>
+            <RV i={2}>
+              <div className="stmt-line grad-text grad-glow">{s.lines[2]}</div>
+            </RV>
+            <RV i={3}>
+              <p className="stmt-body">{s.body}</p>
+            </RV>
+          </div>
+          <ChromeFoot />
+        </>
       );
 
-    case "pillars":
+    case "product":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="grid-3">
-              {s.cards.map((c, k) => (
-                <div className="card" key={k}>
-                  <span className="idx">{c.idx}</span>
-                  <h3>{c.h}</h3>
-                  <p>{c.p}</p>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display" style={{ maxWidth: 1560 }}>
+              {fmt(s.title)}
+            </h1>
+          </RV>
+          <RV i={1}>
+            <p className="lead">{s.lead}</p>
+          </RV>
+          <div className="feat-grid">
+            {s.features.map((f, k) => (
+              <RV i={k + 2} key={k}>
+                <div className="feat">
+                  <div className="n">{String(k + 1).padStart(2, "0")}</div>
+                  <div>
+                    <h3>{f.h}</h3>
+                    <p>{f.p}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </RI>
-        </Reveal>
-      );
-
-    case "feature":
-      return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          {s.lead ? (
-            <RI i={2}>
-              <p className="lead">{s.lead}</p>
-            </RI>
-          ) : null}
-          <RI i={3}>
-            <ul className="feat-list">
-              {s.items.map((it, k) => (
-                <li key={k}>{fmt(it)}</li>
-              ))}
-            </ul>
-          </RI>
-        </Reveal>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
       );
 
     case "showcase":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="gated">
-              <div className="showcase">
-                {s.shots.map((sh, k) => (
-                  <Shot key={k} src={sh.src} cap={sh.cap} />
-                ))}
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="show-grid">
+            <RV i={1}>
+              <div>
+                <div className="media-frame">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={s.fullShot.src} alt="Full table view" />
+                  <AdultGate line={s.fullShot.gateLine} />
+                </div>
+                <div className="media-cap">{s.fullShot.cap}</div>
               </div>
-              <AdultGate label="Live product · 18+" />
+            </RV>
+            <div className="show-side">
+              {s.crops.map((c, k) => (
+                <RV i={k + 2} key={k}>
+                  <div>
+                    <div
+                      className={`crop-frame ${c.cropHeight ? "fixed-h" : ""}`}
+                      style={c.cropHeight ? { height: c.cropHeight } : undefined}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.src} alt="" />
+                    </div>
+                    <div className="media-cap">{c.cap}</div>
+                  </div>
+                </RV>
+              ))}
             </div>
-          </RI>
-          <RI i={3}>
-            <p className="lead" style={{ fontSize: "0.85rem" }}>
-              {s.note}
-            </p>
-          </RI>
-        </Reveal>
+          </div>
+          <ChromeFoot />
+        </>
       );
 
     case "demo":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <DemoPlayer video={s.video} poster={s.poster} />
-          </RI>
-          <RI i={3}>
-            <p className="lead" style={{ fontSize: "0.85rem" }}>
-              {s.note}
-            </p>
-          </RI>
-        </Reveal>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <RV i={1}>
+            <DemoVideo s={s} />
+          </RV>
+          <ChromeFoot />
+        </>
       );
 
-    case "odds":
+    case "caseStudy":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="odds-grid">
-              {s.odds.map((o, k) => (
-                <div className="odd" data-accent={o.accent} key={k}>
-                  <span className="name">{o.name}</span>
-                  <span className="pay">{o.pay}</span>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="tl-grid">
+            {s.steps.map((st, k) => (
+              <RV i={k + 1} key={k}>
+                <div className="tl">
+                  <div className={`dot ${st.bright ? "bright" : ""}`} />
+                  <div className={`day ${st.bright ? "bright" : ""}`}>{st.day}</div>
+                  <h3>{st.h}</h3>
+                  <p>{st.p}</p>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <div className="cs-stats">
+            {s.stats.map((st, k) => (
+              <RV i={k + 5} big key={k}>
+                <div>
+                  <div className="big">{st.big}</div>
+                  <div className="cap">{st.cap}</div>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot left={<span className="chip">{s.chip}</span>} />
+        </>
+      );
+
+    case "panels3":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="p3-grid">
+            {s.panels.map((p, k) => (
+              <RV i={k + 1} key={k}>
+                <div className="p3">
+                  <div className="n">{String(k + 1).padStart(2, "0")}</div>
+                  <h3>{p.h}</h3>
+                  <p>{p.p}</p>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
+      );
+
+    case "betMenu":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <RV i={1}>
+            <p className="lead" style={{ maxWidth: 1100 }}>
+              {s.lead}
+            </p>
+          </RV>
+          <div className="bets-main">
+            {s.mains.map((b, k) => (
+              <RV i={k + 2} big key={k}>
+                <div className="bet-main" style={{ "--bet": b.color } as React.CSSProperties}>
+                  <div className="lbl">{b.label}</div>
+                  <div className="odds">{b.odds}</div>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <div className="bets-pairs">
+            {s.pairs.map((p, k) => (
+              <RV i={k + 5} key={k}>
+                <div className="bet-pair">
+                  <div className="odds">{p.odds}</div>
+                  <div className="lbl">{p.label}</div>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot
+            left={
+              <>
+                <span className="foot-note">{s.footNote}</span>
+                <span className="chip">{s.chip}</span>
+              </>
+            }
+          />
+        </>
+      );
+
+    case "integration":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <RV i={1}>
+            <div className="arch-strip">
+              {s.strip.map((node, k) => (
+                <div key={k} style={{ display: "contents" }}>
+                  {k > 0 ? <div className="arch-arrow">→</div> : null}
+                  <div className={`arch-node ${k === s.stripActive ? "active" : ""}`}>
+                    <span>{node}</span>
+                  </div>
                 </div>
               ))}
             </div>
-          </RI>
-          <RI i={3}>
-            <p className="lead" style={{ fontSize: "0.9rem" }}>
-              {s.note}
-            </p>
-          </RI>
-        </Reveal>
-      );
-
-    case "split":
-      return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="split">
-              {s.cols.map((c, k) => (
-                <div className="col" key={k}>
-                  <span className="tag">{c.tag}</span>
+          </RV>
+          <div className="arch-cols">
+            {s.cols.map((c, k) => (
+              <RV i={k + 2} key={k}>
+                <div>
                   <h3>{c.h}</h3>
-                  <p>{fmt(c.p)}</p>
+                  <p>{c.p}</p>
                 </div>
-              ))}
-            </div>
-          </RI>
-          {s.foot ? (
-            <RI i={3}>
-              <p className="lead" style={{ fontSize: "0.92rem" }}>
-                {fmt(s.foot)}
-              </p>
-            </RI>
-          ) : null}
-        </Reveal>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
       );
 
-    case "stats":
+    case "wallet":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          {s.lead ? (
-            <RI i={2}>
-              <p className="lead">{s.lead}</p>
-            </RI>
-          ) : null}
-          <RI i={3}>
-            <div className="stats">
-              {s.stats.map((st, k) => (
-                <div className="stat" key={k}>
-                  <div className="num">{fmt(st.num)}</div>
-                  <div className="lbl">{fmt(st.lbl)}</div>
-                </div>
-              ))}
-            </div>
-          </RI>
-        </Reveal>
-      );
-
-    case "phases":
-      return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="phases">
-              {s.items.map((p, k) => (
-                <div className="phase" key={k}>
-                  <span className="p-tag">{p.tag}</span>
-                  <h4>{p.h}</h4>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="wallet-grid">
+            {s.panels.map((p, k) => (
+              <RV i={k + 1} key={k}>
+                <div className="wpanel">
+                  <h3>{p.h}</h3>
                   <ul>
-                    {p.points.map((pt, j) => (
-                      <li key={j}>{pt}</li>
+                    {p.bullets.map((b, j) => (
+                      <li key={j}>{b}</li>
                     ))}
                   </ul>
                 </div>
-              ))}
-            </div>
-          </RI>
-        </Reveal>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
       );
 
-    case "steps":
+    case "bigStats":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-lg">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="steps">
-              {s.steps.map((st, k) => (
-                <div className="step" key={k}>
-                  <h4>{st.h}</h4>
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="vstats">
+            {s.stats.map((st, k) => (
+              <RV i={k + 1} big key={k}>
+                <div>
+                  <div className="big grad-text">{st.big}</div>
+                  <div className="cap">{st.cap}</div>
                   <p>{st.p}</p>
                 </div>
-              ))}
-            </div>
-          </RI>
-        </Reveal>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot left={<span className="chip">{s.chip}</span>} />
+        </>
+      );
+
+    case "roadmap":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="tl-grid roadmap">
+            {s.phases.map((p, k) => (
+              <RV i={k + 1} key={k}>
+                <div className="tl">
+                  <div className={`dot ${p.live ? "bright pulse" : ""}`} />
+                  <div className={`day ${p.live ? "bright" : ""}`}>
+                    {p.live ? (
+                      p.tag
+                    ) : (
+                      <>
+                        <span className="tag-dim">{p.tag}</span>
+                        <span className="chip inline">{p.dateChip}</span>
+                      </>
+                    )}
+                  </div>
+                  <h3>{p.h}</h3>
+                  <p>{p.p}</p>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
+      );
+
+    case "compliance":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <RV i={1}>
+            <p className="lead" style={{ maxWidth: 1100 }}>
+              {s.lead}
+            </p>
+          </RV>
+          <div className="comp-grid">
+            {s.items.map((it, k) => (
+              <RV i={k + 2} key={k}>
+                <div>
+                  <h3>{it.h}</h3>
+                  <p>
+                    {it.p}
+                    {it.chip ? <span className="chip inline">{it.chip}</span> : null}
+                  </p>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <ChromeFoot />
+        </>
+      );
+
+    case "commercials":
+      return (
+        <>
+          <ChromeTop num={s.num} label={s.label} />
+          <RV i={0}>
+            <h1 className="h-display">{fmt(s.title)}</h1>
+          </RV>
+          <div className="deal-grid">
+            {s.panels.map((p, k) => (
+              <RV i={k + 1} key={k}>
+                <div className="deal-panel">
+                  <h3>{p.h}</h3>
+                  <div className="deal-rows">
+                    {p.rows.map((r, j) => (
+                      <div className="deal-row" key={j}>
+                        <span className="k">{r.k}</span>
+                        <span className="chip">{r.chip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </RV>
+            ))}
+          </div>
+          <RV i={3}>
+            <p className="deal-note">{s.footNote}</p>
+          </RV>
+          <ChromeFoot />
+        </>
       );
 
     case "close":
       return (
-        <Reveal className="slide-inner stack">
-          <RI i={0}>
-            <span className="kicker">{s.kicker}</span>
-          </RI>
-          <RI i={1}>
-            <h2 className="display d-xl">{fmt(s.title)}</h2>
-          </RI>
-          <RI i={2}>
-            <div className="cta-row">
-              {s.contacts.map((c, k) => (
-                <div className="item" key={k}>
-                  <span className="k">{c.k}</span>
-                  <span className="v">{fmt(c.v)}</span>
-                </div>
-              ))}
+        <>
+          <div className="chrome-top">
+            <div className="kicker">
+              <span className="num">{s.kicker[0]}</span>
+              <span className="lbl">{s.kicker[1]}</span>
             </div>
-          </RI>
-        </Reveal>
+            <span className="badge-18">18+</span>
+          </div>
+          <div className="cover-center">
+            <RV i={0}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="close-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
+            </RV>
+            <RV i={1}>
+              <div className="close-title">{s.titleTop}</div>
+            </RV>
+            <RV i={2}>
+              <div className="close-sub grad-text grad-glow">{s.titleSub}</div>
+            </RV>
+            <RV i={3}>
+              <div className="close-chips">
+                {s.chips.map((c, k) => (
+                  <span className="chip" key={k}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </RV>
+            <RV i={4}>
+              <div className="cover-legal">{s.legal}</div>
+            </RV>
+          </div>
+          <div className="ui-strip short">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/pitch/ui-strip.png" alt="Playroom live table interface" />
+          </div>
+        </>
       );
   }
 }
 
+function glowFor(s: Slide): "top" | "bottom" | "both" {
+  if (s.type === "cover" || s.type === "close") return "both";
+  if (s.type === "statement" || s.type === "demo" || s.type === "bigStats")
+    return "bottom";
+  return "top";
+}
+
 export default function PitchDeck({ operator }: { operator: string | null }) {
   const who = operator && operator.trim() ? operator.trim() : "Do not distribute";
-  const scrollerRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  const stRef = useRef<ScrollTrigger | null>(null);
   const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
+  const [motionMode, setMotionMode] = useState<"pan" | "static">("pan");
 
-  const scrollToIndex = useCallback((i: number) => {
-    const clamped = Math.max(0, Math.min(DECK.length - 1, i));
+  /* Stage scale: fit the 1920x1080 canvas to the viewport, before paint. */
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const apply = () => {
+      const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      root.style.setProperty("--stage-scale", String(s));
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
+
+  /* Horizontal pan: vertical scroll through a tall spacer drives the sticky
+     track left-to-right. No pin (position:fixed), so it prints/captures.
+     `?flat` (or reduced-motion) falls back to a plain vertical stack. */
+  useEffect(() => {
     const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    sectionRefs.current[clamped]?.scrollIntoView({
-      behavior: reduce ? "auto" : "smooth",
-      block: "start",
-    });
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      new URLSearchParams(window.location.search).has("flat");
+    if (reduce) {
+      setMotionMode("static");
+      return;
+    }
+    const scroller = scrollRef.current;
+    const track = trackRef.current;
+    if (!scroller || !track) return;
+
+    const setBar = barRef.current
+      ? gsap.quickSetter(barRef.current, "scaleX")
+      : null;
+
+    const ctx = gsap.context(() => {
+      gsap.to(track, {
+        x: () => -(track.scrollWidth - window.innerWidth),
+        ease: "none",
+        scrollTrigger: {
+          trigger: scroller,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1,
+          invalidateOnRefresh: true,
+          snap: {
+            snapTo: 1 / (N - 1),
+            duration: { min: 0.2, max: 0.5 },
+            delay: 0.06,
+            ease: "power1.inOut",
+          },
+          onRefreshInit: (self) => {
+            stRef.current = self;
+          },
+          onUpdate: (self) => {
+            stRef.current = self;
+            setBar?.(self.progress);
+            const i = Math.round(self.progress * (N - 1));
+            if (i !== activeRef.current) {
+              activeRef.current = i;
+              setActive(i);
+            }
+          },
+        },
+      });
+    }, rootRef);
+
+    return () => ctx.revert();
   }, []);
 
+  /* Keyboard: slide navigation + print/save intercept. */
   useEffect(() => {
-    const root = scrollerRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting && e.intersectionRatio >= 0.5) {
-            const idx = Number((e.target as HTMLElement).dataset.idx);
-            if (!Number.isNaN(idx)) setActive(idx);
-          }
-        }
-      },
-      { root, threshold: [0.5, 0.75] },
-    );
-    for (const el of sectionRefs.current) if (el) io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  useEffect(() => {
+    const goTo = (i: number) => {
+      const st = stRef.current;
+      if (!st) return;
+      const clamped = Math.max(0, Math.min(N - 1, i));
+      const y = st.start + (clamped / (N - 1)) * (st.end - st.start);
+      gsap.to(window, { scrollTo: y, duration: 0.6, ease: "power2.inOut" });
+    };
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && ["p", "s"].includes(e.key.toLowerCase())) {
         e.preventDefault();
         return;
       }
-      const next = ["ArrowDown", "PageDown", " ", "ArrowRight"];
-      const prev = ["ArrowUp", "PageUp", "ArrowLeft"];
+      if (motionMode === "static") return;
+      const next = ["ArrowRight", "ArrowDown", "PageDown", " "];
+      const prev = ["ArrowLeft", "ArrowUp", "PageUp"];
       if (next.includes(e.key)) {
         e.preventDefault();
-        setActive((a) => {
-          const n = Math.min(DECK.length - 1, a + 1);
-          scrollToIndex(n);
-          return n;
-        });
+        goTo(activeRef.current + 1);
       } else if (prev.includes(e.key)) {
         e.preventDefault();
-        setActive((a) => {
-          const n = Math.max(0, a - 1);
-          scrollToIndex(n);
-          return n;
-        });
+        goTo(activeRef.current - 1);
       } else if (e.key === "Home") {
         e.preventDefault();
-        scrollToIndex(0);
+        goTo(0);
       } else if (e.key === "End") {
         e.preventDefault();
-        scrollToIndex(DECK.length - 1);
+        goTo(N - 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [scrollToIndex]);
+  }, [motionMode]);
 
   return (
-    <div className="pitch-root" onContextMenu={(e) => e.preventDefault()}>
-      <div className="pitch-atmos" aria-hidden="true" />
-      <div className="pitch-grain" aria-hidden="true" />
-      <div className="age-badge">18+</div>
+    <div
+      className="pitch-root"
+      ref={rootRef}
+      data-motion={motionMode}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <Watermark operator={who} />
+      <div className="rotate-hint">ROTATE FOR BEST VIEW · THE DECK IS 16:9</div>
 
-      <nav className="rail" aria-label="Slides">
-        {DECK.map((_, i) => (
-          <button
-            key={i}
-            aria-current={active === i}
-            aria-label={`Go to slide ${i + 1}`}
-            onClick={() => {
-              setActive(i);
-              scrollToIndex(i);
-            }}
-          />
-        ))}
-      </nav>
+      <div
+        className="deck-scroll"
+        ref={scrollRef}
+        style={motionMode === "pan" ? { height: `${N * 100}vh` } : undefined}
+      >
+        <div className="deck-viewport">
+          <div className="deck-track" ref={trackRef}>
+            {DECK.map((s, idx) => (
+              <section
+                className={`panel ${
+                  motionMode === "static" || idx <= active ? "active" : ""
+                }`}
+                data-idx={idx}
+                key={idx}
+              >
+                <div className="stage-scaler">
+                  <div className="stage" data-glow={glowFor(s)}>
+                    <StageBody s={s} operator={operator} />
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
 
-      <div className="pitch-scroller" ref={scrollerRef} tabIndex={0}>
-        {DECK.map((s, idx) => (
-          <section
-            className="slide"
-            key={idx}
-            data-idx={idx}
-            ref={(el) => {
-              sectionRefs.current[idx] = el;
-            }}
-          >
-            <span className="slide-tag">
-              <b>{String(idx + 1).padStart(2, "0")}</b> /{" "}
-              {String(DECK.length).padStart(2, "0")}
-            </span>
-            <SlideBody s={s} />
-            {s.type === "cover" ? (
-              <div className="scroll-hint" aria-hidden="true">
-                <span>Scroll</span>
-                <span className="line" />
-              </div>
-            ) : null}
-          </section>
-        ))}
+      <div className="deck-progress" aria-hidden="true">
+        <i ref={barRef} />
+      </div>
+      <div className="deck-counter" aria-hidden="true">
+        <b>{String(active + 1).padStart(2, "0")}</b> / {String(N).padStart(2, "0")}
       </div>
     </div>
   );

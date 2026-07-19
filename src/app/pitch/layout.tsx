@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Fraunces, IBM_Plex_Mono } from "next/font/google";
+import { Anton, IBM_Plex_Mono } from "next/font/google";
 
-// Scoped display + mono fonts. Applied only under /pitch via the wrapper
-// below, so the product's global Inter theme is untouched.
-const fraunces = Fraunces({
+// Scoped display + mono fonts per the approved design (Anton condensed caps
+// for display, IBM Plex Mono for deck chrome). Applied only under /pitch via
+// the wrapper below, so the product's global Inter theme is untouched.
+const anton = Anton({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: "400",
+  variable: "--font-anton",
   display: "swap",
 });
 
@@ -28,6 +28,6 @@ export const metadata: Metadata = {
 
 export default function PitchLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={`${fraunces.variable} ${plexMono.variable}`}>{children}</div>
+    <div className={`${anton.variable} ${plexMono.variable}`}>{children}</div>
   );
 }
