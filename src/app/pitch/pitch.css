@@ -51,16 +51,16 @@
 }
 
 /* ---- Horizontal deck structure ----
-   .deck-scroll is a tall spacer (N x 100vh) that provides the scroll
-   distance. .deck-viewport is position:sticky (NOT fixed, so it captures /
-   prints cleanly). .deck-track slides in -x as the spacer scrolls. Each
-   .panel is one viewport; the 1920x1080 .stage centers inside it. */
+   The deck does NOT scroll the document. .deck-viewport is a fixed-height,
+   non-scrolling window; .deck-track is translated in -x by exactly one
+   viewport per navigation gesture (wheel / swipe / key), so slides step
+   strictly one at a time and can never be skipped. Each .panel is one
+   viewport; the 1920x1080 .stage centers inside it. */
 .deck-scroll {
   position: relative;
 }
 .deck-viewport {
-  position: sticky;
-  top: 0;
+  position: relative;
   height: 100dvh;
   overflow: hidden;
   background: var(--ink);
@@ -111,12 +111,8 @@
     var(--ink);
 }
 
-/* Reduced-motion / static fallback: plain vertical stack, no sticky. */
-.pitch-root[data-motion="static"] .deck-scroll {
-  height: auto !important;
-}
+/* Reduced-motion / ?flat fallback: plain vertical stack, native scroll. */
 .pitch-root[data-motion="static"] .deck-viewport {
-  position: static;
   height: auto;
   overflow: visible;
 }
@@ -169,12 +165,10 @@
 .chrome-foot.end {
   justify-content: flex-end;
 }
-.foot-brand {
-  font-family: var(--mono);
-  font-size: 24px;
-  letter-spacing: 0.18em;
-  color: var(--dim);
-  white-space: nowrap;
+.foot-logo {
+  height: 46px;
+  width: auto;
+  opacity: 0.9;
 }
 .foot-left {
   display: flex;
@@ -432,12 +426,12 @@
   border: 1px solid rgba(232, 30, 40, 0.28);
   background: #0c0a0b;
   overflow: hidden;
+  border-radius: 4px;
 }
-.crop-frame.fixed-h img {
+.crop-frame img {
+  display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top;
+  height: auto;
 }
 
 /* ---- 18+ gate (fully obscures until tapped) ---- */
@@ -493,28 +487,16 @@
   position: relative;
   border: 1px solid rgba(232, 30, 40, 0.28);
   background: #0c0a0b;
-  aspect-ratio: 2920 / 1496;
+  aspect-ratio: 1600 / 730; /* pre-cropped: no capture chrome, no dock */
   overflow: hidden;
 }
 .demo-frame video {
   position: absolute;
-  left: 0;
-  top: -10.43%; /* crops the capture chrome; bottom edge aligns */
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
-}
-.demo-caps {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-}
-.demo-caps span {
-  font-family: var(--mono);
-  font-size: 24px;
-  letter-spacing: 0.14em;
-  color: var(--dim);
+  height: 100%;
+  object-fit: cover;
 }
 
 /* ---- Case study / roadmap timeline ---- */

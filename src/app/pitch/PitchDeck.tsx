@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -8,14 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import "./pitch.css";
-import { DECK, FOOTER, type Slide } from "./content";
+import { DECK, type Slide } from "./content";
 import AdultGate from "./AdultGate";
 import Watermark from "./Watermark";
-
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 const N = DECK.length;
 
@@ -78,11 +75,13 @@ function ChromeTop({
   );
 }
 
+/* Footer carries the Playroom logo (replaces the old "OPERATOR DECK" text). */
 function ChromeFoot({ left }: { left?: ReactNode }) {
   return (
     <div className={`chrome-foot ${left ? "" : "end"}`}>
       {left ? <div className="foot-left">{left}</div> : null}
-      <span className="foot-brand">{FOOTER}</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="foot-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
     </div>
   );
 }
@@ -130,10 +129,6 @@ function DemoVideo({ s }: { s: Extract<Slide, { type: "demo" }> }) {
             }
           }}
         />
-      </div>
-      <div className="demo-caps">
-        <span>{s.capLeft}</span>
-        <span>{s.capRight}</span>
       </div>
     </div>
   );
@@ -286,10 +281,7 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
               {s.crops.map((c, k) => (
                 <RV i={k + 2} key={k}>
                   <div>
-                    <div
-                      className={`crop-frame ${c.cropHeight ? "fixed-h" : ""}`}
-                      style={c.cropHeight ? { height: c.cropHeight } : undefined}
-                    >
+                    <div className="crop-frame">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={c.src} alt="" />
                     </div>
@@ -640,12 +632,12 @@ function glowFor(s: Slide): "top" | "bottom" | "both" {
 export default function PitchDeck({ operator }: { operator: string | null }) {
   const who = operator && operator.trim() ? operator.trim() : "Do not distribute";
   const rootRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
-  const stRef = useRef<ScrollTrigger | null>(null);
   const [active, setActive] = useState(0);
+  const [revealed, setRevealed] = useState<Set<number>>(() => new Set([0]));
   const activeRef = useRef(0);
+  const animatingRef = useRef(false);
   const [motionMode, setMotionMode] = useState<"pan" | "static">("pan");
 
   /* Stage scale: fit the 1920x1080 canvas to the viewport, before paint. */
@@ -653,91 +645,130 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     const root = rootRef.current;
     if (!root) return;
     const apply = () => {
-      const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-      root.style.setProperty("--stage-scale", String(s));
+      const sc = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      root.style.setProperty("--stage-scale", String(sc));
     };
     apply();
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
   }, []);
 
-  /* Horizontal pan: vertical scroll through a tall spacer drives the sticky
-     track left-to-right. No pin (position:fixed), so it prints/captures.
-     `?flat` (or reduced-motion) falls back to a plain vertical stack. */
   useEffect(() => {
     const reduce =
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       new URLSearchParams(window.location.search).has("flat");
-    if (reduce) {
-      setMotionMode("static");
-      return;
-    }
-    const scroller = scrollRef.current;
-    const track = trackRef.current;
-    if (!scroller || !track) return;
-
-    const setBar = barRef.current
-      ? gsap.quickSetter(barRef.current, "scaleX")
-      : null;
-
-    const ctx = gsap.context(() => {
-      gsap.to(track, {
-        x: () => -(track.scrollWidth - window.innerWidth),
-        ease: "none",
-        scrollTrigger: {
-          trigger: scroller,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 1,
-          invalidateOnRefresh: true,
-          snap: {
-            snapTo: 1 / (N - 1),
-            duration: { min: 0.2, max: 0.5 },
-            delay: 0.06,
-            ease: "power1.inOut",
-          },
-          onRefreshInit: (self) => {
-            stRef.current = self;
-          },
-          onUpdate: (self) => {
-            stRef.current = self;
-            setBar?.(self.progress);
-            const i = Math.round(self.progress * (N - 1));
-            if (i !== activeRef.current) {
-              activeRef.current = i;
-              setActive(i);
-            }
-          },
-        },
-      });
-    }, rootRef);
-
-    return () => ctx.revert();
+    if (reduce) setMotionMode("static");
   }, []);
 
-  /* Keyboard: slide navigation + print/save intercept. */
-  useEffect(() => {
-    const goTo = (i: number) => {
-      const st = stRef.current;
-      if (!st) return;
+  /* Strict, one-at-a-time slide navigation. The document never scrolls; the
+     track translates by exactly one viewport per gesture. A gesture is locked
+     until its animation finishes AND wheel/touch input has gone quiet, so
+     trackpad inertia can never skip a slide. */
+  const goTo = useCallback(
+    (i: number, instant = false) => {
       const clamped = Math.max(0, Math.min(N - 1, i));
-      const y = st.start + (clamped / (N - 1)) * (st.end - st.start);
-      gsap.to(window, { scrollTo: y, duration: 0.6, ease: "power2.inOut" });
+      if (clamped === activeRef.current && !instant) return;
+      const track = trackRef.current;
+      if (!track) return;
+      activeRef.current = clamped;
+      setActive(clamped);
+      setRevealed((prev) =>
+        prev.has(clamped) ? prev : new Set(prev).add(clamped),
+      );
+      if (barRef.current) {
+        gsap.to(barRef.current, {
+          scaleX: N > 1 ? clamped / (N - 1) : 1,
+          duration: instant ? 0 : 0.6,
+          ease: "power2.inOut",
+        });
+      }
+      animatingRef.current = true;
+      gsap.to(track, {
+        x: () => -clamped * window.innerWidth,
+        duration: instant ? 0 : 0.72,
+        ease: "power3.inOut",
+        overwrite: true,
+        onComplete: () => {
+          animatingRef.current = false;
+        },
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (motionMode !== "pan") return;
+    const track = trackRef.current;
+    if (!track) return;
+
+    // set initial position (and on resize)
+    gsap.set(track, { x: () => -activeRef.current * window.innerWidth });
+    const onResize = () =>
+      gsap.set(track, { x: -activeRef.current * window.innerWidth });
+    window.addEventListener("resize", onResize);
+
+    let locked = false;
+    let unlockTimer: ReturnType<typeof setTimeout> | null = null;
+    const relock = (ms: number) => {
+      if (unlockTimer) clearTimeout(unlockTimer);
+      unlockTimer = setTimeout(() => {
+        locked = false;
+      }, ms);
     };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // while locked (animating or inertia still flowing), keep pushing the
+      // unlock out so a single flick can't chain into a second step
+      if (locked || animatingRef.current) {
+        relock(180);
+        return;
+      }
+      const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (Math.abs(d) < 6) return;
+      locked = true;
+      goTo(activeRef.current + (d > 0 ? 1 : -1));
+      relock(760);
+    };
+
+    // touch: one swipe = one step
+    let tsX = 0;
+    let tsY = 0;
+    let tsActive = false;
+    const onTouchStart = (e: TouchEvent) => {
+      tsX = e.touches[0].clientX;
+      tsY = e.touches[0].clientY;
+      tsActive = true;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.cancelable) e.preventDefault();
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!tsActive) return;
+      tsActive = false;
+      if (locked || animatingRef.current) return;
+      const dx = e.changedTouches[0].clientX - tsX;
+      const dy = e.changedTouches[0].clientY - tsY;
+      const d = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
+      if (Math.abs(d) < 45) return;
+      locked = true;
+      goTo(activeRef.current + (d < 0 ? 1 : -1));
+      relock(760);
+    };
+
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && ["p", "s"].includes(e.key.toLowerCase())) {
         e.preventDefault();
         return;
       }
-      if (motionMode === "static") return;
       const next = ["ArrowRight", "ArrowDown", "PageDown", " "];
       const prev = ["ArrowLeft", "ArrowUp", "PageUp"];
       if (next.includes(e.key)) {
         e.preventDefault();
-        goTo(activeRef.current + 1);
+        if (!animatingRef.current) goTo(activeRef.current + 1);
       } else if (prev.includes(e.key)) {
         e.preventDefault();
-        goTo(activeRef.current - 1);
+        if (!animatingRef.current) goTo(activeRef.current - 1);
       } else if (e.key === "Home") {
         e.preventDefault();
         goTo(0);
@@ -746,9 +777,22 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
         goTo(N - 1);
       }
     };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [motionMode]);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+      if (unlockTimer) clearTimeout(unlockTimer);
+    };
+  }, [motionMode, goTo]);
 
   return (
     <div
@@ -760,38 +804,36 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       <Watermark operator={who} />
       <div className="rotate-hint">ROTATE FOR BEST VIEW · THE DECK IS 16:9</div>
 
-      <div
-        className="deck-scroll"
-        ref={scrollRef}
-        style={motionMode === "pan" ? { height: `${N * 100}vh` } : undefined}
-      >
-        <div className="deck-viewport">
-          <div className="deck-track" ref={trackRef}>
-            {DECK.map((s, idx) => (
-              <section
-                className={`panel ${
-                  motionMode === "static" || idx <= active ? "active" : ""
-                }`}
-                data-idx={idx}
-                key={idx}
-              >
-                <div className="stage-scaler">
-                  <div className="stage" data-glow={glowFor(s)}>
-                    <StageBody s={s} operator={operator} />
-                  </div>
+      <div className="deck-viewport">
+        <div className="deck-track" ref={trackRef}>
+          {DECK.map((s, idx) => (
+            <section
+              className={`panel ${
+                motionMode === "static" || revealed.has(idx) ? "active" : ""
+              }`}
+              data-idx={idx}
+              key={idx}
+            >
+              <div className="stage-scaler">
+                <div className="stage" data-glow={glowFor(s)}>
+                  <StageBody s={s} operator={operator} />
                 </div>
-              </section>
-            ))}
-          </div>
+              </div>
+            </section>
+          ))}
         </div>
       </div>
 
-      <div className="deck-progress" aria-hidden="true">
-        <i ref={barRef} />
-      </div>
-      <div className="deck-counter" aria-hidden="true">
-        <b>{String(active + 1).padStart(2, "0")}</b> / {String(N).padStart(2, "0")}
-      </div>
+      {motionMode === "pan" ? (
+        <>
+          <div className="deck-progress" aria-hidden="true">
+            <i ref={barRef} />
+          </div>
+          <div className="deck-counter" aria-hidden="true">
+            <b>{String(active + 1).padStart(2, "0")}</b> / {String(N).padStart(2, "0")}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

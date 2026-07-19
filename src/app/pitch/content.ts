@@ -57,7 +57,7 @@ export type Slide =
       label: string;
       title: string;
       fullShot: { src: string; cap: string; gateLine: string };
-      crops: { src: string; cap: string; cropHeight?: number }[];
+      crops: { src: string; cap: string }[];
       notes: string;
     }
   | {
@@ -246,11 +246,7 @@ export const DECK: Slide[] = [
     },
     crops: [
       { src: "/pitch/ui-betmenu.png", cap: "BET MENU · BALANCE · CHIP RAIL" },
-      {
-        src: "/pitch/ui-chat.png",
-        cap: "LIVE CHAT · PRESENCE IN EVERY ROUND",
-        cropHeight: 250,
-      },
+      { src: "/pitch/ui-hands.png", cap: "LIVE HANDS · REAL CARDS, REAL TIME" },
     ],
     notes:
       "Real product. Full table view is gated; click to reveal in the room when appropriate. The UI crops on the right are safe and show what the operator is actually buying: the platform.",
