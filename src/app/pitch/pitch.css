@@ -175,7 +175,7 @@
   justify-content: flex-end;
 }
 .foot-logo {
-  height: 46px;
+  height: 53px;
   width: auto;
   opacity: 0.9;
 }
@@ -248,12 +248,16 @@
   align-items: center;
   text-align: center;
 }
+.cover-center.solo {
+  flex: 1;
+  justify-content: center;
+}
 .cover-logo {
-  height: 120px;
+  height: 138px;
   width: auto;
 }
 .close-logo {
-  height: 80px;
+  height: 92px;
   width: auto;
 }
 .cover-title {
@@ -374,13 +378,17 @@
   margin: 8px 0 0 0;
 }
 
-/* ---- The product, live (video hero + UI crops) ---- */
-.live-grid {
-  margin-top: 44px;
-  display: grid;
-  grid-template-columns: 1.28fr 0.72fr;
-  gap: 56px;
-  align-items: start;
+/* ---- The product, live (large centered video) ---- */
+.live-solo {
+  margin-top: clamp(24px, 4vh, 48px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.live-solo .demo-frame {
+  height: 690px;
+  width: auto;
+  aspect-ratio: 1600 / 730;
 }
 .media-cap {
   font-family: var(--mono);

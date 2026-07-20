@@ -45,40 +45,21 @@ function RV({
   );
 }
 
-function ChromeTop({
-  num,
-  label,
-  pair,
-}: {
-  num?: string;
-  label?: string;
-  pair?: [string, string];
-}) {
+function ChromeTop({ num, label }: { num: string; label: string }) {
   return (
     <div className="chrome-top">
       <div className="kicker">
-        {pair ? (
-          <>
-            <span className="num">{pair[0]}</span>
-            <span className="lbl">{pair[1]}</span>
-          </>
-        ) : (
-          <>
-            <span className="num">{num}</span>
-            <span className="lbl"> · {label}</span>
-          </>
-        )}
+        <span className="num">{num}</span>
+        <span className="lbl"> · {label}</span>
       </div>
-      <span className="badge-18">18+</span>
     </div>
   );
 }
 
 /* Footer carries the Playroom logo mark. */
-function ChromeFoot({ left }: { left?: ReactNode }) {
+function ChromeFoot() {
   return (
-    <div className={`chrome-foot ${left ? "" : "end"}`}>
-      {left ? <div className="foot-left">{left}</div> : null}
+    <div className="chrome-foot end">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="foot-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
     </div>
@@ -131,46 +112,22 @@ function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
   );
 }
 
-function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
+function StageBody({ s }: { s: Slide }) {
   switch (s.type) {
     case "cover":
       return (
-        <>
-          <div className="chrome-top">
-            <div className="kicker">
-              <span className="num">{s.kicker[0]}</span>
-              <span className="lbl">{s.kicker[1]}</span>
-            </div>
-            <span className="badge-18">18+</span>
-          </div>
-          <div className="cover-center">
-            <RV i={0}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="cover-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
-            </RV>
-            <RV i={1}>
-              <div className="cover-title">{s.titleTop}</div>
-            </RV>
-            <RV i={2}>
-              <div className="cover-sub grad-text">{s.titleSub}</div>
-            </RV>
-            <RV i={3}>
-              <div className="cover-prepared">
-                <span className="chip">
-                  {s.preparedForPrefix}
-                  {(operator ?? "OPERATOR NAME").toUpperCase()}
-                </span>
-              </div>
-            </RV>
-            <RV i={4}>
-              <div className="cover-legal">{s.legal}</div>
-            </RV>
-          </div>
-          <div className="ui-strip">
+        <div className="cover-center solo">
+          <RV i={0}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/pitch/ui-strip.png" alt="Playroom live table interface" />
-          </div>
-        </>
+            <img className="cover-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
+          </RV>
+          <RV i={1}>
+            <div className="cover-title">{s.titleTop}</div>
+          </RV>
+          <RV i={2}>
+            <div className="cover-sub grad-text">{s.titleSub}</div>
+          </RV>
+        </div>
       );
 
     case "statement":
@@ -231,27 +188,11 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
           <RV i={0}>
             <h1 className="h-display">{fmt(s.title)}</h1>
           </RV>
-          <div className="live-grid">
-            <RV i={1}>
-              <div>
-                <DemoVideo src={s.video} gateLine={s.gateLine} />
-                <div className="media-cap">{s.videoCap}</div>
-              </div>
-            </RV>
-            <div className="show-side">
-              {s.crops.map((c, k) => (
-                <RV i={k + 2} key={k}>
-                  <div>
-                    <div className="crop-frame">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={c.src} alt="" />
-                    </div>
-                    <div className="media-cap">{c.cap}</div>
-                  </div>
-                </RV>
-              ))}
+          <RV i={1}>
+            <div className="live-solo">
+              <DemoVideo src={s.video} gateLine={s.gateLine} />
             </div>
-          </div>
+          </RV>
           <ChromeFoot />
         </>
       );
@@ -293,65 +234,31 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
                   <h3>{c.h}</h3>
                   <ul className="ops-list">
                     {c.bullets.map((b, j) => (
-                      <li key={j}>
-                        {typeof b === "string" ? (
-                          b
-                        ) : (
-                          <span>
-                            {b.text}
-                            <span className="chip inline">{b.chip}</span>
-                          </span>
-                        )}
-                      </li>
+                      <li key={j}>{b}</li>
                     ))}
                   </ul>
                 </div>
               </RV>
             ))}
           </div>
-          <ChromeFoot left={<span className="chip">{s.chip}</span>} />
+          <ChromeFoot />
         </>
       );
 
     case "close":
       return (
-        <>
-          <div className="chrome-top">
-            <div className="kicker">
-              <span className="num">{s.kicker[0]}</span>
-              <span className="lbl">{s.kicker[1]}</span>
-            </div>
-            <span className="badge-18">18+</span>
-          </div>
-          <div className="cover-center">
-            <RV i={0}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="close-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
-            </RV>
-            <RV i={1}>
-              <div className="close-title">{s.titleTop}</div>
-            </RV>
-            <RV i={2}>
-              <div className="close-sub grad-text grad-glow">{s.titleSub}</div>
-            </RV>
-            <RV i={3}>
-              <div className="close-chips">
-                {s.chips.map((c, k) => (
-                  <span className="chip" key={k}>
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </RV>
-            <RV i={4}>
-              <div className="cover-legal">{s.legal}</div>
-            </RV>
-          </div>
-          <div className="ui-strip short">
+        <div className="cover-center solo">
+          <RV i={0}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/pitch/ui-strip.png" alt="Playroom live table interface" />
-          </div>
-        </>
+            <img className="close-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
+          </RV>
+          <RV i={1}>
+            <div className="close-title">{s.titleTop}</div>
+          </RV>
+          <RV i={2}>
+            <div className="close-sub grad-text grad-glow">{s.titleSub}</div>
+          </RV>
+        </div>
       );
   }
 }
@@ -390,12 +297,8 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     if (reduce) setMotionMode("static");
   }, []);
 
-  /* One slide per gesture, no artificial cooldown: a fresh gesture (wheel
-     activity after a quiet gap, or a direction change) advances immediately,
-     even mid-animation. A single trackpad flick with momentum is one
-     continuous stream, so it still moves exactly one slide. The track and
-     progress bar move via CSS vars (--active / --progress) with a CSS
-     transition, so position is resize-proof (vw units) with no JS math. */
+  /* Track + progress move via CSS vars with a CSS transition, so position is
+     resize-proof (vw units) with no JS pixel math. */
   const goTo = useCallback((i: number) => {
     const clamped = Math.max(0, Math.min(N - 1, i));
     if (clamped === activeRef.current) return;
@@ -412,22 +315,42 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
   useEffect(() => {
     if (motionMode !== "pan") return;
 
-    /* Wheel gesture detection: events separated by a quiet gap (or flipping
-       direction) start a new gesture; each new gesture = one step. */
-    const GAP_MS = 110;
-    let lastWheelAt = 0;
+    /* One slide per gesture, responsive. Impulse detection instead of a lock:
+       a trackpad swipe is one rise-then-decay of |delta|; a genuine second
+       swipe (even same direction, even while the first's inertia is still
+       trailing) shows a fresh acceleration. We step on the leading edge, on a
+       direction flip, or on that fresh impulse; the decaying inertia tail
+       fires nothing, so one flick = one slide but consecutive deliberate
+       swipes advance immediately. */
     let lastDir = 0;
+    let prevAbs = 0;
+    let decaying = false;
+    let lastEventAt = 0;
+    let lastFireAt = 0;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-      if (Math.abs(d) < 4) return;
-      const dir = d > 0 ? 1 : -1;
+      const raw = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      const absD = Math.abs(raw);
+      if (absD < 3) return;
+      const dir = raw > 0 ? 1 : -1;
       const now = performance.now();
-      const fresh = now - lastWheelAt > GAP_MS || dir !== lastDir;
-      lastWheelAt = now;
+
+      const quiet = now - lastEventAt > 45; // inertia streams faster than this
+      const flipped = dir !== lastDir && lastDir !== 0;
+      const rising = absD > prevAbs + 1.2;
+      const impulse = rising && decaying; // new push after the tail started decaying
+
+      if (absD < prevAbs - 0.5) decaying = true; // past the peak, in the tail
+
+      if ((quiet || flipped || impulse) && now - lastFireAt > 60) {
+        goTo(activeRef.current + dir);
+        lastFireAt = now;
+        decaying = false;
+      }
       lastDir = dir;
-      if (fresh) goTo(activeRef.current + dir);
+      prevAbs = absD;
+      lastEventAt = now;
     };
 
     // touch: one swipe = one step
@@ -510,7 +433,7 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
             >
               <div className="stage-scaler">
                 <div className="stage" data-glow={glowFor(s)}>
-                  <StageBody s={s} operator={operator} />
+                  <StageBody s={s} />
                 </div>
               </div>
             </section>

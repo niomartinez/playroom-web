@@ -1,10 +1,9 @@
 /**
  * Operator pitch deck content. Design system per the approved Claude Design
  * handoff (fixed 1920x1080 stage, Anton + IBM Plex Mono, red gradient, gold
- * fill-in chips). Structure per the 2026-07-20 concision pass: 7 slides,
- * product-centric, one job per slide:
+ * fill-in chips). 7 slides, product-centric, one job per slide:
  *
- *   Cover -> 01 hook -> 02 what it is -> 03 proof (video + UI) ->
+ *   Cover -> 01 hook -> 02 what it is -> 03 proof (video) ->
  *   04 why players stay -> 05 safe to carry -> Close
  *
  * Copy conventions:
@@ -18,11 +17,8 @@
 export type Slide =
   | {
       type: "cover";
-      kicker: [string, string];
       titleTop: string; // white Anton line
       titleSub: string; // red-gradient Anton line
-      preparedForPrefix: string; // operator name appended at runtime
-      legal: string;
       notes: string;
     }
   | {
@@ -49,8 +45,6 @@ export type Slide =
       title: string;
       video: string;
       gateLine: string;
-      videoCap: string;
-      crops: { src: string; cap: string }[];
       notes: string;
     }
   | {
@@ -66,30 +60,22 @@ export type Slide =
       num: string;
       label: string;
       title: string;
-      cols: { tag: string; h: string; bullets: (string | { text: string; chip: string })[] }[];
-      chip: string;
+      cols: { tag: string; h: string; bullets: string[] }[];
       notes: string;
     }
   | {
       type: "close";
-      kicker: [string, string];
       titleTop: string;
       titleSub: string;
-      chips: string[];
-      legal: string;
       notes: string;
     };
 
 export const DECK: Slide[] = [
   {
     type: "cover",
-    kicker: ["PLAYROOM GAMING", " · OPERATOR BRIEFING"],
     titleTop: "LIVE CASINO,",
     titleSub: "REIMAGINED FOR ADULT AUDIENCES",
-    preparedForPrefix: "PREPARED FOR: ",
-    legal: "18+ / 21+ where required",
-    notes:
-      "Cinematic open. Logo, positioning, legal line. The operator name comes from the signed link.",
+    notes: "Cinematic open. Logo + positioning. Clean, no chrome.",
   },
   {
     type: "statement",
@@ -134,13 +120,8 @@ export const DECK: Slide[] = [
     title: "THE TABLE, AS PLAYERS [[SEE IT]].",
     video: "/pitch/demo.mp4",
     gateLine: "ADULTS ONLY · TAP TO PLAY",
-    videoCap: "LIVE GAMEPLAY · GATED · MUTED",
-    crops: [
-      { src: "/pitch/ui-betmenu.png", cap: "BET MENU · BALANCE · CHIP RAIL" },
-      { src: "/pitch/ui-hands.png", cap: "LIVE HANDS · REAL CARDS, REAL TIME" },
-    ],
     notes:
-      "One slide of proof: real gameplay, muted, gated, no autoplay. The UI crops are safe and show what the operator is actually buying: the platform. Let the video run while you talk.",
+      "One slide of proof: real gameplay, muted, gated, no autoplay. Let the video run large while you talk.",
   },
   {
     type: "panels3",
@@ -193,23 +174,17 @@ export const DECK: Slide[] = [
         h: "PASS REVIEW",
         bullets: [
           "18+/21+ gating, jurisdiction allow-lists, kill-switch per market.",
-          { text: "Certified equipment and dealing procedure: ", chip: "ADD TESTING LAB" },
           "Responsible-gaming limits and self-exclusion inherited from your account layer.",
         ],
       },
     ],
-    chip: "VERIFY SLA FIGURES WITH OPS",
     notes:
       "The due-diligence trio on one slide: money, stream, compliance. Their finance, platform, and compliance leads each get their column in five seconds.",
   },
   {
     type: "close",
-    kicker: ["NEXT STEP", " · PRIVATE DEMO"],
     titleTop: "THE TABLE IS FAMILIAR.",
     titleSub: "THE EXPERIENCE IS NOT.",
-    chips: ["NAME · TITLE", "EMAIL", "BOOK A PRIVATE DEMO"],
-    legal: "18+ / 21+ where required",
-    notes:
-      "Land the close, then stop talking. Contacts and demo link are chips; fill before send.",
+    notes: "Land the close, then stop talking. Clean, just the line.",
   },
 ];
