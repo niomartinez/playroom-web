@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
 
 /**
@@ -26,16 +26,42 @@ import { useGame } from "./game-context";
 // request.
 const RENEW_MS = 60_000;
 
-export function useStreamToken(): React.MutableRefObject<string | null> {
+// Fail-open ceiling: if the first mint hasn't returned within this long (no
+// session, demo route, backend blip), let the video connect anyway — tokenless,
+// like today. The authenticated fast path flips `ready` the instant the first
+// token lands (~300ms), so this only ever delays the failure/demo case.
+const READY_TIMEOUT_MS = 2_000;
+
+export interface StreamTokenState {
+  /** Freshest token; read at (re)connect time. Renewals update this in place
+   *  without re-rendering, so a healthy WHEP session is never torn down. */
+  tokenRef: React.MutableRefObject<string | null>;
+  /** Flips true once the FIRST token is in hand (or the fail-open timeout
+   *  elapses). Gate the video's initial connect on this so the stream carries
+   *  a token from the very first handshake — otherwise the WHEP session is
+   *  anonymous and the server can never kick it (freeloading). */
+  ready: boolean;
+}
+
+export function useStreamToken(): StreamTokenState {
   const { gameId } = useGame();
   const tokenRef = useRef<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    // Fail-open backstop: never let a missing token block playback forever.
+    const failOpen = setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, READY_TIMEOUT_MS);
+
     if (!gameId) {
       tokenRef.current = null;
-      return;
+      return () => {
+        cancelled = true;
+        clearTimeout(failOpen);
+      };
     }
-    let cancelled = false;
 
     const mint = async () => {
       try {
@@ -47,7 +73,10 @@ export function useStreamToken(): React.MutableRefObject<string | null> {
         if (!res.ok) return; // fail-open: keep whatever token we had
         const json = await res.json();
         const token = json?.data?.stream_token ?? null;
-        if (!cancelled && typeof token === "string") tokenRef.current = token;
+        if (!cancelled && typeof token === "string") {
+          tokenRef.current = token;
+          setReady(true); // fast path: connect now, with a token in hand
+        }
       } catch {
         // network blip — fail-open, retry on the next tick
       }
@@ -57,11 +86,12 @@ export function useStreamToken(): React.MutableRefObject<string | null> {
     const id = setInterval(mint, RENEW_MS);
     return () => {
       cancelled = true;
+      clearTimeout(failOpen);
       clearInterval(id);
     };
   }, [gameId]);
 
-  return tokenRef;
+  return { tokenRef, ready };
 }
 
 /** Append the stream token as `?t=` / `&t=` to a stream URL, if present. */

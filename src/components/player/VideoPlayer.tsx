@@ -60,7 +60,11 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Short-lived stream-access token (renewed silently every 60s + heartbeats
   // presence for idle tracking). Read via .current when a connection is
   // (re)built so a renewal never re-negotiates a healthy WHEP session.
-  const streamTokenRef = useStreamToken();
+  // `tokenReady` gates the FIRST connect so the stream carries a token from the
+  // opening handshake — a tokenless WHEP session is anonymous and can never be
+  // kicked on idle-revoke (the freeloading hole). Fail-open: `ready` also flips
+  // true after a short timeout if minting never succeeds.
+  const { tokenRef: streamTokenRef, ready: tokenReady } = useStreamToken();
 
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
@@ -112,6 +116,13 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   useEffect(() => {
     if (!webrtcUrl && !hlsUrl) {
       setState("fallback");
+      return;
+    }
+    // Hold the opening handshake until the first stream token is in hand (or
+    // the fail-open timeout fired). Connecting tokenless would make the WHEP
+    // session anonymous and un-kickable on idle-revoke.
+    if (!tokenReady) {
+      setState("connecting");
       return;
     }
     const video = videoRef.current;
@@ -388,7 +399,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     })();
 
     return cleanup;
-  }, [webrtcUrl, hlsUrl, attempt]);
+  }, [webrtcUrl, hlsUrl, attempt, tokenReady]);
 
   // Always render the <video> element so videoRef stays bound. Stream URLs
   // arrive async (DemoWrapper / useStateRecovery fetch), so if we conditionally
