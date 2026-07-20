@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { gsap } from "gsap";
 import "./pitch.css";
 import { DECK, type Slide } from "./content";
 import AdultGate from "./AdultGate";
@@ -75,7 +74,7 @@ function ChromeTop({
   );
 }
 
-/* Footer carries the Playroom logo (replaces the old "OPERATOR DECK" text). */
+/* Footer carries the Playroom logo mark. */
 function ChromeFoot({ left }: { left?: ReactNode }) {
   return (
     <div className={`chrome-foot ${left ? "" : "end"}`}>
@@ -87,49 +86,47 @@ function ChromeFoot({ left }: { left?: ReactNode }) {
 }
 
 /** Demo video: gated, muted, no autoplay; resumes from last position. */
-function DemoVideo({ s }: { s: Extract<Slide, { type: "demo" }> }) {
+function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [revealed, setRevealed] = useState(false);
   return (
-    <div className="demo-wrap">
-      <div className="demo-frame">
-        <video
-          ref={ref}
-          src={s.video}
-          preload="none"
-          muted
-          playsInline
-          controls={revealed}
-          onTimeUpdate={(e) => {
-            try {
-              localStorage.setItem(
-                "playroom-prg-pos",
-                String(e.currentTarget.currentTime),
-              );
-            } catch {}
-          }}
-          onLoadedMetadata={(e) => {
-            try {
-              const t = parseFloat(localStorage.getItem("playroom-prg-pos") ?? "");
-              const el = e.currentTarget;
-              if (!isNaN(t) && t > 0 && t < el.duration - 1) el.currentTime = t;
-            } catch {}
-          }}
-        />
-        <AdultGate
-          line={s.gateLine}
-          sub=""
-          large
-          onReveal={() => {
-            setRevealed(true);
-            const v = ref.current;
-            if (v) {
-              v.muted = true;
-              v.play().catch(() => {});
-            }
-          }}
-        />
-      </div>
+    <div className="demo-frame">
+      <video
+        ref={ref}
+        src={src}
+        preload="none"
+        muted
+        playsInline
+        controls={revealed}
+        onTimeUpdate={(e) => {
+          try {
+            localStorage.setItem(
+              "playroom-prg-pos",
+              String(e.currentTarget.currentTime),
+            );
+          } catch {}
+        }}
+        onLoadedMetadata={(e) => {
+          try {
+            const t = parseFloat(localStorage.getItem("playroom-prg-pos") ?? "");
+            const el = e.currentTarget;
+            if (!isNaN(t) && t > 0 && t < el.duration - 1) el.currentTime = t;
+          } catch {}
+        }}
+      />
+      <AdultGate
+        line={gateLine}
+        sub=""
+        large
+        onReveal={() => {
+          setRevealed(true);
+          const v = ref.current;
+          if (v) {
+            v.muted = true;
+            v.play().catch(() => {});
+          }
+        }}
+      />
     </div>
   );
 }
@@ -173,38 +170,6 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/pitch/ui-strip.png" alt="Playroom live table interface" />
           </div>
-        </>
-      );
-
-    case "market":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display" style={{ maxWidth: 1500 }}>
-              {fmt(s.title)}
-            </h1>
-          </RV>
-          <div className="market-grid">
-            {s.cards.map((c, k) => (
-              <RV i={k} big key={k}>
-                <div className="mcard">
-                  <div className="big grad-text">{c.big}</div>
-                  <div className="cap">{c.cap}</div>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot
-            left={
-              <>
-                <span className="foot-note" style={{ letterSpacing: "0.14em" }}>
-                  SOURCES:
-                </span>
-                <span className="chip">{s.sourcesChip}</span>
-              </>
-            }
-          />
         </>
       );
 
@@ -259,22 +224,18 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
         </>
       );
 
-    case "showcase":
+    case "live":
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
           <RV i={0}>
             <h1 className="h-display">{fmt(s.title)}</h1>
           </RV>
-          <div className="show-grid">
+          <div className="live-grid">
             <RV i={1}>
               <div>
-                <div className="media-frame">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.fullShot.src} alt="Full table view" />
-                  <AdultGate line={s.fullShot.gateLine} />
-                </div>
-                <div className="media-cap">{s.fullShot.cap}</div>
+                <DemoVideo src={s.video} gateLine={s.gateLine} />
+                <div className="media-cap">{s.videoCap}</div>
               </div>
             </RV>
             <div className="show-side">
@@ -292,53 +253,6 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
             </div>
           </div>
           <ChromeFoot />
-        </>
-      );
-
-    case "demo":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <RV i={1}>
-            <DemoVideo s={s} />
-          </RV>
-          <ChromeFoot />
-        </>
-      );
-
-    case "caseStudy":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <div className="tl-grid">
-            {s.steps.map((st, k) => (
-              <RV i={k + 1} key={k}>
-                <div className="tl">
-                  <div className={`dot ${st.bright ? "bright" : ""}`} />
-                  <div className={`day ${st.bright ? "bright" : ""}`}>{st.day}</div>
-                  <h3>{st.h}</h3>
-                  <p>{st.p}</p>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <div className="cs-stats">
-            {s.stats.map((st, k) => (
-              <RV i={k + 5} big key={k}>
-                <div>
-                  <div className="big">{st.big}</div>
-                  <div className="cap">{st.cap}</div>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot left={<span className="chip">{s.chip}</span>} />
         </>
       );
 
@@ -364,218 +278,38 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
         </>
       );
 
-    case "betMenu":
+    case "ops3":
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
           <RV i={0}>
             <h1 className="h-display">{fmt(s.title)}</h1>
           </RV>
-          <RV i={1}>
-            <p className="lead" style={{ maxWidth: 1100 }}>
-              {s.lead}
-            </p>
-          </RV>
-          <div className="bets-main">
-            {s.mains.map((b, k) => (
-              <RV i={k + 2} big key={k}>
-                <div className="bet-main" style={{ "--bet": b.color } as React.CSSProperties}>
-                  <div className="lbl">{b.label}</div>
-                  <div className="odds">{b.odds}</div>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <div className="bets-pairs">
-            {s.pairs.map((p, k) => (
-              <RV i={k + 5} key={k}>
-                <div className="bet-pair">
-                  <div className="odds">{p.odds}</div>
-                  <div className="lbl">{p.label}</div>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot
-            left={
-              <>
-                <span className="foot-note">{s.footNote}</span>
-                <span className="chip">{s.chip}</span>
-              </>
-            }
-          />
-        </>
-      );
-
-    case "integration":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <RV i={1}>
-            <div className="arch-strip">
-              {s.strip.map((node, k) => (
-                <div key={k} style={{ display: "contents" }}>
-                  {k > 0 ? <div className="arch-arrow">→</div> : null}
-                  <div className={`arch-node ${k === s.stripActive ? "active" : ""}`}>
-                    <span>{node}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </RV>
-          <div className="arch-cols">
+          <div className="p3-grid">
             {s.cols.map((c, k) => (
-              <RV i={k + 2} key={k}>
-                <div>
-                  <h3>{c.h}</h3>
-                  <p>{c.p}</p>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot />
-        </>
-      );
-
-    case "wallet":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <div className="wallet-grid">
-            {s.panels.map((p, k) => (
               <RV i={k + 1} key={k}>
-                <div className="wpanel">
-                  <h3>{p.h}</h3>
-                  <ul>
-                    {p.bullets.map((b, j) => (
-                      <li key={j}>{b}</li>
+                <div className="p3">
+                  <div className="n">{c.tag}</div>
+                  <h3>{c.h}</h3>
+                  <ul className="ops-list">
+                    {c.bullets.map((b, j) => (
+                      <li key={j}>
+                        {typeof b === "string" ? (
+                          b
+                        ) : (
+                          <span>
+                            {b.text}
+                            <span className="chip inline">{b.chip}</span>
+                          </span>
+                        )}
+                      </li>
                     ))}
                   </ul>
                 </div>
               </RV>
             ))}
           </div>
-          <ChromeFoot />
-        </>
-      );
-
-    case "bigStats":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <div className="vstats">
-            {s.stats.map((st, k) => (
-              <RV i={k + 1} big key={k}>
-                <div>
-                  <div className="big grad-text">{st.big}</div>
-                  <div className="cap">{st.cap}</div>
-                  <p>{st.p}</p>
-                </div>
-              </RV>
-            ))}
-          </div>
           <ChromeFoot left={<span className="chip">{s.chip}</span>} />
-        </>
-      );
-
-    case "roadmap":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <div className="tl-grid roadmap">
-            {s.phases.map((p, k) => (
-              <RV i={k + 1} key={k}>
-                <div className="tl">
-                  <div className={`dot ${p.live ? "bright pulse" : ""}`} />
-                  <div className={`day ${p.live ? "bright" : ""}`}>
-                    {p.live ? (
-                      p.tag
-                    ) : (
-                      <>
-                        <span className="tag-dim">{p.tag}</span>
-                        <span className="chip inline">{p.dateChip}</span>
-                      </>
-                    )}
-                  </div>
-                  <h3>{p.h}</h3>
-                  <p>{p.p}</p>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot />
-        </>
-      );
-
-    case "compliance":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <RV i={1}>
-            <p className="lead" style={{ maxWidth: 1100 }}>
-              {s.lead}
-            </p>
-          </RV>
-          <div className="comp-grid">
-            {s.items.map((it, k) => (
-              <RV i={k + 2} key={k}>
-                <div>
-                  <h3>{it.h}</h3>
-                  <p>
-                    {it.p}
-                    {it.chip ? <span className="chip inline">{it.chip}</span> : null}
-                  </p>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <ChromeFoot />
-        </>
-      );
-
-    case "commercials":
-      return (
-        <>
-          <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <div className="deal-grid">
-            {s.panels.map((p, k) => (
-              <RV i={k + 1} key={k}>
-                <div className="deal-panel">
-                  <h3>{p.h}</h3>
-                  <div className="deal-rows">
-                    {p.rows.map((r, j) => (
-                      <div className="deal-row" key={j}>
-                        <span className="k">{r.k}</span>
-                        <span className="chip">{r.chip}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </RV>
-            ))}
-          </div>
-          <RV i={3}>
-            <p className="deal-note">{s.footNote}</p>
-          </RV>
-          <ChromeFoot />
         </>
       );
 
@@ -624,20 +358,16 @@ function StageBody({ s, operator }: { s: Slide; operator: string | null }) {
 
 function glowFor(s: Slide): "top" | "bottom" | "both" {
   if (s.type === "cover" || s.type === "close") return "both";
-  if (s.type === "statement" || s.type === "demo" || s.type === "bigStats")
-    return "bottom";
+  if (s.type === "statement" || s.type === "live") return "bottom";
   return "top";
 }
 
 export default function PitchDeck({ operator }: { operator: string | null }) {
   const who = operator && operator.trim() ? operator.trim() : "Do not distribute";
   const rootRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
   const [revealed, setRevealed] = useState<Set<number>>(() => new Set([0]));
   const activeRef = useRef(0);
-  const animatingRef = useRef(false);
   const [motionMode, setMotionMode] = useState<"pan" | "static">("pan");
 
   /* Stage scale: fit the 1920x1080 canvas to the viewport, before paint. */
@@ -660,75 +390,44 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     if (reduce) setMotionMode("static");
   }, []);
 
-  /* Strict, one-at-a-time slide navigation. The document never scrolls; the
-     track translates by exactly one viewport per gesture. A gesture is locked
-     until its animation finishes AND wheel/touch input has gone quiet, so
-     trackpad inertia can never skip a slide. */
-  const goTo = useCallback(
-    (i: number, instant = false) => {
-      const clamped = Math.max(0, Math.min(N - 1, i));
-      if (clamped === activeRef.current && !instant) return;
-      const track = trackRef.current;
-      if (!track) return;
-      activeRef.current = clamped;
-      setActive(clamped);
-      setRevealed((prev) =>
-        prev.has(clamped) ? prev : new Set(prev).add(clamped),
-      );
-      if (barRef.current) {
-        gsap.to(barRef.current, {
-          scaleX: N > 1 ? clamped / (N - 1) : 1,
-          duration: instant ? 0 : 0.6,
-          ease: "power2.inOut",
-        });
-      }
-      animatingRef.current = true;
-      gsap.to(track, {
-        x: () => -clamped * window.innerWidth,
-        duration: instant ? 0 : 0.72,
-        ease: "power3.inOut",
-        overwrite: true,
-        onComplete: () => {
-          animatingRef.current = false;
-        },
-      });
-    },
-    [],
-  );
+  /* One slide per gesture, no artificial cooldown: a fresh gesture (wheel
+     activity after a quiet gap, or a direction change) advances immediately,
+     even mid-animation. A single trackpad flick with momentum is one
+     continuous stream, so it still moves exactly one slide. The track and
+     progress bar move via CSS vars (--active / --progress) with a CSS
+     transition, so position is resize-proof (vw units) with no JS math. */
+  const goTo = useCallback((i: number) => {
+    const clamped = Math.max(0, Math.min(N - 1, i));
+    if (clamped === activeRef.current) return;
+    activeRef.current = clamped;
+    setActive(clamped);
+    setRevealed((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
+    const root = rootRef.current;
+    if (root) {
+      root.style.setProperty("--active", String(clamped));
+      root.style.setProperty("--progress", String(N > 1 ? clamped / (N - 1) : 1));
+    }
+  }, []);
 
   useEffect(() => {
     if (motionMode !== "pan") return;
-    const track = trackRef.current;
-    if (!track) return;
 
-    // set initial position (and on resize)
-    gsap.set(track, { x: () => -activeRef.current * window.innerWidth });
-    const onResize = () =>
-      gsap.set(track, { x: -activeRef.current * window.innerWidth });
-    window.addEventListener("resize", onResize);
-
-    let locked = false;
-    let unlockTimer: ReturnType<typeof setTimeout> | null = null;
-    const relock = (ms: number) => {
-      if (unlockTimer) clearTimeout(unlockTimer);
-      unlockTimer = setTimeout(() => {
-        locked = false;
-      }, ms);
-    };
+    /* Wheel gesture detection: events separated by a quiet gap (or flipping
+       direction) start a new gesture; each new gesture = one step. */
+    const GAP_MS = 110;
+    let lastWheelAt = 0;
+    let lastDir = 0;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      // while locked (animating or inertia still flowing), keep pushing the
-      // unlock out so a single flick can't chain into a second step
-      if (locked || animatingRef.current) {
-        relock(180);
-        return;
-      }
       const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-      if (Math.abs(d) < 6) return;
-      locked = true;
-      goTo(activeRef.current + (d > 0 ? 1 : -1));
-      relock(760);
+      if (Math.abs(d) < 4) return;
+      const dir = d > 0 ? 1 : -1;
+      const now = performance.now();
+      const fresh = now - lastWheelAt > GAP_MS || dir !== lastDir;
+      lastWheelAt = now;
+      lastDir = dir;
+      if (fresh) goTo(activeRef.current + dir);
     };
 
     // touch: one swipe = one step
@@ -746,14 +445,11 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     const onTouchEnd = (e: TouchEvent) => {
       if (!tsActive) return;
       tsActive = false;
-      if (locked || animatingRef.current) return;
       const dx = e.changedTouches[0].clientX - tsX;
       const dy = e.changedTouches[0].clientY - tsY;
       const d = Math.abs(dx) >= Math.abs(dy) ? dx : dy;
       if (Math.abs(d) < 45) return;
-      locked = true;
       goTo(activeRef.current + (d < 0 ? 1 : -1));
-      relock(760);
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -765,10 +461,10 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       const prev = ["ArrowLeft", "ArrowUp", "PageUp"];
       if (next.includes(e.key)) {
         e.preventDefault();
-        if (!animatingRef.current) goTo(activeRef.current + 1);
+        goTo(activeRef.current + 1);
       } else if (prev.includes(e.key)) {
         e.preventDefault();
-        if (!animatingRef.current) goTo(activeRef.current - 1);
+        goTo(activeRef.current - 1);
       } else if (e.key === "Home") {
         e.preventDefault();
         goTo(0);
@@ -789,8 +485,6 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onResize);
-      if (unlockTimer) clearTimeout(unlockTimer);
     };
   }, [motionMode, goTo]);
 
@@ -805,7 +499,7 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       <div className="rotate-hint">ROTATE FOR BEST VIEW · THE DECK IS 16:9</div>
 
       <div className="deck-viewport">
-        <div className="deck-track" ref={trackRef}>
+        <div className="deck-track">
           {DECK.map((s, idx) => (
             <section
               className={`panel ${
@@ -827,7 +521,7 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       {motionMode === "pan" ? (
         <>
           <div className="deck-progress" aria-hidden="true">
-            <i ref={barRef} />
+            <i />
           </div>
           <div className="deck-counter" aria-hidden="true">
             <b>{String(active + 1).padStart(2, "0")}</b> / {String(N).padStart(2, "0")}
