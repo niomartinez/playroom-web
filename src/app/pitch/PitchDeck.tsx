@@ -348,6 +348,23 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     if (reduce) setMotionMode("static");
   }, []);
 
+  /* Pan mode is a fixed full-viewport stage — lock document scroll so the
+     fixed atmosphere / watermark can never trigger scrollbars. Static (?flat /
+     reduced-motion) mode is a vertical stack and stays scrollable. */
+  useEffect(() => {
+    if (motionMode !== "pan") return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevH = html.style.overflow;
+    const prevB = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevH;
+      body.style.overflow = prevB;
+    };
+  }, [motionMode]);
+
   /* Track + progress move via CSS vars with a CSS transition, so position is
      resize-proof (vw units) with no JS pixel math. */
   const goTo = useCallback((i: number) => {
