@@ -151,19 +151,27 @@ export default function PitchLinksPage() {
                 );
               })}
               <span className="text-xs" style={{ color: "#4b5563" }}>or</span>
-              <input
-                type="number"
-                min={1}
-                max={2160}
-                value={customHours}
-                onChange={(e) => setCustomHours(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="custom hrs"
-                className="w-28 rounded-lg px-3 py-2 text-sm text-white outline-none"
-                style={{
-                  ...inputStyle,
-                  border: customHours.trim() ? "1px solid #f0b100" : "1px solid #262626",
-                }}
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={2160}
+                  value={customHours}
+                  onChange={(e) => setCustomHours(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="hours"
+                  className="w-32 rounded-lg pl-3 pr-10 py-2 text-sm text-white outline-none"
+                  style={{
+                    ...inputStyle,
+                    border: customHours.trim() ? "1px solid #f0b100" : "1px solid #262626",
+                  }}
+                />
+                <span
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                  style={{ color: "#6a7282" }}
+                >
+                  hrs
+                </span>
+              </div>
             </div>
             <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
               Custom hours override the preset. Max 2160 h (90 days).
@@ -213,9 +221,16 @@ export default function PitchLinksPage() {
       </div>
 
       {/* History + statuses of previously minted pitch links */}
-      {history.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">Sent links</h2>
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold text-white">Sent links</h2>
+        {history.length === 0 ? (
+          <div
+            className="rounded-lg px-4 py-6 text-sm text-center"
+            style={{ border: "1px solid #1f1f1f", color: "#6b7280" }}
+          >
+            No links sent yet. Generate one above and it will show here.
+          </div>
+        ) : (
           <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #1f1f1f" }}>
             <table className="w-full text-xs" style={{ color: "#d1d5db" }}>
               <thead style={{ color: "#6b7280" }}>
@@ -264,8 +279,8 @@ export default function PitchLinksPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
