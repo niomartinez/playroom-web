@@ -3,11 +3,14 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAdmin } from "@/lib/admin-context";
+import { isProdEnv } from "@/lib/server-env";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  /** Hidden on production (test-only surfaces). */
+  stagingOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -119,6 +122,17 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    label: "Test tokens",
+    href: "/admin/test-tokens",
+    stagingOnly: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
     href: "/admin/settings",
     icon: (
@@ -138,6 +152,8 @@ function isActive(pathname: string, href: string): boolean {
 export default function AdminSidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, setSidebarCollapsed } = useAdmin();
+  // Test-only nav items are hidden on production.
+  const prodEnv = isProdEnv();
 
   return (
     <aside
@@ -193,7 +209,7 @@ export default function AdminSidebar() {
 
       {/* Nav items */}
       <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !(item.stagingOnly && prodEnv)).map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
