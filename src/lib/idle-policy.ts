@@ -35,9 +35,9 @@ export interface IdlePolicy {
  * table). Mirrors the backend default so the two never silently disagree.
  */
 export const DEFAULT_IDLE_POLICY: IdlePolicy = {
-  warn1: null,
-  warn2: null,
-  expire: 1,
+  warn1: 1,
+  warn2: 2,
+  expire: 3,
 };
 
 /** Whether the QA URL override is allowed — non-prod API hosts only. */

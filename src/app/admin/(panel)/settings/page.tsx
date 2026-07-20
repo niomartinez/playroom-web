@@ -45,9 +45,9 @@ export default function SettingsPage() {
   // Inactivity / idle-session policy (rounds). expire = freeze after N idle
   // rounds; warn1/warn2 = optional escalating warnings before that. Empty
   // string = disabled (null).
-  const [idleExpire, setIdleExpire] = useState("1");
-  const [idleWarn1, setIdleWarn1] = useState("");
-  const [idleWarn2, setIdleWarn2] = useState("");
+  const [idleExpire, setIdleExpire] = useState("3");
+  const [idleWarn1, setIdleWarn1] = useState("1");
+  const [idleWarn2, setIdleWarn2] = useState("2");
 
   /* Danger zone */
   const [showForceClose, setShowForceClose] = useState(false);
@@ -334,13 +334,14 @@ export default function SettingsPage() {
       >
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
-            Inactivity
+            Inactivity (platform default)
           </h2>
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
             A player who sits out (places no bet) for this many rounds is frozen
             with a &ldquo;seat released&rdquo; overlay. Warnings are optional and must be
-            fewer rounds than the freeze. Applies to all tables; takes effect on
-            the next round after Save.
+            fewer rounds than the freeze. This is the default for operators that
+            haven&rsquo;t set their own — override it per operator on the operator
+            page. Takes effect on the next round after Save.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

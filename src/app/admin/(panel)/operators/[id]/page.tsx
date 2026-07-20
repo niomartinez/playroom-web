@@ -36,6 +36,13 @@ export default function OperatorDetailPage() {
   const [isActive, setIsActive] = useState(true);
   const [allowedIps, setAllowedIps] = useState("");
 
+  /* Per-operator idle policy. `idleOverride` off = inherit the platform
+     default (idle_policy null). Empty warn = disabled (null). */
+  const [idleOverride, setIdleOverride] = useState(false);
+  const [idleExpire, setIdleExpire] = useState("3");
+  const [idleWarn1, setIdleWarn1] = useState("1");
+  const [idleWarn2, setIdleWarn2] = useState("2");
+
   /* Confirm dialogs */
   const [showRegenKey, setShowRegenKey] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
@@ -61,6 +68,18 @@ export default function OperatorDetailPage() {
             ? data.allowed_ips.join(", ")
             : data.allowed_ips || ""
         );
+        const ip = data.idle_policy as
+          | { expire?: number; warn1?: number | null; warn2?: number | null }
+          | null
+          | undefined;
+        if (ip && typeof ip === "object") {
+          setIdleOverride(true);
+          if (ip.expire != null) setIdleExpire(String(ip.expire));
+          setIdleWarn1(ip.warn1 != null ? String(ip.warn1) : "");
+          setIdleWarn2(ip.warn2 != null ? String(ip.warn2) : "");
+        } else {
+          setIdleOverride(false);
+        }
       }
     } catch {
       // silent
@@ -89,6 +108,15 @@ export default function OperatorDetailPage() {
             .split(",")
             .map((ip) => ip.trim())
             .filter(Boolean),
+          // null = inherit the platform default; a dict = this operator's own
+          // thresholds. Blank warn fields become null (disabled).
+          idle_policy: idleOverride
+            ? {
+                expire: Math.max(1, parseInt(idleExpire) || 3),
+                warn1: idleWarn1.trim() === "" ? null : parseInt(idleWarn1),
+                warn2: idleWarn2.trim() === "" ? null : parseInt(idleWarn2),
+              }
+            : null,
         }),
       });
       if (res.ok) {
@@ -307,6 +335,46 @@ export default function OperatorDetailPage() {
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
             style={inputStyle}
           />
+        </div>
+
+        {/* Per-operator inactivity policy */}
+        <div className="pt-2" style={{ borderTop: "1px solid #262626" }}>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium" style={{ color: "#99a1af" }}>
+              Inactivity policy (override platform default)
+            </label>
+            <button
+              onClick={() => setIdleOverride((v) => !v)}
+              className="relative rounded-full transition-colors"
+              style={{ width: 44, height: 24, backgroundColor: idleOverride ? "rgba(208,135,0,0.5)" : "rgba(255,255,255,0.1)" }}
+            >
+              <span className="absolute top-0.5 rounded-full transition-transform bg-white" style={{ width: 20, height: 20, left: idleOverride ? 22 : 2 }} />
+            </button>
+          </div>
+          <p className="text-xs mb-2" style={{ color: "#6a7282" }}>
+            {idleOverride
+              ? "A player who sits out (no bet) this many rounds is frozen. Warnings are optional and must be fewer rounds than the freeze."
+              : "Off = this operator uses the platform default (Settings → Inactivity)."}
+          </p>
+          {idleOverride && (
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>Freeze after</label>
+                <input type="number" min={1} max={50} value={idleExpire} onChange={(e) => setIdleExpire(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>1st warning</label>
+                <input type="number" min={1} max={49} value={idleWarn1} onChange={(e) => setIdleWarn1(e.target.value)} placeholder="—"
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+              </div>
+              <div>
+                <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>Final warning</label>
+                <input type="number" min={1} max={49} value={idleWarn2} onChange={(e) => setIdleWarn2(e.target.value)} placeholder="—"
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
