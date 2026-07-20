@@ -323,7 +323,7 @@ export const DECK: Slide[] = [
     num: "08",
     label: "THE BET MENU",
     title: "A BET MENU BUILT FOR [[DEPTH]].",
-    lead: "Thirteen markets per hand: mains, pairs, and premium sides keep every round bettable.",
+    lead: "Seven markets per hand: mains and pairs keep every round bettable.",
     mains: [
       { label: "PLAYER", odds: "1:1", color: "#2b7fff" },
       { label: "TIE", odds: "8:1", color: "#00bc7d" },
@@ -335,7 +335,7 @@ export const DECK: Slide[] = [
       { odds: "11:1", label: "BANKER PAIR" },
       { odds: "5:1", label: "EITHER PAIR" },
     ],
-    footNote: "+6 PREMIUM SIDES · CONFIGURABLE PER MARKET",
+    footNote: "ODDS CONFIGURABLE PER MARKET",
     chip: "CONFIRM FINAL ODDS",
     notes:
       "The deep bet menu is a commercial asset: 13 markets per hand. Mains use the product's bet colors. Confirm final odds per jurisdiction before sending.",
@@ -402,11 +402,6 @@ export const DECK: Slide[] = [
         big: "1.2S",
         cap: "GLASS-TO-GLASS LATENCY",
         p: "WebRTC-first, adaptive bitrate down to constrained mobile.",
-      },
-      {
-        big: "3X",
-        cap: "REDUNDANT STREAM PATHS",
-        p: "Automatic failover between encoders and CDNs, mid-round.",
       },
       {
         big: "99.9%",
