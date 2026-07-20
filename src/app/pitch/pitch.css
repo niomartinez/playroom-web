@@ -715,16 +715,18 @@
   inset: 0;
   background: radial-gradient(120% 100% at 50% 42%, transparent 52%, rgba(3, 2, 3, 0.62) 100%);
 }
-/* keep real content above the atmosphere */
-.deck-viewport,
-.chrome-top,
-.cover-center,
-.stmt-center,
-.watermark-tag,
-.deck-progress,
-.deck-counter {
+/* Keep the deck (and everything in it) above the fixed atmosphere. Only the
+   viewport needs a stacking context — do NOT re-position the fixed chrome
+   (progress bar / counter / watermark), or they drop into flow and overflow. */
+.deck-viewport {
   position: relative;
   z-index: 1;
+}
+/* Pan mode is a fixed, non-scrolling stage — clip any stray sub-pixel overflow
+   from the atmosphere / reveals so no scrollbars appear. Static (?flat /
+   reduced-motion) mode is a vertical stack and MUST stay scrollable. */
+.pitch-root[data-motion="pan"] {
+  overflow: hidden;
 }
 @media (prefers-reduced-motion: reduce) {
   .atmos-aurora,
@@ -733,6 +735,18 @@
   }
   .atmos-grain {
     opacity: 0.035;
+  }
+}
+/* Mobile / small screens: keep the look but drop GPU-heavy work (the blended
+   grain loop + wide blur). Touch-swipe nav + rotate hint are unchanged. */
+@media (max-width: 900px), (hover: none) {
+  .atmos-grain {
+    animation: none;
+    opacity: 0.04;
+  }
+  .atmos-aurora {
+    filter: blur(16px);
+    animation-duration: 42s;
   }
 }
 
