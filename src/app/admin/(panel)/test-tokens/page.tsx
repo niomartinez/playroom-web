@@ -157,7 +157,8 @@ export default function TestTokensPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-8">
+      <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Test tokens</h1>
         <p className="text-sm mt-1" style={{ color: "#99a1af" }}>
@@ -239,6 +240,7 @@ export default function TestTokensPage() {
           ))}
         </div>
       )}
+      </div>
 
       {/* History + statuses of previously generated tokens */}
       {history.length > 0 && (
@@ -248,39 +250,39 @@ export default function TestTokensPage() {
             <table className="w-full text-xs" style={{ color: "#d1d5db" }}>
               <thead style={{ color: "#6b7280" }}>
                 <tr className="text-left">
-                  <th className="px-3 py-2 font-medium">Tester</th>
-                  <th className="px-3 py-2 font-medium">Token</th>
-                  <th className="px-3 py-2 font-medium">Table</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Stream</th>
-                  <th className="px-3 py-2 font-medium">Balance</th>
-                  <th className="px-3 py-2 font-medium">Created</th>
-                  <th className="px-3 py-2 font-medium">Expires</th>
-                  <th className="px-3 py-2 font-medium">Last seen</th>
-                  <th className="px-3 py-2 font-medium"></th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Tester</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Token</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Table</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Status</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Stream</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Balance</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Created</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Expires</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Last seen</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap"></th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((h, i) => (
                   <tr key={i} style={{ borderTop: "1px solid #1a1a1a" }}>
-                    <td className="px-3 py-2 font-mono">{h.display_name}</td>
-                    <td className="px-3 py-2 font-mono" style={{ color: "#9ca3af" }}>{h.token_preview || "—"}</td>
-                    <td className="px-3 py-2">{h.table || "—"}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 font-mono whitespace-nowrap">{h.display_name}</td>
+                    <td className="px-3 py-2 font-mono whitespace-nowrap" style={{ color: "#9ca3af" }}>{h.token_preview || "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{h.table || "—"}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <span style={{ color: STATUS_COLOR[h.status] || "#9ca3af" }}>● {h.status}</span>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {h.stream_revoked ? (
                         <span style={{ color: "#f87171" }}>cut (idle)</span>
                       ) : (
                         <span style={{ color: "#9ca3af" }}>{h.idle_rounds ? `idle ${h.idle_rounds}` : "—"}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2">₱{Number(h.balance || 0).toLocaleString()}</td>
-                    <td className="px-3 py-2">{fmt(h.created_at)}</td>
-                    <td className="px-3 py-2">{fmt(h.expires_at)}</td>
-                    <td className="px-3 py-2">{fmt(h.last_seen_at)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 whitespace-nowrap">₱{Number(h.balance || 0).toLocaleString()}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{fmt(h.created_at)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{fmt(h.expires_at)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{fmt(h.last_seen_at)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {h.token ? (
                         <button
                           onClick={() => {
