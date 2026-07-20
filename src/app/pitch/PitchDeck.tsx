@@ -315,42 +315,61 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
   useEffect(() => {
     if (motionMode !== "pan") return;
 
-    /* One slide per gesture, responsive. Impulse detection instead of a lock:
-       a trackpad swipe is one rise-then-decay of |delta|; a genuine second
-       swipe (even same direction, even while the first's inertia is still
-       trailing) shows a fresh acceleration. We step on the leading edge, on a
-       direction flip, or on that fresh impulse; the decaying inertia tail
-       fires nothing, so one flick = one slide but consecutive deliberate
-       swipes advance immediately. */
-    let lastDir = 0;
-    let prevAbs = 0;
-    let decaying = false;
-    let lastEventAt = 0;
+    /* One slide per gesture, responsive, no skipping.
+
+       A trackpad flick is a stream of wheel events whose |delta| ramps up to a
+       peak then decays through a long inertia tail; the tail is noisy and can
+       wobble. We fire once when "armed", then disarm. We only re-arm on a real
+       gesture boundary: a genuine silence gap, a direction flip, or a forceful
+       RE-ACCELERATION that happens only AFTER the current flick has decayed
+       past its peak into its tail (tracked via peak/valley). Mid-flick wobble
+       stays below the peak, so it can't re-arm -> one flick = exactly one
+       slide. A real second flick spikes hard out of the tail -> it advances
+       immediately, even while the first flick's inertia still trails. */
+    let armed = true;
+    let peak = 0;
+    let valley = Infinity;
+    let passedPeak = false;
+    let lastAt = 0;
     let lastFireAt = 0;
+    let lastDir = 0;
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const raw = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
       const absD = Math.abs(raw);
-      if (absD < 3) return;
+      if (absD < 2) return;
       const dir = raw > 0 ? 1 : -1;
       const now = performance.now();
+      const gap = now - lastAt;
+      lastAt = now;
 
-      const quiet = now - lastEventAt > 45; // inertia streams faster than this
-      const flipped = dir !== lastDir && lastDir !== 0;
-      const rising = absD > prevAbs + 1.2;
-      const impulse = rising && decaying; // new push after the tail started decaying
-
-      if (absD < prevAbs - 0.5) decaying = true; // past the peak, in the tail
-
-      if ((quiet || flipped || impulse) && now - lastFireAt > 60) {
-        goTo(activeRef.current + dir);
-        lastFireAt = now;
-        decaying = false;
+      if (gap > 110 || (dir !== lastDir && lastDir !== 0)) {
+        armed = true;
+        peak = 0;
+        valley = Infinity;
+        passedPeak = false;
       }
       lastDir = dir;
-      prevAbs = absD;
-      lastEventAt = now;
+
+      if (!armed) {
+        if (absD > peak) peak = absD;
+        if (peak > 0 && absD < peak * 0.5) passedPeak = true;
+        if (passedPeak) {
+          if (absD < valley) valley = absD;
+          // a fresh, forceful push out of the inertia tail = a new flick
+          if (absD > 45 && absD > valley * 2.2) armed = true;
+        }
+      }
+
+      if (armed && absD >= 16 && now - lastFireAt > 90) {
+        goTo(activeRef.current + dir);
+        lastFireAt = now;
+        armed = false;
+        peak = absD;
+        valley = Infinity;
+        passedPeak = false;
+      }
     };
 
     // touch: one swipe = one step
