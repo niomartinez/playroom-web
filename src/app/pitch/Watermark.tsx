@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 
 /**
  * Anti-distribution watermark. A faint tiled overlay plus a corner tag,
- * both stamped with the operator's name and the view timestamp. Sourced
- * from the `operator` prop today (URL param); once the per-operator gate
- * lands, pass the operator from the verified session instead.
+ * both stamped with the operator's name and the view timestamp. The
+ * `operator` prop comes from the VERIFIED signed link token (see
+ * pitch/page.tsx), so a recipient can't edit or strip it via the URL.
  */
 export default function Watermark({ operator }: { operator: string }) {
   const [stamp, setStamp] = useState("");
