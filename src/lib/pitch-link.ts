@@ -32,6 +32,10 @@ const SECRET = new TextEncoder().encode(
 const TYP = "pitch";
 export const DEFAULT_EXPIRY_DAYS = 14;
 export const MAX_EXPIRY_DAYS = 90;
+// Expiry is hours-based internally so links can be short-lived (custom hours) or
+// long (day presets). Day presets are just hour shortcuts.
+export const DEFAULT_EXPIRY_HOURS = DEFAULT_EXPIRY_DAYS * 24;
+export const MAX_EXPIRY_HOURS = MAX_EXPIRY_DAYS * 24; // 2160
 
 export interface PitchToken {
   /** Operator name — rendered as the watermark. */
@@ -40,19 +44,34 @@ export interface PitchToken {
   sentBy: string;
 }
 
+/** Clamp a requested expiry (in hours) to [1, MAX_EXPIRY_HOURS]. */
+export function clampExpiryHours(hours: number): number {
+  return Math.max(1, Math.min(MAX_EXPIRY_HOURS, Math.floor(hours) || DEFAULT_EXPIRY_HOURS));
+}
+
+/** Human label for an hours value: "14 days" when a whole number of days, else "36 hours". */
+export function expiryLabel(hours: number): string {
+  const h = clampExpiryHours(hours);
+  if (h % 24 === 0) {
+    const d = h / 24;
+    return `${d} day${d === 1 ? "" : "s"}`;
+  }
+  return `${h} hour${h === 1 ? "" : "s"}`;
+}
+
 /**
- * Mint a signed pitch link token. `days` is clamped to [1, MAX_EXPIRY_DAYS].
+ * Mint a signed pitch link token. `hours` is clamped to [1, MAX_EXPIRY_HOURS].
  * Server-only (needs the secret) — call from an admin-gated route.
  */
 export async function signPitchToken(
   t: PitchToken,
-  days: number = DEFAULT_EXPIRY_DAYS,
+  hours: number = DEFAULT_EXPIRY_HOURS,
 ): Promise<string> {
-  const d = Math.max(1, Math.min(MAX_EXPIRY_DAYS, Math.floor(days) || DEFAULT_EXPIRY_DAYS));
+  const h = clampExpiryHours(hours);
   return new SignJWT({ typ: TYP, op: t.operator, by: t.sentBy })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${d}d`)
+    .setExpirationTime(`${h}h`)
     .sign(SECRET);
 }
 

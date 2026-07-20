@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { signPitchToken, DEFAULT_EXPIRY_DAYS, MAX_EXPIRY_DAYS } from "@/lib/pitch-link";
+import {
+  signPitchToken,
+  clampExpiryHours,
+  expiryLabel,
+  DEFAULT_EXPIRY_HOURS,
+} from "@/lib/pitch-link";
 import { requireEnv } from "@/lib/server-env";
 
 const API_URL =
@@ -20,7 +25,9 @@ function backendHeaders(req: NextRequest): Record<string, string> {
  * Mint a signed, expiring pitch-deck link. Admin-only (any admin-panel role) —
  * gated by the same `admin_session` cookie as the rest of /admin.
  *
- * POST { operator: string, days?: number } -> { token, url, expiresInDays, operator }
+ * POST { operator: string, hours?: number, days?: number }
+ *   -> { token, url, operator, expiresInHours, expiresLabel }
+ * `hours` takes precedence; `days` is a shortcut (days*24); else the default.
  */
 export async function POST(req: NextRequest) {
   const admin = await getAdminSession();
@@ -33,10 +40,15 @@ export async function POST(req: NextRequest) {
   if (!operator) {
     return NextResponse.json({ error: "Operator name is required" }, { status: 400 });
   }
-  const days = Number.isFinite(body.days) ? Number(body.days) : DEFAULT_EXPIRY_DAYS;
 
-  const token = await signPitchToken({ operator, sentBy: admin.email }, days);
-  const clamped = Math.max(1, Math.min(MAX_EXPIRY_DAYS, Math.floor(days) || DEFAULT_EXPIRY_DAYS));
+  let requestedHours: number;
+  if (Number.isFinite(body.hours)) requestedHours = Number(body.hours);
+  else if (Number.isFinite(body.days)) requestedHours = Number(body.days) * 24;
+  else requestedHours = DEFAULT_EXPIRY_HOURS;
+  const hours = clampExpiryHours(requestedHours);
+  const label = expiryLabel(hours);
+
+  const token = await signPitchToken({ operator, sentBy: admin.email }, hours);
 
   // Build the absolute link from the request origin so it works on staging and
   // prod without extra config.
@@ -47,18 +59,18 @@ export async function POST(req: NextRequest) {
   // Record it for the history/audit — best-effort. MUST be awaited: on Vercel's
   // serverless runtime a fetch left pending when the response returns is killed,
   // so a fire-and-forget would silently never record.
-  const expiresAt = new Date(Date.now() + clamped * 86400_000).toISOString();
+  const expiresAt = new Date(Date.now() + hours * 3600_000).toISOString();
   try {
     await fetch(`${API_URL}/internal/admin/pitch-link-audit`, {
       method: "POST",
       headers: backendHeaders(req),
-      body: JSON.stringify({ operator, days: clamped, expires_at: expiresAt, token }),
+      body: JSON.stringify({ operator, expiry_label: label, expires_at: expiresAt, token }),
     });
   } catch {
     // never block the mint on the audit write
   }
 
-  return NextResponse.json({ token, url, operator, expiresInDays: clamped });
+  return NextResponse.json({ token, url, operator, expiresInHours: hours, expiresLabel: label });
 }
 
 // History + statuses of previously minted pitch links.
