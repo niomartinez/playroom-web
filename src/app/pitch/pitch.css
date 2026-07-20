@@ -664,6 +664,120 @@
   font-weight: 500;
 }
 
+/* ============================================================
+   Ambient atmosphere — slow-drifting aurora + film grain + vignette.
+   Fixed, pointer-events-none, behind all content. Pure CSS loops
+   (cheaper than JS for perpetual ambience); gated off under
+   prefers-reduced-motion. This is what carries the "expensive" feel.
+   ============================================================ */
+.pitch-atmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.atmos-aurora {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(38% 46% at 22% 28%, rgba(236, 31, 40, 0.16), transparent 62%),
+    radial-gradient(34% 40% at 82% 74%, rgba(124, 12, 18, 0.22), transparent 60%),
+    radial-gradient(30% 36% at 62% 12%, rgba(226, 178, 74, 0.05), transparent 64%);
+  filter: blur(30px);
+  will-change: transform;
+  animation: atmos-drift 26s ease-in-out infinite alternate;
+}
+@keyframes atmos-drift {
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1.02); }
+  50%  { transform: translate3d(2.5%, 1.5%, 0) scale(1.08); }
+  100% { transform: translate3d(-1%, 2%, 0) scale(1.03); }
+}
+/* Fine film grain — SVG feTurbulence as a data URI, tiled, blended.
+   Translated (not background-position) so it stays GPU-composited. */
+.atmos-grain {
+  position: absolute;
+  inset: -60px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  will-change: transform;
+  animation: atmos-grain 0.9s steps(3) infinite;
+}
+@keyframes atmos-grain {
+  0%   { transform: translate3d(0, 0, 0); }
+  33%  { transform: translate3d(-14px, 8px, 0); }
+  66%  { transform: translate3d(10px, -12px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+.atmos-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 42%, transparent 52%, rgba(3, 2, 3, 0.62) 100%);
+}
+/* keep real content above the atmosphere */
+.deck-viewport,
+.chrome-top,
+.cover-center,
+.stmt-center,
+.watermark-tag,
+.deck-progress,
+.deck-counter {
+  position: relative;
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .atmos-aurora,
+  .atmos-grain {
+    animation: none;
+  }
+  .atmos-grain {
+    opacity: 0.035;
+  }
+}
+
+/* ============================================================
+   Kinetic headline — each word rises out of a clip mask.
+   Driven by Motion (motion/react) when the slide activates.
+   ============================================================ */
+.kh {
+  display: inline;
+}
+.kh-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.08em; /* descender clearance for the mask */
+}
+.kh-word > span {
+  display: inline-block;
+  will-change: transform;
+}
+.kh-space {
+  display: inline-block;
+  width: 0.28em;
+}
+
+/* Cinematic settle: the active stage eases in with a hair of depth,
+   layered on top of the horizontal pan. Content reveals handle the rest. */
+.stage {
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pitch-root[data-motion="pan"] .panel:not(.active) .stage {
+  opacity: 0.35;
+  transform: scale(0.988);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    transition: none;
+  }
+  .pitch-root[data-motion="pan"] .panel:not(.active) .stage {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ---- Motion + print hardening ---- */
 @media (prefers-reduced-motion: reduce) {
   .rv,

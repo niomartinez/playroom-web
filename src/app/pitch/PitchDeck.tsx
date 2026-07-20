@@ -8,40 +8,94 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import "./pitch.css";
 import { DECK, type Slide } from "./content";
 import AdultGate from "./AdultGate";
 import Watermark from "./Watermark";
 
 const N = DECK.length;
+const EASE = [0.16, 1, 0.3, 1] as const;
 
-/** [[emphasis]] -> solid red span inside an Anton headline. */
-function fmt(text: string): ReactNode[] {
-  return text.split(/(\[\[.*?\]\])/g).map((part, i) =>
-    part.startsWith("[[") && part.endsWith("]]") ? (
-      <span className="em" key={i}>
-        {part.slice(2, -2)}
-      </span>
-    ) : (
-      <span key={i}>{part}</span>
-    ),
-  );
-}
-
-/** Reveal-on-activation wrapper with stagger index. */
+/** Motion reveal-on-activation wrapper. Springs content in when its slide
+ *  becomes active; resets when it leaves, so revisiting a slide re-plays. */
 function RV({
   i,
+  active,
   big = false,
   children,
 }: {
   i: number;
+  active: boolean;
   big?: boolean;
   children: ReactNode;
 }) {
+  const reduce = useReducedMotion();
+  const hidden = big
+    ? { opacity: 0, y: 26, filter: "blur(10px)" }
+    : { opacity: 0, x: -44, y: 0, filter: "blur(0px)" };
+  const show = { opacity: 1, x: 0, y: 0, filter: "blur(0px)" };
   return (
-    <div className={big ? "rv-big" : "rv"} style={{ "--i": i } as React.CSSProperties}>
+    <motion.div
+      initial={false}
+      animate={active ? show : hidden}
+      transition={
+        reduce
+          ? { duration: 0 }
+          : {
+              duration: big ? 0.8 : 0.7,
+              ease: EASE,
+              delay: (big ? 0.12 : 0) + i * (big ? 0.11 : 0.09),
+            }
+      }
+      style={{ willChange: "transform, opacity" }}
+    >
       {children}
-    </div>
+    </motion.div>
+  );
+}
+
+/** Kinetic headline: each word rises out of a clip mask, staggered.
+ *  Handles [[emphasis]] -> red word. Use for SOLID-color display lines. */
+function KineticHeadline({
+  text,
+  active,
+  className,
+}: {
+  text: string;
+  active: boolean;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  const words: { w: string; em: boolean }[] = [];
+  text.split(/(\[\[.*?\]\])/g).forEach((part) => {
+    if (!part) return;
+    const em = part.startsWith("[[") && part.endsWith("]]");
+    const clean = em ? part.slice(2, -2) : part;
+    clean.split(/\s+/).forEach((tok) => {
+      if (tok) words.push({ w: tok, em });
+    });
+  });
+  return (
+    <span className={`kh${className ? ` ${className}` : ""}`}>
+      {words.map((wd, k) => (
+        <span key={k}>
+          <span className="kh-word">
+            <motion.span
+              className={wd.em ? "em" : undefined}
+              initial={false}
+              animate={active ? { y: "0%" } : { y: "115%" }}
+              transition={
+                reduce ? { duration: 0 } : { duration: 0.72, ease: EASE, delay: 0.06 + k * 0.05 }
+              }
+            >
+              {wd.w}
+            </motion.span>
+          </span>
+          {k < words.length - 1 ? <span className="kh-space" /> : null}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -112,19 +166,19 @@ function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
   );
 }
 
-function StageBody({ s }: { s: Slide }) {
+function StageBody({ s, active }: { s: Slide; active: boolean }) {
   switch (s.type) {
     case "cover":
       return (
         <div className="cover-center solo">
-          <RV i={0}>
+          <RV i={0} active={active}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="cover-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
           </RV>
-          <RV i={1}>
-            <div className="cover-title">{s.titleTop}</div>
-          </RV>
-          <RV i={2}>
+          <div className="cover-title">
+            <KineticHeadline text={s.titleTop} active={active} />
+          </div>
+          <RV i={2} big active={active}>
             <div className="cover-sub grad-text">{s.titleSub}</div>
           </RV>
         </div>
@@ -135,16 +189,16 @@ function StageBody({ s }: { s: Slide }) {
         <>
           <ChromeTop num={s.num} label={s.label} />
           <div className="stmt-center">
-            <RV i={0}>
-              <div className="stmt-line">{s.lines[0]}</div>
-            </RV>
-            <RV i={1}>
-              <div className="stmt-line">{s.lines[1]}</div>
-            </RV>
-            <RV i={2}>
+            <div className="stmt-line">
+              <KineticHeadline text={s.lines[0]} active={active} />
+            </div>
+            <div className="stmt-line">
+              <KineticHeadline text={s.lines[1]} active={active} />
+            </div>
+            <RV i={2} big active={active}>
               <div className="stmt-line grad-text grad-glow">{s.lines[2]}</div>
             </RV>
-            <RV i={3}>
+            <RV i={3} active={active}>
               <p className="stmt-body">{s.body}</p>
             </RV>
           </div>
@@ -156,17 +210,15 @@ function StageBody({ s }: { s: Slide }) {
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display" style={{ maxWidth: 1560 }}>
-              {fmt(s.title)}
-            </h1>
-          </RV>
-          <RV i={1}>
+          <h1 className="h-display" style={{ maxWidth: 1560 }}>
+            <KineticHeadline text={s.title} active={active} />
+          </h1>
+          <RV i={1} active={active}>
             <p className="lead">{s.lead}</p>
           </RV>
           <div className="feat-grid">
             {s.features.map((f, k) => (
-              <RV i={k + 2} key={k}>
+              <RV i={k + 2} active={active} key={k}>
                 <div className="feat">
                   <div className="n">{String(k + 1).padStart(2, "0")}</div>
                   <div>
@@ -185,10 +237,10 @@ function StageBody({ s }: { s: Slide }) {
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
-          <RV i={1}>
+          <h1 className="h-display">
+            <KineticHeadline text={s.title} active={active} />
+          </h1>
+          <RV i={1} active={active}>
             <div className="live-solo">
               <DemoVideo src={s.video} gateLine={s.gateLine} />
             </div>
@@ -201,12 +253,12 @@ function StageBody({ s }: { s: Slide }) {
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
+          <h1 className="h-display">
+            <KineticHeadline text={s.title} active={active} />
+          </h1>
           <div className="p3-grid">
             {s.panels.map((p, k) => (
-              <RV i={k + 1} key={k}>
+              <RV i={k + 1} active={active} key={k}>
                 <div className="p3">
                   <div className="n">{String(k + 1).padStart(2, "0")}</div>
                   <h3>{p.h}</h3>
@@ -223,12 +275,12 @@ function StageBody({ s }: { s: Slide }) {
       return (
         <>
           <ChromeTop num={s.num} label={s.label} />
-          <RV i={0}>
-            <h1 className="h-display">{fmt(s.title)}</h1>
-          </RV>
+          <h1 className="h-display">
+            <KineticHeadline text={s.title} active={active} />
+          </h1>
           <div className="p3-grid">
             {s.cols.map((c, k) => (
-              <RV i={k + 1} key={k}>
+              <RV i={k + 1} active={active} key={k}>
                 <div className="p3">
                   <div className="n">{c.tag}</div>
                   <h3>{c.h}</h3>
@@ -248,14 +300,14 @@ function StageBody({ s }: { s: Slide }) {
     case "close":
       return (
         <div className="cover-center solo">
-          <RV i={0}>
+          <RV i={0} active={active}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="close-logo" src="/pitch/logo-dark.png" alt="Playroom Gaming" />
           </RV>
-          <RV i={1}>
-            <div className="close-title">{s.titleTop}</div>
-          </RV>
-          <RV i={2}>
+          <div className="close-title">
+            <KineticHeadline text={s.titleTop} active={active} />
+          </div>
+          <RV i={2} big active={active}>
             <div className="close-sub grad-text grad-glow">{s.titleSub}</div>
           </RV>
         </div>
@@ -273,7 +325,6 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
   const who = operator && operator.trim() ? operator.trim() : "Do not distribute";
   const rootRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  const [revealed, setRevealed] = useState<Set<number>>(() => new Set([0]));
   const activeRef = useRef(0);
   const [motionMode, setMotionMode] = useState<"pan" | "static">("pan");
 
@@ -304,7 +355,6 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
     if (clamped === activeRef.current) return;
     activeRef.current = clamped;
     setActive(clamped);
-    setRevealed((prev) => (prev.has(clamped) ? prev : new Set(prev).add(clamped)));
     const root = rootRef.current;
     if (root) {
       root.style.setProperty("--active", String(clamped));
@@ -437,26 +487,33 @@ export default function PitchDeck({ operator }: { operator: string | null }) {
       data-motion={motionMode}
       onContextMenu={(e) => e.preventDefault()}
     >
+      <div className="pitch-atmos" aria-hidden="true">
+        <div className="atmos-aurora" />
+        <div className="atmos-grain" />
+        <div className="atmos-vignette" />
+      </div>
+
       <Watermark operator={who} />
       <div className="rotate-hint">ROTATE FOR BEST VIEW · THE DECK IS 16:9</div>
 
       <div className="deck-viewport">
         <div className="deck-track">
-          {DECK.map((s, idx) => (
-            <section
-              className={`panel ${
-                motionMode === "static" || revealed.has(idx) ? "active" : ""
-              }`}
-              data-idx={idx}
-              key={idx}
-            >
-              <div className="stage-scaler">
-                <div className="stage" data-glow={glowFor(s)}>
-                  <StageBody s={s} />
+          {DECK.map((s, idx) => {
+            const on = motionMode === "static" || active === idx;
+            return (
+              <section
+                className={`panel ${on ? "active" : ""}`}
+                data-idx={idx}
+                key={idx}
+              >
+                <div className="stage-scaler">
+                  <div className="stage" data-glow={glowFor(s)}>
+                    <StageBody s={s} active={on} />
+                  </div>
                 </div>
-              </div>
-            </section>
-          ))}
+              </section>
+            );
+          })}
         </div>
       </div>
 
