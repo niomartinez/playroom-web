@@ -26,6 +26,9 @@ interface HistoryRow {
   stream_revoked: boolean | null;
   idle_rounds: number | null;
   last_seen_at: string | null;
+  table: string | null;
+  token: string | null;
+  token_preview: string | null;
 }
 
 interface AuditRow {
@@ -246,18 +249,23 @@ export default function TestTokensPage() {
               <thead style={{ color: "#6b7280" }}>
                 <tr className="text-left">
                   <th className="px-3 py-2 font-medium">Tester</th>
+                  <th className="px-3 py-2 font-medium">Token</th>
+                  <th className="px-3 py-2 font-medium">Table</th>
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 font-medium">Stream</th>
                   <th className="px-3 py-2 font-medium">Balance</th>
                   <th className="px-3 py-2 font-medium">Created</th>
                   <th className="px-3 py-2 font-medium">Expires</th>
                   <th className="px-3 py-2 font-medium">Last seen</th>
+                  <th className="px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((h, i) => (
                   <tr key={i} style={{ borderTop: "1px solid #1a1a1a" }}>
                     <td className="px-3 py-2 font-mono">{h.display_name}</td>
+                    <td className="px-3 py-2 font-mono" style={{ color: "#9ca3af" }}>{h.token_preview || "—"}</td>
+                    <td className="px-3 py-2">{h.table || "—"}</td>
                     <td className="px-3 py-2">
                       <span style={{ color: STATUS_COLOR[h.status] || "#9ca3af" }}>● {h.status}</span>
                     </td>
@@ -272,6 +280,19 @@ export default function TestTokensPage() {
                     <td className="px-3 py-2">{fmt(h.created_at)}</td>
                     <td className="px-3 py-2">{fmt(h.expires_at)}</td>
                     <td className="px-3 py-2">{fmt(h.last_seen_at)}</td>
+                    <td className="px-3 py-2">
+                      {h.token && h.table ? (
+                        <button
+                          onClick={() => copy(`${window.location.origin}/play?token=${h.token}&game=${h.table}&lang=en`)}
+                          className="text-xs px-2 py-1 rounded"
+                          style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
+                        >
+                          Copy link
+                        </button>
+                      ) : (
+                        <span style={{ color: "#4b5563" }}>—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
