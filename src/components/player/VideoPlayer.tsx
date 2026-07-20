@@ -11,6 +11,7 @@ import {
   subscribeMedia,
   onVideoReload,
 } from "@/lib/media-prefs";
+import { useStreamToken, withStreamToken } from "@/lib/use-stream-token";
 
 /**
  * Live video player for a baccarat table.
@@ -56,6 +57,10 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Bumped to re-run the connection effect after a failure. Monotonic —
   // every retry tears down the previous attempt via the effect cleanup.
   const [attempt, setAttempt] = useState(0);
+  // Short-lived stream-access token (renewed silently every 60s + heartbeats
+  // presence for idle tracking). Read via .current when a connection is
+  // (re)built so a renewal never re-negotiates a healthy WHEP session.
+  const streamTokenRef = useStreamToken();
 
   // Hydrate persisted prefs on first mount only — re-running on every render
   // would clobber user changes.
@@ -256,11 +261,14 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        const res = await fetch(webrtcUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/sdp" },
-          body: offer.sdp,
-        });
+        const res = await fetch(
+          withStreamToken(webrtcUrl, streamTokenRef.current),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/sdp" },
+            body: offer.sdp,
+          },
+        );
         if (!res.ok) {
           throw new Error(`WHEP POST ${res.status}`);
         }
@@ -308,7 +316,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       }
       // Native HLS (Safari).
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = hlsUrl;
+        video.src = withStreamToken(hlsUrl, streamTokenRef.current);
         video.addEventListener(
           "loadeddata",
           () => {
@@ -341,7 +349,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           lowLatencyMode: true,
           backBufferLength: 10,
         });
-        hls.loadSource(hlsUrl);
+        hls.loadSource(withStreamToken(hlsUrl, streamTokenRef.current));
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (cancelled) return;
