@@ -17,6 +17,17 @@ function getJwtSecret(envVar: string, name: string): Uint8Array {
 
 const STUDIO_JWT_SECRET = getJwtSecret("STUDIO_JWT_SECRET", "studio");
 const ADMIN_JWT_SECRET = getJwtSecret("ADMIN_JWT_SECRET", "admin");
+
+// The backend signs studio/admin JWTs with its ADMIN_JWT_SECRET, but where the
+// backend has NO ADMIN_JWT_SECRET set it falls back to its service key (see the
+// backend's admin_jwt_secret_effective). The frontend holds that same value as
+// API_SERVICE_KEY (what it sends as X-Service-Key and the backend accepts), so
+// we must verify against it too — otherwise a valid, backend-issued studio
+// cookie fails to verify and /studio bounces straight back to /studio/login on
+// every login. Only used when the env var is present (never the dev default).
+const BACKEND_SERVICE_KEY = process.env.API_SERVICE_KEY
+  ? new TextEncoder().encode(process.env.API_SERVICE_KEY)
+  : null;
 const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
   .split(",")
   .map((ip) => ip.trim())
@@ -44,8 +55,17 @@ async function verifyStudioCookie(
     const { payload } = await jwtVerify(token, STUDIO_JWT_SECRET);
     return { payload };
   } catch {
-    return null;
+    // Fall through to the backend service-key fallback.
   }
+  if (BACKEND_SERVICE_KEY) {
+    try {
+      const { payload } = await jwtVerify(token, BACKEND_SERVICE_KEY);
+      return { payload };
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 export async function proxy(req: NextRequest) {
