@@ -281,16 +281,23 @@ export default function TestTokensPage() {
                     <td className="px-3 py-2">{fmt(h.expires_at)}</td>
                     <td className="px-3 py-2">{fmt(h.last_seen_at)}</td>
                     <td className="px-3 py-2">
-                      {h.token && h.table ? (
+                      {h.token ? (
                         <button
-                          onClick={() => copy(`${window.location.origin}/play?token=${h.token}&game=${h.table}&lang=en`)}
-                          className="text-xs px-2 py-1 rounded"
+                          onClick={() => {
+                            // Token isn't bound to a table — the game param just
+                            // picks which table to open. Use the recorded table
+                            // if we have it, else the table selected above.
+                            const g = h.table || table;
+                            copy(`${window.location.origin}/play?token=${h.token}&game=${g}&lang=en`);
+                          }}
+                          className="text-xs px-2 py-1 rounded whitespace-nowrap"
                           style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
+                          title={`Opens on ${h.table || table || "(pick a table above)"}`}
                         >
                           Copy link
                         </button>
                       ) : (
-                        <span style={{ color: "#4b5563" }}>—</span>
+                        <span style={{ color: "#4b5563" }} title="expired/revoked — not re-usable">—</span>
                       )}
                     </td>
                   </tr>
