@@ -217,6 +217,17 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  /* ── Emulator is a TEST-only surface: 404 it on production ──
+     The backend already blocks emulator deals on non-TEST prod tables, but the
+     control panel itself has no business existing on prod. Test facilities live
+     on staging only. */
+  if (
+    pathname.startsWith("/emulator") &&
+    /\/\/api\.playroomgaming\.ph/.test(process.env.NEXT_PUBLIC_API_URL || "")
+  ) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   /* ── Studio / Emulator routes ── */
   const isProtected =
     pathname.startsWith("/studio") || pathname.startsWith("/emulator");

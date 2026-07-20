@@ -19,3 +19,12 @@ export function requireEnv(name: string, devFallback: string): string {
   }
   return devFallback;
 }
+
+/** True when this deployment talks to the PROD backend. The API base is the
+ *  reliable env signal (Vercel sets NODE_ENV=production for staging too). Used
+ *  to keep test-only surfaces (/play/demo, /emulator) off production. */
+export function isProdEnv(): boolean {
+  const api = process.env.NEXT_PUBLIC_API_URL || "";
+  // prod = https://api.playroomgaming.ph ; staging = https://staging-api...
+  return /\/\/api\.playroomgaming\.ph/.test(api);
+}
