@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/lib/toast-context";
 import { isProdEnv } from "@/lib/server-env";
 
@@ -16,6 +16,42 @@ interface GeneratedToken {
   url: string;
 }
 
+interface HistoryRow {
+  display_name: string;
+  balance: string;
+  created_at: string;
+  expires_at: string;
+  status: "active" | "expired" | "revoked";
+  last_seen_ip: string | null;
+  stream_revoked: boolean | null;
+  idle_rounds: number | null;
+  last_seen_at: string | null;
+}
+
+interface AuditRow {
+  created_at: string;
+  entity_id: string;
+  new_value: { count?: number; balance?: string; by?: string; testers?: string[] };
+  admin_users?: { email?: string; display_name?: string };
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  active: "#6ee7b7",
+  expired: "#9ca3af",
+  revoked: "#f87171",
+};
+
+function fmt(ts: string | null): string {
+  if (!ts) return "—";
+  try {
+    return new Date(ts).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+  } catch {
+    return ts;
+  }
+}
+
 export default function TestTokensPage() {
   const { toast } = useToast();
   const [tables, setTables] = useState<string[]>([]);
@@ -26,6 +62,19 @@ export default function TestTokensPage() {
   const [busy, setBusy] = useState(false);
   const [tokens, setTokens] = useState<GeneratedToken[]>([]);
   const [meta, setMeta] = useState<{ operator?: string; operator_scoped?: boolean } | null>(null);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [audit, setAudit] = useState<AuditRow[]>([]);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/test-token");
+      const d = await res.json();
+      setHistory(d?.data?.tokens || []);
+      setAudit(d?.data?.audit || []);
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
 
   // Staging-only surface. On prod the proxy + backend already refuse; this is
   // the friendly message so nobody wonders why it's dead.
@@ -45,7 +94,8 @@ export default function TestTokensPage() {
         setTable(ids.find((x: string) => x.startsWith("TEST")) || ids[0] || "");
       })
       .catch(() => undefined);
-  }, [prod]);
+    loadHistory();
+  }, [prod, loadHistory]);
 
   async function generate() {
     if (!table) {
@@ -71,6 +121,7 @@ export default function TestTokensPage() {
           })),
         );
         setMeta({ operator: data.data.operator, operator_scoped: data.data.operator_scoped });
+        loadHistory();
       } else {
         toast({ type: "error", message: data?.message || data?.error || "Failed to generate" });
       }
@@ -183,6 +234,70 @@ export default function TestTokensPage() {
               <div className="text-xs font-mono break-all" style={{ color: "#9ca3af" }}>{t.url}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* History + statuses of previously generated tokens */}
+      {history.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-white mt-4">Generated tokens</h2>
+          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #1f1f1f" }}>
+            <table className="w-full text-xs" style={{ color: "#d1d5db" }}>
+              <thead style={{ color: "#6b7280" }}>
+                <tr className="text-left">
+                  <th className="px-3 py-2 font-medium">Tester</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Stream</th>
+                  <th className="px-3 py-2 font-medium">Balance</th>
+                  <th className="px-3 py-2 font-medium">Created</th>
+                  <th className="px-3 py-2 font-medium">Expires</th>
+                  <th className="px-3 py-2 font-medium">Last seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h, i) => (
+                  <tr key={i} style={{ borderTop: "1px solid #1a1a1a" }}>
+                    <td className="px-3 py-2 font-mono">{h.display_name}</td>
+                    <td className="px-3 py-2">
+                      <span style={{ color: STATUS_COLOR[h.status] || "#9ca3af" }}>● {h.status}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {h.stream_revoked ? (
+                        <span style={{ color: "#f87171" }}>cut (idle)</span>
+                      ) : (
+                        <span style={{ color: "#9ca3af" }}>{h.idle_rounds ? `idle ${h.idle_rounds}` : "—"}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">₱{Number(h.balance || 0).toLocaleString()}</td>
+                    <td className="px-3 py-2">{fmt(h.created_at)}</td>
+                    <td className="px-3 py-2">{fmt(h.expires_at)}</td>
+                    <td className="px-3 py-2">{fmt(h.last_seen_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Audit log — who generated what, when */}
+      {audit.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold text-white mt-4">Audit log</h2>
+          <div className="space-y-1">
+            {audit.map((a, i) => (
+              <div key={i} className="text-xs px-3 py-2 rounded" style={{ backgroundColor: "#0d0d0d", border: "1px solid #1a1a1a", color: "#9ca3af" }}>
+                <span style={{ color: "#d1d5db" }}>{fmt(a.created_at)}</span>
+                {" — "}
+                <span style={{ color: "#93c5fd" }}>{a.new_value?.by || a.admin_users?.email || "admin"}</span>
+                {" generated "}
+                <strong style={{ color: "#e5e7eb" }}>{a.new_value?.count ?? "?"}</strong>
+                {" token(s) on "}
+                <span style={{ color: "#e5e7eb" }}>{a.entity_id}</span>
+                {a.new_value?.balance ? ` · ₱${Number(a.new_value.balance).toLocaleString()} each` : ""}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

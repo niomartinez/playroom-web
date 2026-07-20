@@ -11,24 +11,35 @@ const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
  * STAGING-ONLY: 404 on prod (the backend also refuses). Forwards the admin
  * backend token + service key like the other /api/admin proxies.
  */
+function headers(req: NextRequest): Record<string, string> {
+  const backendToken = req.cookies.get("admin_backend_token")?.value || "";
+  return {
+    "Content-Type": "application/json",
+    "X-Service-Key": SERVICE_KEY,
+    ...(backendToken ? { "X-Admin-Token": backendToken } : {}),
+  };
+}
+
 export async function POST(req: NextRequest) {
   if (isProdEnv()) {
-    return NextResponse.json(
-      { error: "Test tokens are staging-only." },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Test tokens are staging-only." }, { status: 404 });
   }
-  const backendToken = req.cookies.get("admin_backend_token")?.value || "";
   const body = await req.json().catch(() => ({}));
   const res = await fetch(`${API_URL}/internal/admin/test-token`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Service-Key": SERVICE_KEY,
-      ...(backendToken ? { "X-Admin-Token": backendToken } : {}),
-    },
+    headers: headers(req),
     body: JSON.stringify(body),
   });
+  const data = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
+}
+
+// History + statuses of generated tokens (+ audit log).
+export async function GET(req: NextRequest) {
+  if (isProdEnv()) {
+    return NextResponse.json({ data: { tokens: [], audit: [] } }, { status: 200 });
+  }
+  const res = await fetch(`${API_URL}/internal/admin/test-tokens`, { headers: headers(req) });
   const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }
