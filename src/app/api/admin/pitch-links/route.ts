@@ -44,13 +44,19 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") || req.nextUrl.origin;
   const url = `${origin}/pitch?t=${encodeURIComponent(token)}`;
 
-  // Record it for the history/audit — best-effort, never blocks the mint.
+  // Record it for the history/audit — best-effort. MUST be awaited: on Vercel's
+  // serverless runtime a fetch left pending when the response returns is killed,
+  // so a fire-and-forget would silently never record.
   const expiresAt = new Date(Date.now() + clamped * 86400_000).toISOString();
-  fetch(`${API_URL}/internal/admin/pitch-link-audit`, {
-    method: "POST",
-    headers: backendHeaders(req),
-    body: JSON.stringify({ operator, days: clamped, expires_at: expiresAt, token }),
-  }).catch(() => undefined);
+  try {
+    await fetch(`${API_URL}/internal/admin/pitch-link-audit`, {
+      method: "POST",
+      headers: backendHeaders(req),
+      body: JSON.stringify({ operator, days: clamped, expires_at: expiresAt, token }),
+    });
+  } catch {
+    // never block the mint on the audit write
+  }
 
   return NextResponse.json({ token, url, operator, expiresInDays: clamped });
 }
