@@ -34,10 +34,26 @@ const STUDIO_JWT_SECRET = new TextEncoder().encode(
 const ADMIN_JWT_SECRET = new TextEncoder().encode(
   requireEnv("ADMIN_JWT_SECRET", "playroom-admin-secret-change-in-prod"),
 );
-const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
-  .split(",")
-  .map((ip) => ip.trim())
-  .filter(Boolean);
+// IP allowlist (Option A). Mirrors src/proxy.ts: the managed PANEL list plus the
+// legacy STUDIO list, unioned with a baked-in break-glass. The gate is INERT
+// (allow-all) until PANEL_ALLOWED_IPS or STUDIO_ALLOWED_IPS is set, so break-glass
+// alone never activates it. See docs/SECURITY_HARDENING_2026-07-22.md.
+function parseIps(raw: string | undefined): string[] {
+  return (raw || "")
+    .split(",")
+    .map((ip) => ip.trim())
+    .filter(Boolean);
+}
+const PANEL_ALLOWED_IPS = parseIps(process.env.PANEL_ALLOWED_IPS);
+const STUDIO_ALLOWED_IPS = parseIps(process.env.STUDIO_ALLOWED_IPS);
+const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116");
+const IP_GATE_ACTIVE =
+  PANEL_ALLOWED_IPS.length > 0 || STUDIO_ALLOWED_IPS.length > 0;
+const IP_ALLOWLIST = new Set([
+  ...PANEL_ALLOWED_IPS,
+  ...STUDIO_ALLOWED_IPS,
+  ...BREAK_GLASS_IPS,
+]);
 
 const COOKIE_NAME = "studio_session";
 
@@ -58,10 +74,10 @@ export interface StudioSession {
 }
 
 export function isIpAllowed(ip: string | null): boolean {
-  // If no IPs configured, allow all (dev mode)
-  if (ALLOWED_IPS.length === 0) return true;
+  // Inert (allow all) until an allowlist is configured.
+  if (!IP_GATE_ACTIVE) return true;
   if (!ip) return false;
-  return ALLOWED_IPS.includes(ip);
+  return IP_ALLOWLIST.has(ip);
 }
 
 export function validateCredentials(username: string, password: string): boolean {

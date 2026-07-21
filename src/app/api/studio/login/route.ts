@@ -25,10 +25,11 @@ const DEFAULT_MAX_AGE = 60 * 60 * 12; // 12h fallback
  * TODO: F-08 burn-down — remove the legacy fallback after ~2026-05-07.
  */
 export async function POST(req: NextRequest) {
-  // IP check
+  // IP check. Prefer Vercel's trusted header over the spoofable left-most XFF.
   const clientIp =
+    req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
     "";
 
   if (!isIpAllowed(clientIp)) {

@@ -28,10 +28,65 @@ const ADMIN_JWT_SECRET = getJwtSecret("ADMIN_JWT_SECRET", "admin");
 const BACKEND_SERVICE_KEY = process.env.API_SERVICE_KEY
   ? new TextEncoder().encode(process.env.API_SERVICE_KEY)
   : null;
-const ALLOWED_IPS = (process.env.STUDIO_ALLOWED_IPS || "")
-  .split(",")
-  .map((ip) => ip.trim())
-  .filter(Boolean);
+/** Parse a comma-separated IP env var into a trimmed, non-empty list. */
+function parseIps(raw: string | undefined): string[] {
+  return (raw || "")
+    .split(",")
+    .map((ip) => ip.trim())
+    .filter(Boolean);
+}
+
+// Internal-panel + studio IP allowlist (Option A — env-var driven).
+//
+// - Enforced at the Vercel edge, where the real browser IP is visible.
+// - Scoped to /admin + /studio (and their /api/* routes) ONLY. /admin-ocms is
+//   the EXTERNAL OCMS partner portal (unknown/rotating partner IPs) and is NEVER
+//   IP-gated here.
+// - Empty allowlist => INERT (allow all), so deploying this code never locks
+//   anyone out until PANEL_ALLOWED_IPS is deliberately set in Vercel.
+// - BREAK_GLASS_IPS are always allowed whenever the gate is active, so a bad
+//   allowlist edit can't lock out the office. Defaults to the office IP even
+//   when the env var is unset. See docs/SECURITY_HARDENING_2026-07-22.md.
+const PANEL_ALLOWED_IPS = parseIps(process.env.PANEL_ALLOWED_IPS);
+// Legacy studio-only var — unioned in so an existing STUDIO_ALLOWED_IPS keeps working.
+const STUDIO_ALLOWED_IPS = parseIps(process.env.STUDIO_ALLOWED_IPS);
+const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116");
+
+const IP_GATE_ACTIVE =
+  PANEL_ALLOWED_IPS.length > 0 || STUDIO_ALLOWED_IPS.length > 0;
+const PANEL_IP_ALLOWLIST = new Set([
+  ...PANEL_ALLOWED_IPS,
+  ...STUDIO_ALLOWED_IPS,
+  ...BREAK_GLASS_IPS,
+]);
+
+/** Real client IP at the Vercel edge. Prefer Vercel's trusted headers over the
+ *  raw left-most X-Forwarded-For entry, which a client can spoof. */
+function resolveClientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip")?.trim() ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    ""
+  );
+}
+
+/** True for the internal-panel + studio surfaces the IP gate covers. Excludes
+ *  the OCMS partner portal (/admin-ocms + /api/admin-ocms). */
+function isPanelIpScoped(pathname: string): boolean {
+  if (
+    pathname.startsWith("/admin-ocms") ||
+    pathname.startsWith("/api/admin-ocms")
+  ) {
+    return false;
+  }
+  return (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/admin/") ||
+    pathname.startsWith("/studio") ||
+    pathname.startsWith("/api/studio/")
+  );
+}
 
 /**
  * F-08 Phase B dual-verify: studio cookies issued AFTER the cutover are
@@ -70,6 +125,15 @@ async function verifyStudioCookie(
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Option A IP allowlist — edge-enforced, /admin + /studio only, OCMS excluded.
+  // Inert until PANEL_ALLOWED_IPS (or legacy STUDIO_ALLOWED_IPS) is set in Vercel.
+  if (IP_GATE_ACTIVE && isPanelIpScoped(pathname)) {
+    const clientIp = resolveClientIp(req);
+    if (!clientIp || !PANEL_IP_ALLOWLIST.has(clientIp)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
 
   /* ── OCMS partner-portal API routes (return 401 JSON, no redirect) ──
    * Handled BEFORE the /admin branches because "/admin-ocms" also matches
@@ -230,16 +294,8 @@ export async function proxy(req: NextRequest) {
   if (!isProtected) return NextResponse.next();
   if (pathname === "/studio/login") return NextResponse.next();
 
-  // IP whitelist check (studio only)
-  if (ALLOWED_IPS.length > 0) {
-    const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "";
-    if (!ALLOWED_IPS.includes(clientIp)) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
-  }
+  // IP whitelist for /studio is now handled by the unified edge gate at the top
+  // of proxy() (isPanelIpScoped + PANEL_IP_ALLOWLIST).
 
   // Session check (dual-verify: backend JWT first, legacy fallback).
   const token = req.cookies.get("studio_session")?.value;
@@ -290,6 +346,7 @@ export const config = {
     "/emulator/:path*",
     "/admin/:path*",
     "/api/admin/:path*",
+    "/api/studio/:path*",
     "/admin-ocms/:path*",
     "/api/admin-ocms/:path*",
   ],
