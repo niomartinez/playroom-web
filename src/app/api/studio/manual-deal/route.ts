@@ -16,14 +16,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { game_id, player_cards, banker_cards, player_score, banker_score, outcome, player_pair, banker_pair } = body;
 
-  // F-08: forward the studio cookie as X-Studio-Token so the backend
-  // can stamp dealer_id on the deal/result/settle calls.
+  // A valid studio session is REQUIRED — this route deals cards, sets the
+  // result, and settles. Without this check an unauthenticated caller could
+  // drive settlement via the trusted service key (2026-07-22 hardening).
   const studioToken = req.cookies.get("studio_session")?.value;
+  if (!studioToken) {
+    return NextResponse.json(
+      { error_code: "1001", message: "Not authenticated" },
+      { status: 401 },
+    );
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Service-Key": SERVICE_KEY,
+    "X-Studio-Token": studioToken,
   };
-  if (studioToken) headers["X-Studio-Token"] = studioToken;
 
   // Step 1: Find the active round on this table
   const activeRes = await fetch(`${API_URL}/internal/fights/active/${game_id}`, {

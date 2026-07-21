@@ -8,15 +8,19 @@ const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  // F-08: forward the studio cookie as X-Studio-Token so the backend
-  // can stamp dealer_id on the resulting fight. Header is optional —
-  // backend's verify_studio_token(required=False) ignores absence.
+  // A valid studio session is REQUIRED to start a round (2026-07-22 hardening).
   const studioToken = req.cookies.get("studio_session")?.value;
+  if (!studioToken) {
+    return NextResponse.json(
+      { error_code: "1001", message: "Not authenticated" },
+      { status: 401 },
+    );
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Service-Key": SERVICE_KEY,
+    "X-Studio-Token": studioToken,
   };
-  if (studioToken) headers["X-Studio-Token"] = studioToken;
 
   const res = await fetch(`${API_URL}/internal/round/start`, {
     method: "POST",
