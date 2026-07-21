@@ -62,6 +62,9 @@ export default function TestTokensPage() {
   const [count, setCount] = useState(1);
   const [balance, setBalance] = useState("10000");
   const [ttl, setTtl] = useState(8);
+  // Staging tokens default to never-expiring; prod has no "never" and caps at
+  // 1 week (see PROD_MAX_TTL below + the backend _effective_ttl_hours).
+  const [never, setNever] = useState(true);
   const [busy, setBusy] = useState(false);
   const [tokens, setTokens] = useState<GeneratedToken[]>([]);
   const [meta, setMeta] = useState<{ operator?: string; operator_scoped?: boolean } | null>(null);
@@ -84,6 +87,7 @@ export default function TestTokensPage() {
   //   staging -> only TEST-* tables
   const prod = isProdEnv();
   const PROD_TABLES = ["BAC-TABLE-01", "BAC-TABLE-02"];
+  const PROD_MAX_TTL = 24 * 7; // 1 week — hard cap on production tokens.
   // "TEST-" (with the hyphen) so the decommissioned plain "TEST" table is
   // excluded; prod -> the 2 real tables only.
   const tableAllowed = (id: string) =>
@@ -118,7 +122,15 @@ export default function TestTokensPage() {
       const res = await fetch("/api/admin/test-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table, count, balance, ttl_hours: ttl }),
+        // Staging: send never=true to mint a ~never-expiring token. Prod: no
+        // "never" — ttl_hours capped at 1 week (backend enforces both).
+        body: JSON.stringify({
+          table,
+          count,
+          balance,
+          ttl_hours: prod ? Math.min(ttl, PROD_MAX_TTL) : ttl,
+          never: !prod && never,
+        }),
       });
       const data = await res.json();
       const list = data?.data?.tokens;
@@ -197,12 +209,38 @@ export default function TestTokensPage() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>Expires (h)</label>
-            <input
-              type="number" min={1} max={72} value={ttl}
-              onChange={(e) => setTtl(Math.max(1, Math.min(72, Number(e.target.value) || 8)))}
-              className="w-full rounded px-3 py-2 text-white text-sm" style={inputStyle}
-            />
+            <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>
+              {prod ? "Expires (h, max 168)" : "Expiry"}
+            </label>
+            {prod ? (
+              // Production: hours input, hard-capped at 1 week. No "never".
+              <input
+                type="number" min={1} max={PROD_MAX_TTL} value={ttl}
+                onChange={(e) =>
+                  setTtl(Math.max(1, Math.min(PROD_MAX_TTL, Number(e.target.value) || 8)))
+                }
+                className="w-full rounded px-3 py-2 text-white text-sm" style={inputStyle}
+              />
+            ) : (
+              // Staging: default never-expiring; untick to set an hour count.
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none py-2">
+                  <input
+                    type="checkbox" checked={never}
+                    onChange={(e) => setNever(e.target.checked)}
+                  />
+                  Never expires
+                </label>
+                {!never && (
+                  <input
+                    type="number" min={1} value={ttl}
+                    onChange={(e) => setTtl(Math.max(1, Number(e.target.value) || 8))}
+                    placeholder="Hours"
+                    className="w-full rounded px-3 py-2 text-white text-sm" style={inputStyle}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
 
