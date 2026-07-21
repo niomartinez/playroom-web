@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireEnv, isProdEnv } from "@/lib/server-env";
+import { requireEnv } from "@/lib/server-env";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -21,9 +21,6 @@ function headers(req: NextRequest): Record<string, string> {
 }
 
 export async function POST(req: NextRequest) {
-  if (isProdEnv()) {
-    return NextResponse.json({ error: "Test tokens are staging-only." }, { status: 404 });
-  }
   const body = await req.json().catch(() => ({}));
   const res = await fetch(`${API_URL}/internal/admin/test-token`, {
     method: "POST",
@@ -36,9 +33,6 @@ export async function POST(req: NextRequest) {
 
 // History + statuses of generated tokens (+ audit log).
 export async function GET(req: NextRequest) {
-  if (isProdEnv()) {
-    return NextResponse.json({ data: { tokens: [], audit: [] } }, { status: 200 });
-  }
   const res = await fetch(`${API_URL}/internal/admin/test-tokens`, { headers: headers(req) });
   const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });

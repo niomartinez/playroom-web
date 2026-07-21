@@ -124,7 +124,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Test tokens",
     href: "/admin/test-tokens",
-    stagingOnly: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3" />

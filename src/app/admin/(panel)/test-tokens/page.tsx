@@ -79,25 +79,29 @@ export default function TestTokensPage() {
     }
   }, []);
 
-  // Staging-only surface. On prod the proxy + backend already refuse; this is
-  // the friendly message so nobody wonders why it's dead.
+  // Allowed tables depend on the environment (must match the backend):
+  //   prod    -> only the 2 real tables (test money on the live tables)
+  //   staging -> only TEST-* tables
   const prod = isProdEnv();
+  const PROD_TABLES = ["BAC-TABLE-01", "BAC-TABLE-02"];
+  const tableAllowed = (id: string) =>
+    prod ? PROD_TABLES.includes(id) : id.toUpperCase().startsWith("TEST");
 
   useEffect(() => {
-    if (prod) return;
     fetch("/api/admin/tables")
       .then((r) => r.json())
       .then((d) => {
         const raw = Array.isArray(d?.data) ? d.data : d?.data?.tables || [];
         const ids = raw
           .map((t: { external_game_id?: string }) => t?.external_game_id)
-          .filter(Boolean);
+          .filter(Boolean)
+          .filter(tableAllowed);
         setTables(ids);
-        // Default to a TEST table if present, else the first.
-        setTable(ids.find((x: string) => x.startsWith("TEST")) || ids[0] || "");
+        setTable(ids[0] || "");
       })
       .catch(() => undefined);
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prod, loadHistory]);
 
   async function generate() {
@@ -144,27 +148,16 @@ export default function TestTokensPage() {
     }
   }
 
-  if (prod) {
-    return (
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold text-white">Test tokens</h1>
-        <p className="text-sm mt-2" style={{ color: "#99a1af" }}>
-          Test-token generation is <strong>staging-only</strong>. Open this page on the
-          staging admin panel to generate test links.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
       <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Test tokens</h1>
         <p className="text-sm mt-1" style={{ color: "#99a1af" }}>
-          Generate a funded staging session with test money and copy the{" "}
-          <code>/play</code> link to hand a tester. Staging-only — never touches
-          real OCMS wallets.
+          Generate a funded session with test money and copy the{" "}
+          <code>/play</code> link to hand a tester. Settles play money (transfer
+          operator) — never real OCMS wallets.{" "}
+          {prod ? "On production, only the 2 live tables." : "On staging, only TEST tables."}
         </p>
       </div>
 
