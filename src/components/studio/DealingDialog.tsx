@@ -201,7 +201,10 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
     const banker_pair = isPair(bankerCards);
 
     try {
-      const res = await clientFetch("/api/studio/manual-deal", {
+      // clientFetch returns the ALREADY-PARSED body (not a Response), so use it
+      // directly — calling .json() on it threw "res.json is not a function"
+      // (minified "e.json is not a function") and blocked every deal.
+      const data = await clientFetch("/api/studio/manual-deal", {
         method: "POST",
         body: JSON.stringify({
           game_id: studio.tableId,
@@ -214,9 +217,11 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
           banker_pair,
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.error) {
-        setError(data.error || `HTTP ${res.status}`);
+      const err =
+        (data && (data.error || data.message)) ||
+        (data && data.error_code && data.error_code !== "0" ? "Deal failed" : null);
+      if (err) {
+        setError(typeof err === "string" ? err : "Deal failed");
         setSubmitting(false);
         return;
       }

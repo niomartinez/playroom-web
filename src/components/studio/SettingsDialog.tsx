@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStudio } from "@/lib/studio-context";
 import { clientFetch } from "@/lib/api";
+import { isProdEnv } from "@/lib/server-env";
 
 interface TableOption {
   id: string;
   name: string;
+  external_game_id?: string;
+  is_active?: boolean;
   min_bet?: number;
   max_bet?: number;
 }
@@ -63,7 +66,18 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setLoading(true);
     try {
       const data = await clientFetch("/api/emulator/tables");
-      const list = Array.isArray(data) ? data : data.data ?? data.tables ?? [];
+      const raw: TableOption[] = Array.isArray(data) ? data : data.data ?? data.tables ?? [];
+      // Only active tables, scoped to the environment (matches test-tokens):
+      //   prod    -> the 2 real tables only
+      //   staging -> TEST-* tables only  (keeps decommissioned + prod-named
+      //              tables out of the staging studio picker)
+      const prod = isProdEnv();
+      const PROD_TABLES = ["BAC-TABLE-01", "BAC-TABLE-02"];
+      const list = raw.filter((t) => {
+        if (t.is_active === false) return false;
+        const ext = (t.external_game_id || "").toUpperCase();
+        return prod ? PROD_TABLES.includes(t.external_game_id || "") : ext.startsWith("TEST-");
+      });
       setTables(list);
     } catch {
       // silently fail; user sees empty list
