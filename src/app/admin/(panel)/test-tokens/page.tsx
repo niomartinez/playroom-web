@@ -84,8 +84,10 @@ export default function TestTokensPage() {
   //   staging -> only TEST-* tables
   const prod = isProdEnv();
   const PROD_TABLES = ["BAC-TABLE-01", "BAC-TABLE-02"];
+  // "TEST-" (with the hyphen) so the decommissioned plain "TEST" table is
+  // excluded; prod -> the 2 real tables only.
   const tableAllowed = (id: string) =>
-    prod ? PROD_TABLES.includes(id) : id.toUpperCase().startsWith("TEST");
+    prod ? PROD_TABLES.includes(id) : id.toUpperCase().startsWith("TEST-");
 
   useEffect(() => {
     fetch("/api/admin/tables")
@@ -93,9 +95,10 @@ export default function TestTokensPage() {
       .then((d) => {
         const raw = Array.isArray(d?.data) ? d.data : d?.data?.tables || [];
         const ids = raw
-          .map((t: { external_game_id?: string }) => t?.external_game_id)
-          .filter(Boolean)
-          .filter(tableAllowed);
+          .filter((t: { external_game_id?: string; is_active?: boolean }) =>
+            t?.external_game_id && t?.is_active !== false && tableAllowed(t.external_game_id),
+          )
+          .map((t: { external_game_id?: string }) => t!.external_game_id as string);
         setTables(ids);
         setTable(ids[0] || "");
       })

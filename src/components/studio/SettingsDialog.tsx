@@ -86,6 +86,20 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }, []);
 
+  // If the persisted selection is no longer a valid/active allowed table (e.g.
+  // the decommissioned 'TEST'), clear it so the picker shows "Select a table"
+  // instead of a dead selection, forcing the dealer to pick a live one.
+  useEffect(() => {
+    if (!tables.length || !selectedTableId) return;
+    const valid = tables.some(
+      (t) => t.id === selectedTableId || t.external_game_id === selectedTableId,
+    );
+    if (!valid) {
+      setSelectedTableId("");
+      setSelectedTableName("");
+    }
+  }, [tables, selectedTableId]);
+
   useEffect(() => {
     if (open) {
       fetchTables();
