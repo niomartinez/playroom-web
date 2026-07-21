@@ -7,7 +7,7 @@ import { symbolFor, formatBalance } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
 
 const CHIPS = [
-  { value: 50, src: "/mobile-assets/chip-50.png" },
+  // ₱250 is the smallest chip — the table minimum. No sub-250 chips.
   { value: 250, src: "/mobile-assets/chip-250.png" },
   { value: 500, src: "/mobile-assets/chip-500.png" },
   { value: 1000, src: "/mobile-assets/chip-1000.png" },

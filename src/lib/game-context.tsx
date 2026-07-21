@@ -356,7 +356,7 @@ export function GameProvider({
   const [currentRound, setCurrentRound] = useState<CurrentRound | null>(null);
   const [roads, setRoads] = useState<Roads>(DEFAULT_ROADS);
   const [mainBetCounts, setMainBetCounts] = useState<MainBetCounts | null>(null);
-  const [selectedChip, setSelectedChip] = useState(50);
+  const [selectedChip, setSelectedChip] = useState(250); // ₱250 is the smallest chip
   const [placedBets, setPlacedBets] = useState<PlacedBet[]>([]);
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
   const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
