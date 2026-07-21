@@ -18,6 +18,7 @@ import {
   DEFAULT_OPACITY,
   MIN_OPACITY,
   MAX_OPACITY,
+  MAX_CHAT_LENGTH,
   SEND_COOLDOWN_MS,
 } from "@/lib/chat-ui";
 
@@ -374,7 +375,7 @@ export default function MobileChat() {
   };
 
   const insertEmoji = (emoji: string) => {
-    setDraft((d) => (d + emoji).slice(0, 200));
+    setDraft((d) => (d + emoji).slice(0, MAX_CHAT_LENGTH));
     inputRef.current?.focus();
   };
 
@@ -873,7 +874,7 @@ export default function MobileChat() {
             onBlur={onInputBlur}
             placeholder={connected ? t("chat.placeholder") : t("chat.connecting")}
             disabled={!connected}
-            maxLength={200}
+            maxLength={MAX_CHAT_LENGTH}
             /* 16px font prevents iOS Safari from zooming the page on focus */
             style={{
               flex: 1,

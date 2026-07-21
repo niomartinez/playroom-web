@@ -13,6 +13,13 @@ export const MAX_OPACITY = 1.0;
 /** Client-side send cooldown (mirrors the server's 1 msg / 5s rule for UX). */
 export const SEND_COOLDOWN_MS = 5000;
 
+/**
+ * Max chat message length — mirrors the server cap (MAX_MESSAGE_LENGTH in
+ * backend app/api/ws_chat.py). Tightened 200 → 100 on 2026-07-22 after
+ * wall-of-text spam; keep both in sync.
+ */
+export const MAX_CHAT_LENGTH = 100;
+
 /** Curated emoji set for the picker — no external deps, CSP-safe. */
 export const EMOJIS = [
   "😀","😂","😅","😉","😍","😎","🤑","😭","😡","🤔",
