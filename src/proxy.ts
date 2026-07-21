@@ -217,14 +217,10 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  /* ── Emulator is a TEST-only surface: 404 it on production ──
-     The backend already blocks emulator deals on non-TEST prod tables, but the
-     control panel itself has no business existing on prod. Test facilities live
-     on staging only. */
-  if (
-    pathname.startsWith("/emulator") &&
-    /\/\/api\.playroomgaming\.ph/.test(process.env.NEXT_PUBLIC_API_URL || "")
-  ) {
+  /* ── Emulator DECOMMISSIONED (2026-07-22): 404 on ALL environments ──
+     The mock-round control panel is retired; the studio deals via /studio. Code
+     kept, surface gated off everywhere. */
+  if (pathname.startsWith("/emulator")) {
     return new NextResponse("Not found", { status: 404 });
   }
 
