@@ -94,6 +94,20 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     video.volume = volume;
   }, [muted, volume]);
 
+  // play() with an autoplay-policy net. If the tester's persisted pref is
+  // UNMUTED, a fresh profile (Safari, or Chrome with no media-engagement
+  // history for the site) rejects the gesture-less unmuted play() — the
+  // element then sits paused showing black forever while WHEP is "connected"
+  // and rounds flow fine, and F5 never fixes it (a refresh is not a gesture;
+  // only the settings "reload stream" CLICK was). On rejection: retry muted
+  // (always allowed) and flip the mute UI so one tap restores sound.
+  const playWithAutoplayFallback = (video: HTMLVideoElement): Promise<void> =>
+    video.play().catch(() => {
+      video.muted = true;
+      setMuted(true);
+      return video.play().catch(() => undefined);
+    });
+
   const handleToggleMute = () => {
     const next = !muted;
     setMuted(next);
@@ -288,13 +302,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
         // Don't flip to playing yet — wait for connectionstate.
-        // play() throws if the user hasn't interacted, but it's
-        // muted-by-default below so autoplay policy is satisfied.
-        try {
-          await video.play();
-        } catch {
-          // First play may be rejected; user gesture will recover.
-        }
+        await playWithAutoplayFallback(video);
         return true;
       } catch (err) {
         console.warn("[VideoPlayer] WebRTC failed:", err);
@@ -347,11 +355,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           },
           { once: true },
         );
-        try {
-          await video.play();
-        } catch {
-          // ignored — muted autoplay should succeed regardless
-        }
+        await playWithAutoplayFallback(video);
         return;
       }
       // hls.js path (Chrome, Firefox, etc.).
@@ -364,7 +368,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           if (cancelled) return;
-          video.play().catch(() => undefined);
+          void playWithAutoplayFallback(video);
         });
         hls.on(Hls.Events.LEVEL_LOADED, () => {
           if (cancelled) return;
