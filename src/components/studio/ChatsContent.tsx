@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { useStudio } from "@/lib/studio-context";
 import { clientFetch } from "@/lib/api";
@@ -36,6 +37,14 @@ const EMPTY_SNAPSHOT: MonitorSnapshot = {
   presence: 0,
   connected: false,
 };
+
+/* Chat text-size (zoom) — persisted so a wall monitor stays readable from
+   across the studio. Base px matches the previous `text-sm` message size. */
+const FONT_KEY = "studio-chat-font-scale";
+const FONT_MIN = 0.75;
+const FONT_MAX = 4;
+const FONT_STEP = 0.25;
+const FONT_BASE_PX = 14;
 
 /* ------------------------------------------------------------------ */
 /*  Per-table monitor — mounts one WS per table, reports snapshots up  */
@@ -75,6 +84,35 @@ export default function ChatsContent() {
   activeRef.current = activeExtId;
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  /* ---- Chat text size (persisted) — lets the studio scale the feed so a
+         dealer can read it from across the room on a wall monitor. ---- */
+  const [fontScale, setFontScale] = useState(1);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FONT_KEY);
+      const v = raw ? parseFloat(raw) : NaN;
+      if (!Number.isNaN(v)) {
+        setFontScale(Math.min(FONT_MAX, Math.max(FONT_MIN, v)));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const changeFont = useCallback((delta: number) => {
+    setFontScale((prev) => {
+      const next =
+        Math.round(
+          Math.min(FONT_MAX, Math.max(FONT_MIN, prev + delta)) * 100,
+        ) / 100;
+      try {
+        localStorage.setItem(FONT_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   /* ---- Load the env-filtered table list (mirrors SettingsDialog) ---- */
   useEffect(() => {
@@ -196,6 +234,19 @@ export default function ChatsContent() {
 
   /* ---- Styling tokens (match StudioHeader / SettingsDialog) ---- */
   const panelBg = "linear-gradient(135deg, #171717 0%, #000000 100%)";
+  const fontBtnStyle: CSSProperties = {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    border: "1px solid rgba(208,135,0,0.35)",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    color: "#f0b100",
+    fontWeight: 700,
+    lineHeight: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   return (
     <div
@@ -234,8 +285,35 @@ export default function ChatsContent() {
           </h1>
         </div>
         <div className="flex items-center gap-2 text-xs">
+          {/* Text-size control — scale the chat feed for wall-monitor reading */}
+          <div className="flex items-center gap-1" title="Chat text size">
+            <button
+              type="button"
+              onClick={() => changeFont(-FONT_STEP)}
+              disabled={fontScale <= FONT_MIN}
+              aria-label="Smaller chat text"
+              style={{ ...fontBtnStyle, opacity: fontScale <= FONT_MIN ? 0.4 : 1 }}
+            >
+              {"A\u2212"}
+            </button>
+            <span
+              className="tabular-nums text-[#99a1af]"
+              style={{ minWidth: 40, textAlign: "center" }}
+            >
+              {Math.round(fontScale * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => changeFont(FONT_STEP)}
+              disabled={fontScale >= FONT_MAX}
+              aria-label="Larger chat text"
+              style={{ ...fontBtnStyle, opacity: fontScale >= FONT_MAX ? 0.4 : 1 }}
+            >
+              A+
+            </button>
+          </div>
           <span
-            className="inline-block rounded-full"
+            className="inline-block rounded-full ml-1"
             style={{
               width: 8,
               height: 8,
@@ -362,10 +440,20 @@ export default function ChatsContent() {
                 {activeSnap.connected ? "No messages yet." : "Loading chat..."}
               </div>
             ) : (
-              <ul className="space-y-1.5">
+              <ul
+                className="space-y-1.5"
+                style={{ fontSize: `${FONT_BASE_PX * fontScale}px` }}
+              >
                 {activeMessages.map((m) => (
-                  <li key={m.id} className="text-sm leading-snug">
-                    <span className="text-[11px] tabular-nums text-[#6a7282] mr-2">
+                  <li
+                    key={m.id}
+                    className="leading-snug"
+                    style={{ fontSize: "1em" }}
+                  >
+                    <span
+                      className="tabular-nums text-[#6a7282] mr-2"
+                      style={{ fontSize: "0.78em" }}
+                    >
                       {fmtDateTime(m.time)}
                     </span>
                     <span className="font-semibold" style={{ color: "#f0b100" }}>
