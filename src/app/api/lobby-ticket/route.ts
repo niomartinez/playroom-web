@@ -53,6 +53,16 @@ const ADMIN_JWT_SECRET = loadJwtSecret(
   "playroom-admin-secret-change-in-prod",
 );
 
+// Same three-way verify as src/proxy.ts (218e806): where the backend has no
+// ADMIN_JWT_SECRET it signs studio JWTs with its service key, which we hold
+// as API_SERVICE_KEY. Without this fallback a valid backend-issued studio
+// cookie passes the proxy (dashboard loads) but 401s HERE on role:"studio"
+// mints — killing the studio WS (no lobby_state → zeroed roads/stats, no
+// round events).
+const BACKEND_SERVICE_KEY = process.env.API_SERVICE_KEY
+  ? new TextEncoder().encode(process.env.API_SERVICE_KEY)
+  : null;
+
 async function verifyStudioCookie(token: string): Promise<boolean> {
   try {
     await jwtVerify(token, ADMIN_JWT_SECRET);
@@ -64,8 +74,17 @@ async function verifyStudioCookie(token: string): Promise<boolean> {
     await jwtVerify(token, STUDIO_JWT_SECRET);
     return true;
   } catch {
-    return false;
+    // Fall through to the backend service-key fallback.
   }
+  if (BACKEND_SERVICE_KEY) {
+    try {
+      await jwtVerify(token, BACKEND_SERVICE_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
 
 const STUDIO_COOKIE = "studio_session";
