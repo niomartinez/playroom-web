@@ -259,9 +259,28 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
             video.srcObject = remoteStream;
           }
         };
+        // Hard deadline on reaching "connected". A network that blocks UDP
+        // (office firewall, some VPNs) leaves ICE stuck in "checking"
+        // FOREVER: connectionstate never hits "failed", the stall watchdog
+        // only arms after "connected", and no retry fires — the player sits
+        // on the felt background with no video at all while rounds (plain
+        // WebSocket = TCP) keep flowing. F5 repeats the same hang; only
+        // mashing "reload stream" ever got an attempt through. After the
+        // deadline, drop to HLS — TCP, works where UDP doesn't.
+        const connectDeadline = setTimeout(() => {
+          if (cancelled || !pc) return;
+          if (pc.connectionState !== "connected") {
+            console.warn(
+              `[VideoPlayer] WebRTC stuck in '${pc.connectionState}' — falling back to HLS`,
+            );
+            void tryHls();
+          }
+        }, 8000);
+
         pc.onconnectionstatechange = () => {
           if (cancelled || !pc) return;
           if (pc.connectionState === "connected") {
+            clearTimeout(connectDeadline);
             setState("playing");
             setErrorMsg(null);
             startStallWatchdog();
@@ -286,14 +305,21 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        const res = await fetch(
-          withStreamToken(webrtcUrl, streamTokenRef.current),
-          {
+        // Abort a hung WHEP POST — an unanswered fetch would otherwise stall
+        // the whole connect chain with no fallback and no retry.
+        const whepAbort = new AbortController();
+        const whepTimer = setTimeout(() => whepAbort.abort(), 8000);
+        let res: Response;
+        try {
+          res = await fetch(withStreamToken(webrtcUrl, streamTokenRef.current), {
             method: "POST",
             headers: { "Content-Type": "application/sdp" },
             body: offer.sdp,
-          },
-        );
+            signal: whepAbort.signal,
+          });
+        } finally {
+          clearTimeout(whepTimer);
+        }
         if (!res.ok) {
           throw new Error(`WHEP POST ${res.status}`);
         }
