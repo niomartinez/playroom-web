@@ -135,6 +135,12 @@ export function useBetting() {
           const data = await res.json().catch(() => ({}));
           if (!res.ok || (data.error_code && data.error_code !== "0")) {
             rollback(data.message || res.statusText || "rejected");
+            // 1013 = the server idle-cut ended this session; freeze the UI
+            // the same way the client-side idle counter does, so the player
+            // sees the Session Expired overlay and rejoins via refresh.
+            if (data.error_code === "1013" && typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("playroom:session-ended"));
+            }
           } else {
             // Confirmed by the server. This — NOT the optimistic placement —
             // is what counts as activity for the idle timer, so a bet that

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
+import { setIdleExempt } from "./idle-exempt";
 
 /**
  * Mints + renews the player's short-lived stream-access token for the current
@@ -82,7 +83,28 @@ export function useStreamToken(): StreamTokenState {
       }
     };
 
-    mint();
+    // Re-entry: mount = the player walking (back) into the table. Clears any
+    // idle stream revoke server-side so a refresh restores video + betting —
+    // then mint the first token. Rejoin failures fall through to a plain
+    // mint; a still-revoked session just stays cut until the next refresh.
+    const rejoinThenMint = async () => {
+      try {
+        const res = await fetch("/api/stream/rejoin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: gameId }),
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          if (json?.data?.idle_exempt === true) setIdleExempt(true);
+        }
+      } catch {
+        // best-effort — never block the token mint on rejoin
+      }
+      await mint();
+    };
+
+    rejoinThenMint();
     const id = setInterval(mint, RENEW_MS);
     return () => {
       cancelled = true;

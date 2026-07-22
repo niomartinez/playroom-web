@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
+import { getIdleExempt } from "./idle-exempt";
 import { resolveIdlePolicy, type IdlePolicy } from "./idle-policy";
 
 /**
@@ -45,6 +46,16 @@ export function useIdleSession(): IdleSessionState {
   const [warnLevel, setWarnLevel] = useState<0 | 1 | 2>(0);
   const [expired, setExpired] = useState(false);
 
+  // Server-authoritative session end: the bet route rejected with 1013
+  // (idle stream-cut = full session end). Freeze immediately — the local
+  // round counter may disagree (e.g. after a mid-idle client refresh that
+  // didn't clear the server state in time).
+  useEffect(() => {
+    const onEnded = () => setExpired(true);
+    window.addEventListener("playroom:session-ended", onEnded);
+    return () => window.removeEventListener("playroom:session-ended", onEnded);
+  }, []);
+
   const idleRoundsRef = useRef(0);
   const lastRoundIdRef = useRef<string | null>(null);
   const placedThisRoundRef = useRef(false);
@@ -76,6 +87,9 @@ export function useIdleSession(): IdleSessionState {
   // Evaluate at every transition into a fresh betting_open round.
   useEffect(() => {
     if (token === "demo" || expired) return;
+    // Server-declared exemption (long-lived/QA tokens): the server never cuts
+    // these sessions, so the client must not warn or freeze them either.
+    if (getIdleExempt()) return;
     if (roundStatus !== "betting_open" || !currentRound?.roundId) return;
 
     const newRoundId = String(currentRound.roundId);
