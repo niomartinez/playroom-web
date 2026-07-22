@@ -38,6 +38,7 @@ interface TableStatePayload {
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
   idle_policy?: { expire: number; warn1: number | null; warn2: number | null } | null;
+  min_seat_balance?: { block: number; warn: number } | null;
   main_bet_counts: Record<
     string,
     { players: number; amount: number }
@@ -108,6 +109,7 @@ export function useStateRecovery() {
     setMinBet,
     setMaxBet,
     setIdlePolicy,
+    setMinSeatBalance,
   } = useGame();
 
   useEffect(() => {
@@ -145,6 +147,8 @@ export function useStateRecovery() {
         setMaxBet(payload.table?.max_bet_effective ?? payload.table?.max_bet ?? null);
         // Server-owned idle thresholds — the client never invents these.
         if (payload.idle_policy) setIdlePolicy(payload.idle_policy);
+        // Server-owned seat-balance thresholds (block/warn).
+        if (payload.min_seat_balance) setMinSeatBalance(payload.min_seat_balance);
 
         const fight = payload.fight;
         if (!fight) {

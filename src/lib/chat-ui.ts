@@ -43,3 +43,28 @@ export function fmtTime(iso: string): string {
     return "";
   }
 }
+
+/**
+ * Format an ISO string into a FULL local timestamp "YYYY-MM-DD HH:MM:SS"
+ * (24h). Used by the studio chat-monitor view where operators need the
+ * absolute date + seconds of every line, not the compact HH:MM shown to
+ * players. Falls back to the raw input on parse failure.
+ */
+export function fmtDateTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    // Invalid dates don't throw; toLocale* would render "Invalid Date". Guard
+    // explicitly so a malformed `time` falls back to the raw input.
+    if (Number.isNaN(d.getTime())) return iso || "";
+    const date = d.toLocaleDateString("en-CA"); // YYYY-MM-DD
+    const time = d.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    return `${date} ${time}`;
+  } catch {
+    return iso || "";
+  }
+}

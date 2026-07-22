@@ -371,6 +371,7 @@ export default function MainBets() {
             <button
               key={bet.name}
               data-bet-code={bet.betCode}
+              data-sfx="press"
               onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               onPointerDown={(e) => onPadPointerDown(bet.betCode, e)}
               onPointerMove={onPadPointerMove}
@@ -539,6 +540,7 @@ export default function MainBets() {
           <button
             key={bet.name}
             data-bet-code={bet.betCode}
+            data-sfx="press"
             onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             onPointerDown={(e) => onPadPointerDown(bet.betCode, e)}
             onPointerMove={onPadPointerMove}

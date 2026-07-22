@@ -1,6 +1,7 @@
 "use client";
 
 import type { IdlePolicy } from "./idle-policy";
+import type { MinSeatBalance } from "./min-seat-balance";
 import {
   createContext,
   useContext,
@@ -222,6 +223,8 @@ export interface GameState {
   confirmedBetRoundId: string | null;
   /** Server-delivered idle thresholds (table state). null = use default. */
   idlePolicy: IdlePolicy | null;
+  /** Server-delivered seat-balance thresholds (table state). null = default. */
+  minSeatBalance: MinSeatBalance | null;
 
   /* Setters — accept direct values or functional updaters */
   setWebrtcUrl: (u: string | null) => void;
@@ -265,6 +268,7 @@ export interface GameState {
   setRoundWinners: (w: RoundWinners | null) => void;
   setConfirmedBetRoundId: (id: string | null) => void;
   setIdlePolicy: (p: IdlePolicy | null) => void;
+  setMinSeatBalance: (p: MinSeatBalance | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -364,6 +368,7 @@ export function GameProvider({
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
   const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
+  const [minSeatBalance, setMinSeatBalance] = useState<MinSeatBalance | null>(null);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -563,6 +568,7 @@ export function GameProvider({
     roundWinners,
     confirmedBetRoundId,
     idlePolicy,
+    minSeatBalance,
     setTableName,
     setDealerName,
     setBalance,
@@ -588,6 +594,7 @@ export function GameProvider({
     setRoundWinners,
     setConfirmedBetRoundId,
     setIdlePolicy,
+    setMinSeatBalance,
   };
 
   return <GameContext value={value}>{children}</GameContext>;

@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
-import { symbolFor, formatBalance } from "@/lib/currency";
+import { symbolFor, formatBalance, formatMoney } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
+import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
 
 const CHIPS = [
   // ₱250 is the smallest chip — the table minimum. No sub-250 chips.
@@ -16,6 +17,21 @@ const CHIPS = [
   { value: 100000, src: "/mobile-assets/chip-100000.png" },
   { value: 500000, src: "/mobile-assets/chip-500000.png" },
 ];
+
+/**
+ * Seat-balance warning pulse: cycles the balance number white→red→white while
+ * the wallet is in the warning zone (block <= balance < warn). Reduced-motion
+ * users get the static red instead of the animation.
+ */
+const SEAT_WARN_KEYFRAMES = `
+@keyframes prg-balance-pulse {
+  0%, 100% { color: #ffffff; }
+  50% { color: #fb2c36; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="prg-balance-pulse"] { animation: none !important; color: #fb2c36 !important; }
+}
+`;
 
 /** Post-settlement odometer crawl on the balance number (wins + losses). */
 const BALANCE_CRAWL_DURATION_MS = 1500;
@@ -91,12 +107,27 @@ function useDisplayBalance(target: number): number {
 }
 
 export default function BalanceBar() {
-  const { balance, currency, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets } = useGame();
+  const { balance, balanceLoaded, currency, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets, token, minSeatBalance } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   const displayBalance = useDisplayBalance(balance);
   const isBettingOpen = roundStatus === "betting_open";
   const hasPlacedBets = placedBets.length > 0;
+
+  /**
+   * Seat-balance warning zone: block <= balance < warn. The balance is above
+   * the seat floor (else SeatBalanceGate would cover the screen) but close
+   * enough that we nudge the player before it drops through. Pulses the
+   * balance number red + shows a small, low-opacity, non-obstructive hint.
+   */
+  const { block, warn } = resolveMinSeatBalance(minSeatBalance);
+  const warnLow =
+    token !== "demo" &&
+    balanceLoaded &&
+    minSeatBalance != null &&
+    balance >= block &&
+    balance < warn;
+  const warnLowText = t("seat.warnLow", { amount: formatMoney(block, currency) });
 
   /**
    * Auto-step-down: when the live balance drops below the current selected
@@ -130,8 +161,9 @@ export default function BalanceBar() {
           boxSizing: "border-box",
         }}
       >
+        <style>{SEAT_WARN_KEYFRAMES}</style>
         {/* Top section: icon + balance — compact, single row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
           <img
             src="/mobile-assets/balance-icon.png"
             alt={t("balance.label")}
@@ -149,11 +181,27 @@ export default function BalanceBar() {
                 lineHeight: 1,
                 fontVariantNumeric: "tabular-nums",
                 fontFeatureSettings: '"tnum"',
+                ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
               }}
             >
               {formatted}
             </span>
           </div>
+          {warnLow && (
+            <span
+              role="status"
+              style={{
+                fontSize: 9,
+                fontWeight: 600,
+                color: "#fb2c36",
+                opacity: 0.6,
+                lineHeight: 1.2,
+                flexBasis: "100%",
+              }}
+            >
+              {warnLowText}
+            </span>
+          )}
         </div>
 
         {/* Bottom section: chip row */}
@@ -239,6 +287,7 @@ export default function BalanceBar() {
           className="flex-shrink-0"
           style={{ width: "clamp(28px, 3.4vh, 48px)", height: "clamp(28px, 3.4vh, 48px)" }}
         />
+        <style>{SEAT_WARN_KEYFRAMES}</style>
         <div>
           <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>{t("balance.label")}</div>
           <div
@@ -247,10 +296,27 @@ export default function BalanceBar() {
               fontSize: "clamp(18px, 2.4vh, 30px)",
               fontVariantNumeric: "tabular-nums",
               fontFeatureSettings: '"tnum"',
+              ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
             }}
           >
             {formatted}
           </div>
+          {warnLow && (
+            <div
+              role="status"
+              style={{
+                fontSize: "clamp(8px, 1vh, 11px)",
+                fontWeight: 600,
+                color: "#fb2c36",
+                opacity: 0.6,
+                lineHeight: 1.2,
+                marginTop: 2,
+                maxWidth: "16vw",
+              }}
+            >
+              {warnLowText}
+            </div>
+          )}
         </div>
       </div>
 

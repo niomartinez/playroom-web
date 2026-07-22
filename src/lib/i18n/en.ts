@@ -162,6 +162,13 @@ const en: Record<string, string> = {
   "session.expiredBody": "You sat out too many rounds in a row, so your seat was released to keep the table active. To keep your seat next time, place a bet every round. Return to the lobby to rejoin a table.",
   "session.return": "Return to lobby",
 
+  /* Seat-balance gate */
+  "seat.blockTitle": "Minimum Balance Required",
+  "seat.blockBody": "Your balance has dropped below the minimum required to keep your seat at this table. Add funds to keep playing, or return to the lobby.",
+  "seat.return": "Back to lobby",
+  "seat.addFunds": "Add funds",
+  "seat.warnLow": "Low balance — keep at least {amount} to hold your seat.",
+
   /* Winners marquee */
   "winners.title": "Winners",
 

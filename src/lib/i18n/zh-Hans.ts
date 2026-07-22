@@ -162,6 +162,13 @@ const zhHans: Record<string, string> = {
   "session.expiredBody": "您连续多局未下注，座位已被释放以保持牌桌活跃。下次请每局下注以保留座位。返回大厅可重新加入牌桌。",
   "session.return": "返回大厅",
 
+  /* Seat-balance gate */
+  "seat.blockTitle": "需要最低余额",
+  "seat.blockBody": "您的余额已低于保留本桌座位所需的最低金额。请充值以继续游戏，或返回大厅。",
+  "seat.return": "返回大厅",
+  "seat.addFunds": "充值",
+  "seat.warnLow": "余额偏低——请至少保留 {amount} 以保留座位。",
+
   /* Winners marquee */
   "winners.title": "本局赢家",
 

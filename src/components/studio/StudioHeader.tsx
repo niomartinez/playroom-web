@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import SettingsDialog from "./SettingsDialog";
+import { useStudio } from "@/lib/studio-context";
 
 export default function StudioHeader() {
+  const studio = useStudio();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
@@ -98,6 +100,21 @@ export default function StudioHeader() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#99a1af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
               <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </a>
+
+          {/* Player Chats — full-page monitor, opens for the current table */}
+          <a
+            href={`/studio/chats?table=${encodeURIComponent(studio.tableId || "")}`}
+            target="_blank"
+            rel="noopener"
+            className="flex items-center justify-center hover:opacity-80 transition-opacity"
+            style={{ width: 24, height: 24 }}
+            aria-label="Player Chats"
+            title="Player Chats"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#99a1af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </a>
 

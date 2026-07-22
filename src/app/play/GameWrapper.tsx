@@ -8,7 +8,9 @@ import { useStateRecovery } from "@/lib/use-state-recovery";
 import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 import UsernameModal from "@/components/player/UsernameModal";
 import SessionGuard from "@/components/player/SessionGuard";
+import SeatBalanceGate from "@/components/player/SeatBalanceGate";
 import BetToasts from "@/components/player/BetToasts";
+import ButtonSfxProvider from "@/lib/use-button-sfx";
 import { ToastProvider } from "@/lib/toast-context";
 
 /* ------------------------------------------------------------------ */
@@ -174,9 +176,15 @@ function GameConnections({ children }: { children: ReactNode }) {
 
   return (
     <ToastProvider>
-      <UsernameGate>{children}</UsernameGate>
+      {/* Global button-click SFX (player root only; capture-phase listener). */}
+      <ButtonSfxProvider>
+        <UsernameGate>{children}</UsernameGate>
+      </ButtonSfxProvider>
       {/* #5 — idle warnings + frozen "Session Expired" overlay. */}
       <SessionGuard />
+      {/* Reactive minimum-seat-balance gate (lifts on top-up). Sits above
+          LowBalanceGate (zIndex 200 vs 17). */}
+      <SeatBalanceGate />
       {/* Speaks when a bet action is refused — a drag that the server won't
           take used to snap back silently. */}
       <BetToasts />
