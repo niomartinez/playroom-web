@@ -17,6 +17,8 @@ interface GeneratedToken {
 }
 
 interface HistoryRow {
+  id: string | null;
+  player_id: string | null;
   display_name: string;
   balance: string;
   created_at: string;
@@ -169,6 +171,51 @@ export default function TestTokensPage() {
       toast({ type: "success", message: "Link copied" });
     } catch {
       toast({ type: "error", message: "Copy failed — select and copy manually" });
+    }
+  }
+
+  // BaseResponse returns HTTP 200 with error_code="0" on success, so success is
+  // "no error_code, or the SUCCESS code".
+  const ok = (d: { error_code?: string } | null) =>
+    !(d?.error_code && d.error_code !== "0");
+
+  async function addFunds(playerId: string) {
+    try {
+      const res = await fetch("/api/admin/test-token/add-funds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_id: playerId, amount: "10000" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && ok(d)) {
+        toast({ type: "success", message: "Added ₱10,000" });
+        loadHistory();
+      } else {
+        toast({ type: "error", message: d?.message || "Failed to add funds" });
+      }
+    } catch {
+      toast({ type: "error", message: "Network error" });
+    }
+  }
+
+  async function expireToken(tokenId: string) {
+    if (!window.confirm("Expire this test token now? Its session will stop working."))
+      return;
+    try {
+      const res = await fetch("/api/admin/test-token/expire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token_id: tokenId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && ok(d)) {
+        toast({ type: "success", message: "Token expired" });
+        loadHistory();
+      } else {
+        toast({ type: "error", message: d?.message || "Failed to expire" });
+      }
+    } catch {
+      toast({ type: "error", message: "Network error" });
     }
   }
 
@@ -341,24 +388,46 @@ export default function TestTokensPage() {
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.expires_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.last_seen_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {h.token ? (
-                        <button
-                          onClick={() => {
-                            // Token isn't bound to a table — the game param just
-                            // picks which table to open. Use the recorded table
-                            // if we have it, else the table selected above.
-                            const g = h.table || table;
-                            copy(`${window.location.origin}/play?token=${h.token}&game=${g}&lang=en`);
-                          }}
-                          className="text-xs px-2 py-1 rounded whitespace-nowrap"
-                          style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
-                          title={`Opens on ${h.table || table || "(pick a table above)"}`}
-                        >
-                          Copy link
-                        </button>
-                      ) : (
-                        <span style={{ color: "#4b5563" }} title="expired/revoked — not re-usable">—</span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {h.token ? (
+                          <button
+                            onClick={() => {
+                              // Token isn't bound to a table — the game param just
+                              // picks which table to open. Use the recorded table
+                              // if we have it, else the table selected above.
+                              const g = h.table || table;
+                              copy(`${window.location.origin}/play?token=${h.token}&game=${g}&lang=en`);
+                            }}
+                            className="text-xs px-2 py-1 rounded whitespace-nowrap"
+                            style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
+                            title={`Opens on ${h.table || table || "(pick a table above)"}`}
+                          >
+                            Copy link
+                          </button>
+                        ) : (
+                          <span style={{ color: "#4b5563" }} title="expired/revoked — not re-usable">—</span>
+                        )}
+                        {h.status === "active" && h.player_id && (
+                          <button
+                            onClick={() => addFunds(h.player_id!)}
+                            className="text-xs px-2 py-1 rounded whitespace-nowrap"
+                            style={{ backgroundColor: "#064e3b", color: "#6ee7b7" }}
+                            title="Add ₱10,000 test funds to this player"
+                          >
+                            +₱10k
+                          </button>
+                        )}
+                        {h.status === "active" && h.id && (
+                          <button
+                            onClick={() => expireToken(h.id!)}
+                            className="text-xs px-2 py-1 rounded whitespace-nowrap"
+                            style={{ backgroundColor: "#3f1d1d", color: "#fca5a5" }}
+                            title="Expire this token now"
+                          >
+                            Expire
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
