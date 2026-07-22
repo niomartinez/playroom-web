@@ -157,8 +157,14 @@ function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
           setRevealed(true);
           const v = ref.current;
           if (v) {
-            v.muted = true;
-            v.play().catch(() => {});
+            // the tap is a user gesture, so play WITH sound (retain audio).
+            // native controls let the presenter mute if they prefer.
+            v.muted = false;
+            v.play().catch(() => {
+              // if the browser still blocks unmuted playback, fall back muted
+              v.muted = true;
+              v.play().catch(() => {});
+            });
           }
         }}
       />

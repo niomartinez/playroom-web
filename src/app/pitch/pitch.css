@@ -388,7 +388,7 @@
 .live-solo .demo-frame {
   height: 690px;
   width: auto;
-  aspect-ratio: 1600 / 730;
+  aspect-ratio: 1600 / 786;
 }
 .media-cap {
   font-family: var(--mono);
@@ -463,7 +463,7 @@
   position: relative;
   border: 1px solid rgba(232, 30, 40, 0.28);
   background: #0c0a0b;
-  aspect-ratio: 1600 / 730; /* pre-cropped: no capture chrome, no dock */
+  aspect-ratio: 1600 / 786; /* matches the new gameplay capture, no cropping */
   overflow: hidden;
 }
 .demo-frame video {

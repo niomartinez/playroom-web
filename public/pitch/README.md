@@ -10,7 +10,7 @@ click-to-reveal gate in the deck.
 | `screen-full.jpg` | Showcase (gated)       | Full table view. Adult content. |
 | `ui-betmenu.png` | Showcase side crop      | Crisp bet menu + chip rail (recut from the video frame, 1232x408). |
 | `ui-hands.png`  | Showcase side crop       | Crisp live Player/Banker scoreboard with dealt cards (from the video frame, 892x404). |
-| `demo.mp4`      | Gameplay slide (gated)   | 1600x730, ~1.3 MB. Pre-cropped: the Time2Bet site wrapper (top) and the macOS dock (bottom) are removed; only the Playroom game shows. Muted, no autoplay. |
+| `demo.mp4`      | Gameplay slide (gated)   | 1600x786, ~2.4 MB, clean Playroom UI capture WITH audio (AAC). No autoplay; the 18+ tap-to-play gate is a user gesture, so it plays with sound. |
 
 To recut the crops or re-crop the video, the source frame math lives in the
 git history for this commit. The video crop was `crop=2920:1334:0:156` then
