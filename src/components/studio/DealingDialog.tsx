@@ -225,13 +225,19 @@ export default function DealingDialog({ open, onClose, onSwitchToManual }: Deali
         setSubmitting(false);
         return;
       }
-      // Success — wait for RoundResult/RoundSettled WS to flip status,
-      // useEffect above will close the modal.
+      // Success — the manual-deal response only returns ok:true after the
+      // backend settle completed, so flip to "waiting" locally instead of
+      // depending on the RoundClosed WS event (a dropped/contaminated WS
+      // left the dealer stuck at SETTLING forever). The WS events still
+      // arrive for road updates and multi-client sync; a late RoundClosed
+      // just re-sets "waiting", which is idempotent.
+      studio.setRoundStatus("waiting");
+      setSubmitting(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Submit failed");
       setSubmitting(false);
     }
-  }, [info.handComplete, playerCards, bankerCards, pScore, bScore, studio.tableId]);
+  }, [info.handComplete, playerCards, bankerCards, pScore, bScore, studio.tableId, studio.setRoundStatus]);
 
   if (!open) return null;
 

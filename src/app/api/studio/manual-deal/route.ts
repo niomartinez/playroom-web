@@ -90,6 +90,15 @@ export async function POST(req: NextRequest) {
 
   const settleData = await settleRes.json().catch(() => ({}));
 
+  // A failed settle must surface as an error — returning ok:true here left
+  // the studio UI believing the round settled when it hadn't.
+  if (!settleRes.ok || (settleData.error_code && settleData.error_code !== "0")) {
+    return NextResponse.json(
+      { error: settleData.message || "Failed to settle round" },
+      { status: settleRes.ok ? 400 : settleRes.status },
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     fight_id: fightId,

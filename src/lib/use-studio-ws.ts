@@ -38,7 +38,13 @@ export function useStudioWs() {
       // Studio cookie is verified server-side in /api/lobby-ticket;
       // a 401 means the studio session has expired and we should
       // stop retrying so the operator UI can prompt for a relaunch.
-      const result = await fetchLobbyTicket();
+      // role:"studio" — force the studio-cookie path. Without it, a leftover
+      // prg_session player cookie (from testing /play in the same browser)
+      // wins the lobby-ticket auto-detect; if that player token is stale the
+      // mint 401s and this hook stops reconnecting FOREVER while the studio
+      // session is still valid — the dealer then never receives RoundClosed
+      // and the UI sticks at SETTLING after every round.
+      const result = await fetchLobbyTicket({ role: "studio" });
       if (!mounted) return;
       if ("error" in result) {
         if (result.error === "unauthorized") {

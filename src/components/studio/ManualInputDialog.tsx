@@ -237,6 +237,12 @@ export default function ManualInputDialog({ open, onClose, onSubmitted, gameId }
         return;
       }
 
+      // Settlement is confirmed synchronously by the manual-deal response,
+      // so return the studio to "waiting" locally — don't depend on the
+      // RoundClosed WS event (a dead WS left the round stuck in "dealing",
+      // which also made the DealingDialog auto-reopen over this dialog).
+      studio.setRoundStatus("waiting");
+      studio.setCurrentRound(null);
       onSubmitted?.();
       dispatch({ type: "CLEAR" });
       setStateDiverged(false);
