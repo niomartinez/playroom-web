@@ -60,6 +60,7 @@ export default function TestTokensPage() {
   const [tables, setTables] = useState<string[]>([]);
   const [table, setTable] = useState("");
   const [count, setCount] = useState(1);
+  const [name, setName] = useState("");
   const [balance, setBalance] = useState("10000");
   const [ttl, setTtl] = useState(8);
   // Staging tokens default to never-expiring; prod has no "never" and caps at
@@ -116,6 +117,13 @@ export default function TestTokensPage() {
       toast({ type: "error", message: "Pick a table" });
       return;
     }
+    // Same rule as player usernames (backend rejects otherwise): 3-16 chars,
+    // letters/digits/underscore. Empty = random Tester_xxxx.
+    const trimmedName = name.trim();
+    if (trimmedName && !/^[A-Za-z0-9_]{3,16}$/.test(trimmedName)) {
+      toast({ type: "error", message: "Name must be 3-16 characters: letters, digits, underscore" });
+      return;
+    }
     setBusy(true);
     setTokens([]);
     try {
@@ -130,6 +138,7 @@ export default function TestTokensPage() {
           balance,
           ttl_hours: prod ? Math.min(ttl, PROD_MAX_TTL) : ttl,
           never: !prod && never,
+          name: trimmedName || undefined,
         }),
       });
       const data = await res.json();
@@ -193,6 +202,21 @@ export default function TestTokensPage() {
         </div>
 
         <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>
+              Tester name <span style={{ color: "#6a7282" }}>(optional)</span>
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. NioPhone"
+              maxLength={16}
+              className="w-full rounded px-3 py-2 text-white text-sm" style={inputStyle}
+            />
+            <p className="text-[10px] mt-1" style={{ color: "#6a7282" }}>
+              Blank = random Tester_xxxx. Multiple get _1.._N.
+            </p>
+          </div>
           <div className="flex-1">
             <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>How many</label>
             <input
