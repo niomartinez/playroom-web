@@ -120,7 +120,10 @@ function ChromeFoot() {
   );
 }
 
-/** Demo video: gated, muted, no autoplay; resumes from last position. */
+/** Demo video: gated, no autoplay. The <video> is given NO source until the
+ *  gate is tapped, so it physically cannot start on its own, on any slide, in
+ *  any browser. The tap (a user gesture) assigns the src and plays WITH sound
+ *  (retained audio); resumes from the last position. */
 function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [revealed, setRevealed] = useState(false);
@@ -128,9 +131,7 @@ function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
     <div className="demo-frame">
       <video
         ref={ref}
-        src={src}
         preload="none"
-        muted
         playsInline
         controls={revealed}
         onTimeUpdate={(e) => {
@@ -156,16 +157,17 @@ function DemoVideo({ src, gateLine }: { src: string; gateLine: string }) {
         onReveal={() => {
           setRevealed(true);
           const v = ref.current;
-          if (v) {
-            // the tap is a user gesture, so play WITH sound (retain audio).
-            // native controls let the presenter mute if they prefer.
-            v.muted = false;
-            v.play().catch(() => {
-              // if the browser still blocks unmuted playback, fall back muted
-              v.muted = true;
-              v.play().catch(() => {});
-            });
-          }
+          if (!v) return;
+          // assign the source only now (the tap) — nothing to play before this
+          if (!v.getAttribute("src")) v.src = src;
+          // the tap is a user gesture, so play WITH sound (retained audio).
+          // native controls let the presenter mute if they prefer.
+          v.muted = false;
+          v.play().catch(() => {
+            // if the browser still blocks unmuted playback, fall back muted
+            v.muted = true;
+            v.play().catch(() => {});
+          });
         }}
       />
     </div>
