@@ -42,8 +42,9 @@ const EMPTY_SNAPSHOT: MonitorSnapshot = {
    across the studio. Base px matches the previous `text-sm` message size. */
 const FONT_KEY = "studio-chat-font-scale";
 const FONT_MIN = 0.75;
-const FONT_MAX = 4;
-const FONT_STEP = 0.25;
+// Max 8x (≈112px) so a wall monitor stays readable from across the studio.
+const FONT_MAX = 8;
+const FONT_STEP = 0.5;
 const FONT_BASE_PX = 14;
 
 /* ------------------------------------------------------------------ */
@@ -112,6 +113,22 @@ export default function ChatsContent() {
       }
       return next;
     });
+  }, []);
+
+  /* ---- Fullscreen toggle — fill a wall monitor with no browser chrome ---- */
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    try {
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else void document.documentElement.requestFullscreen();
+    } catch {
+      /* ignore — fullscreen may be blocked by the browser */
+    }
   }, []);
 
   /* ---- Load the env-filtered table list (mirrors SettingsDialog) ---- */
@@ -312,6 +329,24 @@ export default function ChatsContent() {
               A+
             </button>
           </div>
+          {/* Fullscreen — fill a wall monitor with no browser chrome */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen (fill monitor)"}
+            style={{ ...fontBtnStyle, marginLeft: 4 }}
+          >
+            {isFullscreen ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            )}
+          </button>
           <span
             className="inline-block rounded-full ml-1"
             style={{
@@ -441,8 +476,12 @@ export default function ChatsContent() {
               </div>
             ) : (
               <ul
-                className="space-y-1.5"
-                style={{ fontSize: `${FONT_BASE_PX * fontScale}px` }}
+                style={{
+                  fontSize: `${FONT_BASE_PX * fontScale}px`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.45em", // scales with the text so big zoom stays legible
+                }}
               >
                 {activeMessages.map((m) => (
                   <li
