@@ -268,7 +268,20 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
 
         const remoteStream = new MediaStream();
         pc.ontrack = (ev) => {
-          ev.streams[0].getTracks().forEach((t) => remoteStream.addTrack(t));
+          // Attach whatever this event carries. During publisher
+          // renegotiation (studio restarts / switches networks) a track event
+          // can arrive with an EMPTY `ev.streams`, so `ev.streams[0]` is
+          // undefined — dereferencing `.getTracks()` on it threw
+          // "Cannot read properties of undefined (reading 'getTracks')" in
+          // `ontrack` and left the video with no track attached. Fall back to
+          // the event's own `ev.track`. MediaStream.addTrack is a no-op if the
+          // track is already present, so re-fires are safe.
+          const stream = ev.streams && ev.streams[0];
+          if (stream) {
+            stream.getTracks().forEach((t) => remoteStream.addTrack(t));
+          } else if (ev.track) {
+            remoteStream.addTrack(ev.track);
+          }
           if (video.srcObject !== remoteStream) {
             video.srcObject = remoteStream;
           }
