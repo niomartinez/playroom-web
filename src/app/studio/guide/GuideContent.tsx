@@ -691,15 +691,15 @@ export default function GuideContent() {
 
             <div className="step"><span className="step-num">1</span><span className="step-text">OBS → Settings → Stream → Service: <strong>WHIP</strong></span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text">Server + Bearer Token: copy from the <strong>Publish Credentials</strong> panel below (Table 1 = studio1, Table 2 = studio2)</span></div>
-            <div className="step"><span className="step-num">3</span><span className="step-text">Settings → Output (Advanced): Rate Control <strong>CBR</strong>, Bitrate <strong>6000 Kbps</strong>, Keyframe Interval <strong>2s</strong>, <strong>B Frames: 0</strong> (x264: add <code>bframes=0</code> in the options field)</span></div>
-            <div className="step"><span className="step-num">4</span><span className="step-text">Settings → Video: 1920×1080, 30 FPS</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Settings → Output (Advanced): Rate Control <strong>CBR</strong>, Bitrate <strong>2500 Kbps</strong>, Keyframe Interval <strong>1s</strong>, <strong>B Frames: 0</strong> (x264: add <code>bframes=0</code> in the options field). Only go above 2500 if your upload tests clean (Section 10).</span></div>
+            <div className="step"><span className="step-num">4</span><span className="step-text">Settings → Video: <strong>1280×720</strong>, 30 FPS (720p is plenty for baccarat and far more loss-resilient than 1080p)</span></div>
             <div className="step"><span className="step-num">5</span><span className="step-text">Click <strong>Start Streaming</strong> — the indicator turns green within ~3s</span></div>
             <div className="step"><span className="step-num">6</span><span className="step-text">Verify on a player page — video appears within ~5 seconds</span></div>
 
             <CredentialsPanel />
 
             <div className="warn"><strong>B-frames MUST be 0</strong> — otherwise players see black video with no error anywhere. This is the #1 streaming mistake.</div>
-            <div className="info">RTMP fallback: if OBS can&apos;t connect via WHIP, switch Service to <strong>Custom</strong> and use the RTMP Server + Stream Key from the credentials panel (&quot;Use authentication&quot; unchecked). Players get no dealer audio on RTMP — tell Nio so we can fix the network.</div>
+            <div className="info">RTMP fallback: if OBS can&apos;t connect via WHIP, <strong>or your video looks corrupted / blocky even though OBS shows connected</strong>, switch Service to <strong>Custom</strong> and use the RTMP Server + Stream Key from the credentials panel (&quot;Use authentication&quot; unchecked). RTMP runs over TCP, so it survives packet loss — video stays clean (just slightly delayed) where WHEP would break up. Players get no dealer audio on RTMP — tell Nio so we can also fix the network.</div>
           </Section>
 
           <Section item={TOC[2]}>
@@ -862,7 +862,8 @@ export default function GuideContent() {
                 <tr><td>&quot;Browser Not Supported&quot;</td><td>Use Chrome or Edge (not Safari/Firefox). Must be HTTPS.</td></tr>
                 <tr><td>Players report BLACK video</td><td>OBS B-frames must be 0 — see <a href="#streaming-setup" style={{ color: GOLD }}>Section 2</a>. Apply, Stop Streaming, Start Streaming.</td></tr>
                 <tr><td>Cards on player screens out of sync with video</td><td>Settings → Video Delay (ms) — see <a href="#video-delay" style={{ color: GOLD }}>Section 6</a>.</td></tr>
-                <tr><td>Video stream lag</td><td>Check upload bandwidth (need 15+ Mbps). Lower bitrate in OBS (6000 → 4000 Kbps).</td></tr>
+                <tr><td>Video looks corrupted / blocky / pixelated (OBS still shows connected)</td><td>Packet loss on your upload. Lower OBS bitrate (2500 → 2000 Kbps), set Keyframe <strong>1s</strong>, use <strong>wired ethernet</strong> (not Wi-Fi). If it persists, switch Service to <strong>RTMP</strong> (Custom) — TCP survives loss: clean video, no audio. Tell Nio.</td></tr>
+                <tr><td>Video stream lag</td><td>Check upload bandwidth (need a clean 2–3× your bitrate). Lower bitrate in OBS (try 2500 Kbps at 720p).</td></tr>
                 <tr><td>Page frozen</td><td>Refresh (F5). Reconnect shoe. In-progress round is preserved on server.</td></tr>
               </tbody>
             </table>
