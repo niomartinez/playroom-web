@@ -488,9 +488,12 @@ export default function MobileChat() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #1d4ed8 0%, #2b7fff 100%)",
-            border: "1px solid rgba(148,178,255,0.5)",
-            boxShadow: "0 8px 22px rgba(43,127,255,0.45), 0 2px 6px rgba(0,0,0,0.35)",
+            background: "rgba(18,26,42,0.55)",
+            backdropFilter: "blur(16px) saturate(140%)",
+            WebkitBackdropFilter: "blur(16px) saturate(140%)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            boxShadow:
+              "0 8px 24px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -8px 18px rgba(0,0,0,0.28)",
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
@@ -500,11 +503,11 @@ export default function MobileChat() {
             onAnimationEnd={() => setWiggling(false)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
           >
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}>
+            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={2}>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                d="M8 10.5h8M8 13.5h5M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
               />
             </svg>
           </span>
