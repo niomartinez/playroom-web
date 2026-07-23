@@ -189,11 +189,25 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
             if (frames === lastFrames) {
               stalledChecks++;
               if (stalledChecks >= 3) {
-                console.warn(
-                  "[VideoPlayer] WebRTC connected but no frames decoding — falling back to HLS",
-                );
-                stopStallWatchdog();
-                void tryHls();
+                if (lastFrames <= 0) {
+                  // Never decoded a SINGLE frame after ~9s "connected": genuine
+                  // no-media — UDP blocked after the handshake, or a dead/zombie
+                  // publisher. HLS (TCP) is the right net here.
+                  console.warn(
+                    "[VideoPlayer] WebRTC connected but no frames EVER decoded — falling back to HLS",
+                  );
+                  stopStallWatchdog();
+                  void tryHls();
+                } else {
+                  // Frames DID flow, then stalled — almost always transient
+                  // ingest packet loss (corrupt H264 FU-A). Tearing a proven-live
+                  // WHEP down for HLS pulls the SAME lossy source over TCP (no
+                  // better) and drops the session WebRTC NACK/retransmit would
+                  // otherwise recover. Keep WHEP and ride it out; a truly dead
+                  // publisher trips onconnectionstatechange (disconnected/failed),
+                  // which has its own fallback. Just keep watching.
+                  stalledChecks = 0;
+                }
               }
             } else {
               stalledChecks = 0;
