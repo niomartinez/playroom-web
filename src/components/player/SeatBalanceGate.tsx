@@ -27,6 +27,7 @@ export default function SeatBalanceGate() {
     balanceLoaded,
     currency,
     minSeatBalance,
+    placedBets,
     lobbyUrl,
     cashierUrl,
   } = useGame();
@@ -35,11 +36,23 @@ export default function SeatBalanceGate() {
   // Effective thresholds — server value, with the off-prod QA URL override.
   const { block } = resolveMinSeatBalance(minSeatBalance);
 
+  // Money already on the table buys the seat: a player who went all-in this
+  // round is BELOW the floor immediately, but that stake is riding on the hand
+  // being dealt — if they win, settlement lifts them back above it. Dropping
+  // the shutter mid-round would trap them exactly when they might recover.
+  // Mirror the server-side exemptions (seat-floor bet gate + video-cut both
+  // skip a player with a live ACCEPTED stake) so the client overlay agrees:
+  // exempt while a bet is live/settling, re-evaluate once it clears (a loss
+  // clears placedBets via the settlement fly-back → the gate then applies next
+  // round; a win credits the balance back above the floor first).
+  const hasLiveStake = placedBets.length > 0;
+
   const gated =
     token !== "demo" &&
     balanceLoaded && // never flash before the first real balance frame
     minSeatBalance != null &&
-    balance < block;
+    balance < block &&
+    !hasLiveStake;
 
   // Return the player to wherever they launched from — same priority ladder as
   // SessionGuard.returnToSite(): lobbyUrl → href; embedded → closeGame; else
