@@ -50,11 +50,10 @@ const BET_PANEL_STYLES = `
 
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
-  const { roundStatus, placedBets, cancelPlacedBets, webrtcUrl, hlsUrl } = useGame();
+  const { roundStatus, webrtcUrl, hlsUrl } = useGame();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
 
   const isBettingOpen = roundStatus === "betting_open";
-  const hasPlacedBets = placedBets.length > 0;
   const panelClass = isBettingOpen ? "prg-bet-panel--open" : "prg-bet-panel--closed";
 
   if (isMobile) {
@@ -122,32 +121,9 @@ export default function PlayerLayout() {
             transition: "border-color 0.2s ease, box-shadow 0.2s ease",
           }}
         >
+          {/* BalanceBar renders the balance + CLEAR BETS (right, above chips)
+              + the chip row with the ×2 toggle. */}
           <BalanceBar />
-
-          {/* Clear bets — only when betting is open */}
-          {isBettingOpen && (
-            <button
-              onClick={cancelPlacedBets}
-              disabled={!hasPlacedBets}
-              style={{
-                alignSelf: "flex-end",
-                padding: "6px 12px",
-                borderRadius: 10,
-                background: "rgba(0,0,0,0.55)",
-                border: "1px solid rgba(208,135,0,0.3)",
-                color: hasPlacedBets ? "#f0b100" : "rgba(240,177,0,0.4)",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 0.6,
-                cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                opacity: hasPlacedBets ? 1 : 0.55,
-                transition: "opacity 0.15s ease, color 0.15s ease",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              CLEAR BETS
-            </button>
-          )}
 
           <SideBets />
           <MainBets />

@@ -8,14 +8,15 @@ import { useT } from "@/lib/i18n";
 import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
 
 const CHIPS = [
-  // ₱250 is the smallest chip — the table minimum. No sub-250 chips.
+  // ₱50 is the smallest chip. A single ₱50 bet is accepted, but a hand must
+  // reach the round minimum (₱250) or it's refunded at betting close — and the
+  // ×2 toggle lets a ₱50 chip stake ₱100. No sub-50 chips.
+  { value: 50, src: "/mobile-assets/chip-50.png" },
   { value: 250, src: "/mobile-assets/chip-250.png" },
-  { value: 500, src: "/mobile-assets/chip-500.png" },
-  { value: 1000, src: "/mobile-assets/chip-1000.png" },
+  { value: 1250, src: "/mobile-assets/chip-1250.png" },
   { value: 5000, src: "/mobile-assets/chip-5000.png" },
   { value: 25000, src: "/mobile-assets/chip-25000.png" },
-  { value: 100000, src: "/mobile-assets/chip-100000.png" },
-  { value: 500000, src: "/mobile-assets/chip-500000.png" },
+  { value: 50000, src: "/mobile-assets/chip-50000.png" },
 ];
 
 /**
@@ -107,7 +108,7 @@ function useDisplayBalance(target: number): number {
 }
 
 export default function BalanceBar() {
-  const { balance, balanceLoaded, currency, selectedChip, setSelectedChip, roundStatus, placedBets, cancelPlacedBets, token, minSeatBalance } = useGame();
+  const { balance, balanceLoaded, currency, selectedChip, setSelectedChip, chipMultiplier, setChipMultiplier, roundStatus, placedBets, cancelPlacedBets, token, minSeatBalance } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   const displayBalance = useDisplayBalance(balance);
@@ -130,24 +131,31 @@ export default function BalanceBar() {
   const warnLowText = t("seat.warnLow", { amount: formatMoney(block, currency) });
 
   /**
-   * Auto-step-down: when the live balance drops below the current selected
-   * chip, snap to the largest affordable chip. If no chip is affordable,
-   * leave the selection alone — placeBet's pre-check blocks the bet anyway.
+   * Auto-step-down: when the live balance can't cover the current selected
+   * chip's STAKED value (chip × the ×2 toggle), snap to the largest chip that
+   * is affordable at the current multiplier. If none is affordable, leave the
+   * selection alone — placeBet's pre-check blocks the bet anyway. Keyed on
+   * chipMultiplier too, so toggling ×2 on re-evaluates affordability.
    */
   useEffect(() => {
-    if (balance >= selectedChip) return;
-    const affordable = CHIPS.filter((c) => c.value <= balance);
+    const mult = chipMultiplier || 1;
+    if (balance >= selectedChip * mult) return;
+    const affordable = CHIPS.filter((c) => c.value * mult <= balance);
     if (affordable.length === 0) return;
     const next = affordable[affordable.length - 1].value; // largest affordable
     if (next !== selectedChip) {
       setSelectedChip(next);
     }
-  }, [balance, selectedChip, setSelectedChip]);
+  }, [balance, selectedChip, chipMultiplier, setSelectedChip]);
 
   // The crawled value is what the player sees; the underlying `balance` is
   // still the canonical number (used for chip affordability checks above).
   // Exact minor units (₱10.61) — never round the wallet balance.
   const formatted = formatBalance(displayBalance, currency);
+
+  // ×2 chip toggle — doubles the selected chip's placed value (₱50 → ₱100).
+  const x2On = chipMultiplier === 2;
+  const toggleX2 = () => setChipMultiplier(x2On ? 1 : 2);
 
   if (isMobile) {
     return (
@@ -162,31 +170,59 @@ export default function BalanceBar() {
         }}
       >
         <style>{SEAT_WARN_KEYFRAMES}</style>
-        {/* Top section: icon + balance — compact, single row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          <img
-            src="/mobile-assets/balance-icon.png"
-            alt={t("balance.label")}
-            style={{ width: 16, height: 16, flexShrink: 0 }}
-          />
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 400, color: "#99A1AF" }}>
-              {t("balance.label")}
-            </span>
-            <span
+        {/* Top section: balance (left) + CLEAR BETS (right, opposite the
+            balance) — sits above the chips so the two live controls bracket
+            the row. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <img
+              src="/mobile-assets/balance-icon.png"
+              alt={t("balance.label")}
+              style={{ width: 16, height: 16, flexShrink: 0 }}
+            />
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 400, color: "#99A1AF" }}>
+                {t("balance.label")}
+              </span>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: "#ffffff",
+                  lineHeight: 1,
+                  fontVariantNumeric: "tabular-nums",
+                  fontFeatureSettings: '"tnum"',
+                  ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
+                }}
+              >
+                {formatted}
+              </span>
+            </div>
+          </div>
+          {isBettingOpen && (
+            <button
+              onClick={cancelPlacedBets}
+              disabled={!hasPlacedBets}
               style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#ffffff",
-                lineHeight: 1,
-                fontVariantNumeric: "tabular-nums",
-                fontFeatureSettings: '"tnum"',
-                ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
+                flexShrink: 0,
+                padding: "5px 12px",
+                borderRadius: 999,
+                background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
+                border: `1.4px solid ${hasPlacedBets ? "#fb2c36" : "rgba(255,255,255,0.18)"}`,
+                color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: 0.6,
+                cursor: hasPlacedBets ? "pointer" : "not-allowed",
+                boxShadow: hasPlacedBets ? "0 2px 8px rgba(251,44,54,0.35)" : "none",
+                whiteSpace: "nowrap",
+                transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
-              {formatted}
-            </span>
-          </div>
+              {t("balance.clearBets")}
+            </button>
+          )}
           {warnLow && (
             <span
               role="status"
@@ -204,7 +240,9 @@ export default function BalanceBar() {
           )}
         </div>
 
-        {/* Bottom section: chip row */}
+        {/* Bottom section: chip row + ×2 toggle (bigger than the chips).
+            space-between (no fixed gap) keeps 6 × 36px chips + the 50px ×2
+            control inside a ~360px phone without overflow/scroll. */}
         <div
           data-balance-chips=""
           style={{
@@ -215,7 +253,7 @@ export default function BalanceBar() {
         >
           {CHIPS.map((chip) => {
             const isSelected = selectedChip === chip.value;
-            const isDisabled = balance < chip.value;
+            const isDisabled = balance < chip.value * (chipMultiplier || 1);
             return (
               <button
                 key={chip.value}
@@ -226,8 +264,8 @@ export default function BalanceBar() {
                 }}
                 disabled={isDisabled}
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 36,
+                  height: 36,
                   borderRadius: "50%",
                   backgroundColor: "transparent",
                   border: "none",
@@ -254,8 +292,8 @@ export default function BalanceBar() {
                   src={chip.src}
                   alt={`${chip.value} chip`}
                   style={{
-                    width: 38,
-                    height: 38,
+                    width: 36,
+                    height: 36,
                     display: "block",
                     borderRadius: "50%",
                     pointerEvents: "none",
@@ -264,6 +302,42 @@ export default function BalanceBar() {
               </button>
             );
           })}
+
+          {/* ×2 toggle — deliberately larger than a chip so it reads as a
+              distinct control, not another denomination. */}
+          <button
+            type="button"
+            onClick={toggleX2}
+            aria-pressed={x2On}
+            aria-label="Double the selected chip"
+            style={{
+              width: 50,
+              height: 50,
+              flexShrink: 0,
+              borderRadius: 14,
+              border: x2On ? "1.6px solid #f0b100" : "1.6px solid rgba(255,255,255,0.18)",
+              background: x2On
+                ? "linear-gradient(160deg, #ffd24d 0%, #d08700 100%)"
+                : "rgba(255,255,255,0.04)",
+              color: x2On ? "#3a2600" : "rgba(255,255,255,0.72)",
+              fontSize: 16,
+              fontWeight: 900,
+              letterSpacing: 0.2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              padding: 0,
+              transform: x2On ? "scale(1.06)" : "scale(1)",
+              boxShadow: x2On
+                ? "0 0 0 2px rgba(240,177,0,0.35), 0 0 16px rgba(240,177,0,0.55)"
+                : "0 1px 3px rgba(0,0,0,0.3)",
+              transition: "all 0.15s ease",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            ×2
+          </button>
         </div>
       </div>
     );
@@ -395,6 +469,36 @@ export default function BalanceBar() {
             </button>
           );
         })}
+
+        {/* ×2 toggle — larger than a chip so it reads as a control. */}
+        <button
+          type="button"
+          onClick={toggleX2}
+          aria-pressed={x2On}
+          aria-label="Double the selected chip"
+          className="flex items-center justify-center flex-shrink-0"
+          style={{
+            width: "clamp(40px, 4.6vh, 60px)",
+            height: "clamp(40px, 4.6vh, 60px)",
+            borderRadius: "0.5vw",
+            border: x2On ? "1.6px solid #f0b100" : "1.6px solid rgba(255,255,255,0.18)",
+            background: x2On
+              ? "linear-gradient(160deg, #ffd24d 0%, #d08700 100%)"
+              : "rgba(255,255,255,0.04)",
+            color: x2On ? "#3a2600" : "rgba(255,255,255,0.72)",
+            fontSize: "clamp(14px, 1.8vh, 22px)",
+            fontWeight: 900,
+            cursor: "pointer",
+            padding: 0,
+            transform: x2On ? "scale(1.06)" : "scale(1)",
+            boxShadow: x2On
+              ? "0 0 0 2px rgba(240,177,0,0.35), 0 0 16px rgba(240,177,0,0.55)"
+              : "0 1px 3px rgba(0,0,0,0.3)",
+            transition: "all 0.15s ease",
+          }}
+        >
+          ×2
+        </button>
       </div>
     </div>
   );

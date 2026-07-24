@@ -62,7 +62,7 @@ const SIDE_BETS: Array<{
 ];
 
 export default function SideBets() {
-  const { placeBet, isBettingOpen, placedBets, selectedChip } = useBetting();
+  const { placeBet, isBettingOpen, placedBets, selectedChip, effectiveChip } = useBetting();
   const { balance, addFlyingChip } = useGame();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -71,8 +71,9 @@ export default function SideBets() {
   const handleBet = useCallback(
     async (betCode: BetCode, targetEl: HTMLElement | null) => {
       if (!isBettingOpen) return;
+      // Fly the base denom image even with ×2 on (100 isn't a chip).
       const flyDenom = selectedChip;
-      if (selectedChip > balance) {
+      if (effectiveChip > balance) {
         const res = await placeBet(betCode);
         if (!res.success && res.error) toast({ type: "error", message: res.error });
         return;
@@ -81,7 +82,7 @@ export default function SideBets() {
       const res = await placeBet(betCode);
       if (!res.success && res.error) toast({ type: "error", message: res.error });
     },
-    [isBettingOpen, placeBet, selectedChip, balance, addFlyingChip, toast],
+    [isBettingOpen, placeBet, selectedChip, effectiveChip, balance, addFlyingChip, toast],
   );
 
   if (isMobile) {

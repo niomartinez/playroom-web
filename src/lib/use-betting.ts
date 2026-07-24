@@ -10,15 +10,24 @@ export interface BetResult {
   error?: string;
 }
 
+// Side (pair) bets — anything that is NOT one of the three main lines. Mirrors
+// the backend classification (app/services/bet_limits.is_side_bet) so the side
+// cap is enforced on the same set client- and server-side.
+const MAIN_BET_CODES = new Set<string>(["BAC_Player", "BAC_Banker", "BAC_Tie"]);
+const isSideBet = (code: string): boolean => !MAIN_BET_CODES.has(code);
+
 export function useBetting() {
   const {
     token,
     currentRound,
     roundStatus,
     selectedChip,
+    chipMultiplier,
     placedBets,
     balance,
     maxBet,
+    handMaxTotal,
+    sideMaxTotal,
     currency,
     addPlacedBet,
     removePlacedBet,
@@ -32,6 +41,10 @@ export function useBetting() {
 
   const isBettingOpen = roundStatus === "betting_open";
   const isDemo = token === "demo";
+
+  // The value a chip actually stakes: the selected denomination times the ×2
+  // toggle. A ₱50 chip with ×2 on stakes ₱100.
+  const effectiveChip = selectedChip * (chipMultiplier || 1);
 
   // Guards against a second drag starting while one is still in flight.
   // A ref, not state: the check and the set must be atomic within one
@@ -59,18 +72,42 @@ export function useBetting() {
       if (!isBettingOpen) {
         return { success: false, error: "Betting is closed" };
       }
-      // Check the table ceiling BEFORE the optimistic debit. The backend caps
-      // each bet at max_bet, so a chip over it is rejected — and if we debit
-      // first and roll back after the round-trip, the balance visibly crawls
-      // down and then back up, reading as money lost and returned. Refuse it
-      // up front instead: no debit, no crawl, just the reason.
-      if (maxBet != null && maxBet > 0 && selectedChip > maxBet) {
+      // All checks run BEFORE the optimistic debit so a rejected bet never
+      // crawls the balance down and back up (which reads as money lost and
+      // returned). Refuse up front with the reason instead. The numbers here
+      // mirror what the backend enforces (chip value, per-hand combined cap,
+      // side-bet cap) so the UI and API agree.
+      const chipAmount = effectiveChip;
+
+      if (maxBet != null && maxBet > 0 && chipAmount > maxBet) {
         return {
           success: false,
           error: `Max bet is ${formatBalance(maxBet, currency)} on this table`,
         };
       }
-      if (selectedChip > balance) {
+      // Per-hand combined ceiling across ALL bet codes (main + side).
+      if (handMaxTotal != null && handMaxTotal > 0) {
+        const placedTotal = placedBets.reduce((s, b) => s + b.amount, 0);
+        if (placedTotal + chipAmount > handMaxTotal) {
+          return {
+            success: false,
+            error: `Max ${formatBalance(handMaxTotal, currency)} per hand — you have ${formatBalance(placedTotal, currency)} down`,
+          };
+        }
+      }
+      // Separate, tighter ceiling for SIDE (pair) bets only.
+      if (isSideBet(betCode) && sideMaxTotal != null && sideMaxTotal > 0) {
+        const sideTotal = placedBets
+          .filter((b) => isSideBet(b.betCode))
+          .reduce((s, b) => s + b.amount, 0);
+        if (sideTotal + chipAmount > sideMaxTotal) {
+          return {
+            success: false,
+            error: `Max ${formatBalance(sideMaxTotal, currency)} on side bets per hand`,
+          };
+        }
+      }
+      if (chipAmount > balance) {
         return { success: false, error: "Not enough balance for that chip" };
       }
       if (isOpposingBlocked(betCode)) {
@@ -88,7 +125,6 @@ export function useBetting() {
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `bet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const chipAmount = selectedChip;
       const bet: PlacedBet = { id: betId, betCode, amount: chipAmount };
       addPlacedBet(bet);
       setBalance((b) => b - chipAmount);
@@ -154,7 +190,7 @@ export function useBetting() {
 
       return { success: true };
     },
-    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, selectedChip, balance, maxBet, currency, addPlacedBet, removePlacedBet, setBalance, popStackedChip, setConfirmedBetRoundId],
+    [isBettingOpen, isDemo, isOpposingBlocked, token, currentRound, effectiveChip, placedBets, balance, maxBet, handMaxTotal, sideMaxTotal, currency, addPlacedBet, removePlacedBet, setBalance, popStackedChip, setConfirmedBetRoundId],
   );
 
   /**
@@ -290,6 +326,8 @@ export function useBetting() {
     isBettingOpen,
     isOpposingBlocked,
     selectedChip,
+    /** selectedChip × the ×2 toggle — the value a placed chip actually stakes. */
+    effectiveChip,
     placedBets,
     totalBet,
     balance,

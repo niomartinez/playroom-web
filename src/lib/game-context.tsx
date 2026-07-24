@@ -189,6 +189,14 @@ export interface GameState {
   /** Table bet limits from the table config. Null until table state loads. */
   minBet: number | null;
   maxBet: number | null;
+  /** Per-hand combined cap across ALL bet codes (main + side). Null until loaded. */
+  handMaxTotal: number | null;
+  /** Per-hand cap across SIDE (pair) bets only. Null until loaded. */
+  sideMaxTotal: number | null;
+  /** Per-hand MINIMUM total; a hand below this is refunded at betting close. */
+  roundMinTotal: number | null;
+  /** ×2 chip toggle: multiplies the selected chip's placed value (1 or 2). */
+  chipMultiplier: number;
 
   /* Live state */
   balance: number;
@@ -232,6 +240,13 @@ export interface GameState {
   setVideoDelayMs: (ms: number) => void;
   setMinBet: (v: number | null) => void;
   setMaxBet: (v: number | null) => void;
+  setBetLimits: (l: {
+    handMaxTotal: number | null;
+    sideMaxTotal: number | null;
+    roundMinTotal: number | null;
+  }) => void;
+  /** Toggle/override the ×2 chip multiplier (1 or 2). */
+  setChipMultiplier: (m: number) => void;
   setTableName: (n: string) => void;
   setDealerName: (n: string) => void;
   setBalance: (b: SetStateAction<number>) => void;
@@ -309,6 +324,20 @@ export function GameProvider({
   const [videoDelayMs, setVideoDelayMs] = useState(0);
   const [minBet, setMinBet] = useState<number | null>(null);
   const [maxBet, setMaxBet] = useState<number | null>(null);
+  const [handMaxTotal, setHandMaxTotal] = useState<number | null>(null);
+  const [sideMaxTotal, setSideMaxTotal] = useState<number | null>(null);
+  const [roundMinTotal, setRoundMinTotal] = useState<number | null>(null);
+  // ×2 chip toggle. Multiplies the selected chip's PLACED value (so a ₱50 chip
+  // with ×2 on stakes ₱100). Resets to 1 at the start of each betting round.
+  const [chipMultiplier, setChipMultiplier] = useState(1);
+  const setBetLimits = useCallback(
+    (l: { handMaxTotal: number | null; sideMaxTotal: number | null; roundMinTotal: number | null }) => {
+      setHandMaxTotal(l.handMaxTotal);
+      setSideMaxTotal(l.sideMaxTotal);
+      setRoundMinTotal(l.roundMinTotal);
+    },
+    [],
+  );
   const [balance, setBalance] = useState(0);
   // Whether `balance` is the wallet's authoritative figure yet, or still the
   // initial 0. Consumers can't infer this from the value: a broke player
@@ -369,6 +398,14 @@ export function GameProvider({
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
   const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
   const [minSeatBalance, setMinSeatBalance] = useState<MinSeatBalance | null>(null);
+
+  // Reset the ×2 toggle at the start of each betting round. Fires only on the
+  // transition INTO betting_open (roundStatus is a stable string within a
+  // round), so a mid-round toggle persists for that round but a stale ×2 can
+  // never silently carry a doubled stake into the next hand.
+  useEffect(() => {
+    if (roundStatus === "betting_open") setChipMultiplier(1);
+  }, [roundStatus]);
 
   const addPlacedBet = useCallback((bet: PlacedBet) => {
     setPlacedBets((prev) => [...prev, bet]);
@@ -548,11 +585,17 @@ export function GameProvider({
     videoDelayMs,
     minBet,
     maxBet,
+    handMaxTotal,
+    sideMaxTotal,
+    roundMinTotal,
+    chipMultiplier,
     setWebrtcUrl,
     setHlsUrl,
     setVideoDelayMs,
     setMinBet,
     setMaxBet,
+    setBetLimits,
+    setChipMultiplier,
     balance,
     balanceLoaded,
     currency,

@@ -39,6 +39,13 @@ interface TableStatePayload {
   betting_remaining_seconds: number | null;
   idle_policy?: { expire: number; warn1: number | null; warn2: number | null } | null;
   min_seat_balance?: { block: number; warn: number } | null;
+  /** Server-owned bet-limit model. See config_cache.get_bet_limits. */
+  bet_limits?: {
+    chip_min: number;
+    round_min_total: number;
+    hand_max_total: number;
+    side_max_total: number;
+  } | null;
   main_bet_counts: Record<
     string,
     { players: number; amount: number }
@@ -57,7 +64,7 @@ interface ActiveBet {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-const STANDARD_DENOMS = [500000, 100000, 25000, 5000, 1000, 500, 250];
+const STANDARD_DENOMS = [50000, 25000, 5000, 1250, 250, 50];
 
 /**
  * Pick a chip denomination that visually represents `amount`.
@@ -108,6 +115,7 @@ export function useStateRecovery() {
     setVideoDelayMs,
     setMinBet,
     setMaxBet,
+    setBetLimits,
     setIdlePolicy,
     setMinSeatBalance,
   } = useGame();
@@ -149,6 +157,15 @@ export function useStateRecovery() {
         if (payload.idle_policy) setIdlePolicy(payload.idle_policy);
         // Server-owned seat-balance thresholds (block/warn).
         if (payload.min_seat_balance) setMinSeatBalance(payload.min_seat_balance);
+        // Server-owned bet-limit model — the UI gates the ×2 chip, the per-hand
+        // combined cap and the side-bet cap on these same numbers the API enforces.
+        if (payload.bet_limits) {
+          setBetLimits({
+            handMaxTotal: payload.bet_limits.hand_max_total ?? null,
+            sideMaxTotal: payload.bet_limits.side_max_total ?? null,
+            roundMinTotal: payload.bet_limits.round_min_total ?? null,
+          });
+        }
 
         const fight = payload.fight;
         if (!fight) {

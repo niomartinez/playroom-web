@@ -73,7 +73,7 @@ const COUNTS_KEY: Record<BetCode, "Player" | "Tie" | "Banker" | null> = {
 const MAIN_CODES = new Set<BetCode>(["BAC_Player", "BAC_Tie", "BAC_Banker"]);
 
 export default function MainBets() {
-  const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip } = useBetting();
+  const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip, effectiveChip } = useBetting();
   const { toast } = useToast();
   const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound, stackedChips } = useGame();
   const isMobile = useIsMobile();
@@ -324,11 +324,14 @@ export default function MainBets() {
         return;
       }
       if (!isBettingOpen) return;
-      // Snapshot the chip denom we'll animate (selectedChip can change after placeBet)
+      // Snapshot the chip denom we'll animate (selectedChip can change after
+      // placeBet). We fly the base denom image even with ×2 on — 100 isn't a
+      // chip, so a ₱50 chip flies and the total reflects the doubled stake.
       const flyDenom = selectedChip;
       // Pre-check: don't animate a chip fly if the bet would be rejected —
-      // the fly would land a marker on a pad that gets no bet.
-      if (selectedChip > balance || isOpposingBlocked(betCode)) {
+      // the fly would land a marker on a pad that gets no bet. Uses the
+      // effective (×2) chip so a doubled stake over balance doesn't animate.
+      if (effectiveChip > balance || isOpposingBlocked(betCode)) {
         const res = await placeBet(betCode);
         if (!res.success && res.error) toast({ type: "error", message: res.error });
         return;
@@ -343,7 +346,7 @@ export default function MainBets() {
       // no crawl; this surfaces the reason.
       if (!res.success && res.error) toast({ type: "error", message: res.error });
     },
-    [isBettingOpen, placeBet, selectedChip, balance, isOpposingBlocked, addFlyingChip, toast],
+    [isBettingOpen, placeBet, selectedChip, effectiveChip, balance, isOpposingBlocked, addFlyingChip, toast],
   );
 
   /* ── Mobile layout ── */
