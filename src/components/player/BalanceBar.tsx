@@ -424,7 +424,7 @@ export default function BalanceBar() {
       <div data-balance-chips="" className="flex items-center" style={{ gap: "0.5vw" }}>
         {CHIPS.map((chip) => {
           const isSelected = selectedChip === chip.value;
-          const isDisabled = balance < chip.value;
+          const isDisabled = balance < chip.value * (chipMultiplier || 1);
           return (
             <button
               key={chip.value}
