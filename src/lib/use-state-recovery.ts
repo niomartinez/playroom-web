@@ -119,6 +119,7 @@ export function useStateRecovery() {
     setMaxBet,
     setBetLimits,
     setIdlePolicy,
+    setConfirmedBetRoundId,
     setMinSeatBalance,
   } = useGame();
 
@@ -257,6 +258,16 @@ export function useStateRecovery() {
         if (cancelled || !betsJson || betsJson.error_code !== "0") return;
 
         const bets = (betsJson.data?.bets ?? []) as ActiveBet[];
+
+        // Credit this round as PLAYED. These bets came back from the server, so
+        // they are confirmed by definition — but the idle counter only counts a
+        // round as active when `confirmedBetRoundId` matches, and that state
+        // does not survive a reload. So a player who bet and then refreshed had
+        // their own round counted as sat-out and was warned for inactivity on
+        // the very next one, while their chips were visible on the table.
+        if (bets.length > 0) {
+          setConfirmedBetRoundId(String(externalRoundId));
+        }
         // Per-bet: register a placedBet entry (drives "Total bet" totals)
         // and a stacked chip marker (drives the row of chips on the button).
         // BetStackedChips already dedupes per denomination & caps at 3, so

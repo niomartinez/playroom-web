@@ -208,19 +208,6 @@ export default function SeatBalanceGate() {
             # {roundRef}
           </div>
         )}
-        {roundRef && (
-          <div
-            style={{
-              marginTop: 14,
-              fontSize: 10,
-              letterSpacing: 0.4,
-              color: "#4a5565",
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            # {roundRef}
-          </div>
-        )}
         <button
           onClick={returnToSite}
           style={{

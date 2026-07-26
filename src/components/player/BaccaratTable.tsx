@@ -53,7 +53,23 @@ export default function BaccaratTable() {
     result: winner === "P" ? t("table.playerWins") : winner === "B" ? t("table.bankerWins") : winner === "T" ? t("table.tie") : t("table.result"),
   };
 
-  const message = statusText[roundStatus] || t("table.waitingBets");
+  // Once a winner exists, the OUTCOME is the message — for the whole lull, not
+  // just while roundStatus happens to be "result". Settlement moves the round on
+  // within about a second, which is why "Banker Wins" flashed and reverted to
+  // "waiting for bets" before anyone could read it. `winner` is only populated
+  // on resolution and is cleared by the next round, so it is both spoiler-safe
+  // and self-resetting.
+  const outcomeMessage =
+    winner === "P" ? t("table.playerWins")
+    : winner === "B" ? t("table.bankerWins")
+    : winner === "T" ? t("table.tie")
+    : null;
+
+  const message =
+    outcomeMessage ??
+    (roundStatus === "betting_open" || roundStatus === "dealing"
+      ? statusText[roundStatus]
+      : statusText[roundStatus] || t("table.waitingBets"));
 
   if (isMobile) {
     const isPlayerWinner = roundStatus === "result" && winner === "P";

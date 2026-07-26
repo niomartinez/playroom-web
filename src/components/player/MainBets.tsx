@@ -628,18 +628,6 @@ export default function MainBets() {
             ? Math.round((liveBucket.players / totalPlayers) * 100)
             : 0;
 
-        // `currentRound.winner` is only set once the round resolves, so this is
-        // spoiler-safe and — unlike a roundStatus check — does not evaporate the
-        // moment settlement moves the round on.
-        const w = currentRound?.winner;
-        const padWinner =
-          (w === "P" && bet.betCode === "BAC_Player") ||
-          (w === "B" && bet.betCode === "BAC_Banker")
-            ? "win"
-            : w === "T" && bet.betCode === "BAC_Tie"
-              ? "tie"
-              : null;
-
         return (
           <button
             key={bet.name}
@@ -657,15 +645,6 @@ export default function MainBets() {
               borderRadius: "0.7vw",
               boxShadow: drag?.over === bet.betCode ? "0 0 0 2px rgba(255,255,255,0.9), 0 0 16px rgba(255,255,255,0.45)" : undefined,
               touchAction: myTotal > 0 ? "none" : undefined,
-              // Winning side breathes for the whole result lull, same as mobile.
-              // Desktop keeps its normal pad face (no card takeover), so this is
-              // keyed on the winner alone — it is the only marker desktop gets,
-              // which makes it worth more here than on mobile.
-              ...(padWinner
-                ? {
-                    animation: `${padWinner === "tie" ? "prg-pad-tie" : "prg-pad-win"} 1.9s ease-in-out infinite`,
-                  }
-                : null),
             }}
           >
             {!showCards && <BetStackedChips betCode={bet.betCode} size={22} />}
@@ -688,28 +667,10 @@ export default function MainBets() {
               </div>
             ) : (
             <div className="relative z-10 w-full flex flex-col items-center justify-start h-full" style={{ padding: "0.6vh 0.8vw 3.2vh", gap: "0.3vh" }}>
-              {/* Bet title, with the outcome badge beside it once resolved. */}
-              <div className="flex items-center justify-center gap-2 leading-none">
-                <span className="font-bold text-white text-center" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>
-                  {t(bet.nameKey)}
-                </span>
-                {padWinner && (
-                  <span
-                    style={{
-                      fontSize: "clamp(8px, 1vh, 12px)",
-                      fontWeight: 900,
-                      letterSpacing: 0.6,
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      color: "#0b0b0b",
-                      background: padWinner === "tie" ? "#00c950" : "#f0b100",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {padWinner === "tie" ? "TIE" : "WIN"}
-                  </span>
-                )}
-              </div>
+              {/* Bet title. Deliberately NO outcome badge or glow here: desktop
+                  has a dedicated result panel, and marking the win in two places
+                  competes with itself. The pads stay a betting surface. */}
+              <div className="font-bold text-white text-center leading-none" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{t(bet.nameKey)}</div>
 
               {/* Player's own bet amount on this side -- the most important
                   number on the button. Falls back to a 1-em line when no bet
