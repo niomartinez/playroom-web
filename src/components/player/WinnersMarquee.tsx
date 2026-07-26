@@ -113,8 +113,14 @@ export default function WinnersMarquee({ inline = false }: { inline?: boolean })
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                gap: 8,
+                // Mobile: name and amount sit TOGETHER at the right edge.
+                // space-between spread them to opposite ends of a full-width
+                // strip, so a short name left a wide empty gutter between the
+                // two halves of what is really one line of information.
+                // Desktop keeps space-between — it is inside a box, where the
+                // edges give the columns something to align to.
+                justifyContent: inline ? "flex-end" : "space-between",
+                gap: inline ? 6 : 8,
                 padding: inline ? "3px 2px" : "6px 10px",
               }}
             >
@@ -127,7 +133,10 @@ export default function WinnersMarquee({ inline = false }: { inline?: boolean })
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  maxWidth: "58%",
+                  // Only a truncation ceiling now, not a layout column — with
+                  // flex-end the name takes exactly its own width, so a tighter
+                  // cap here would clip short names for no reason.
+                  maxWidth: inline ? "70%" : "58%",
                 }}
               >
                 {w.user}
