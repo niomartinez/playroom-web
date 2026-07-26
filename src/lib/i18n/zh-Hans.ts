@@ -167,6 +167,7 @@ const zhHans: Record<string, string> = {
   "seat.blockBody": "您的余额已低于保留本桌座位所需的最低金额。请在您的网站充值以继续游戏，或返回大厅。",
   "seat.requiredEnterLabel": "进入本桌所需最低余额",
   "seat.requiredKeepLabel": "保留座位所需最低余额",
+  "video.sessionEnded": "座位已释放——直播已停止。",
   "seat.enterTitle": "余额不足，无法进入",
   "seat.enterBody": "您的余额需要再多一些才能在本桌开始游戏。请在您的网站充值，或从大厅选择其他牌桌。",
   "seat.return": "返回大厅",

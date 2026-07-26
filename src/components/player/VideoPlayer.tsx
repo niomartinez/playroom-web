@@ -57,6 +57,22 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
   // Bumped to re-run the connection effect after a failure. Monotonic —
   // every retry tears down the previous attempt via the effect cleanup.
   const [attempt, setAttempt] = useState(0);
+  /**
+   * The edge (stream-authz shim) answered 401 — this session is revoked.
+   *
+   * That 401 is the ONLY authoritative, real-time signal that the seat was
+   * released: the client's own idle counter evaluates a round when the NEXT one
+   * opens, so it always lagged the server's revoke by a round boundary — the
+   * feed was cut while the UI still showed a warning, and the overlay appeared a
+   * round later. Treating the 401 as the trigger makes the overlay and the cut
+   * the same event.
+   *
+   * It also stops the retry loop. Retrying forever against a revoked session
+   * hammered the shim (313 denials in one sitting) and, because tokenless HLS
+   * segment requests hit the shim's fail-open path, could pull the picture back
+   * up underneath the "Seat Released" overlay.
+   */
+  const sessionCutRef = useRef(false);
   // Short-lived stream-access token (renewed silently every 60s + heartbeats
   // presence for idle tracking). Read via .current when a connection is
   // (re)built so a renewal never re-negotiates a healthy WHEP session.
@@ -220,9 +236,57 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
 
     // Schedule a fresh connection attempt after a failure. Idempotent per
     // effect run — only one timer is ever pending, and cleanup cancels it.
+    // Never reconnects a session the edge has revoked.
     const scheduleRetry = () => {
-      if (cancelled || retryTimer) return;
+      if (cancelled || retryTimer || sessionCutRef.current) return;
       retryTimer = setTimeout(() => setAttempt((a) => a + 1), RECONNECT_DELAY_MS);
+    };
+
+    /**
+     * The session was revoked: stop the picture for real.
+     *
+     * The "Seat Released" dialog is a DOM node anyone can delete in devtools, so
+     * covering the video was never enforcement. Detach the source, close the
+     * peer connection and destroy the HLS engine so there is nothing left
+     * playing behind the overlay, and tell the rest of the UI via
+     * `playroom:session-ended` (SessionGuard already listens) so the overlay
+     * appears at exactly the moment the feed stops.
+     */
+    const cutSession = (why: string) => {
+      if (sessionCutRef.current) return;
+      sessionCutRef.current = true;
+      console.warn("[VideoPlayer] session revoked by the edge — stopping video:", why);
+      stopStallWatchdog();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      if (pc) {
+        pc.getSenders().forEach((snd) => snd.track?.stop());
+        pc.close();
+        pc = null;
+      }
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      const v = videoRef.current;
+      if (v) {
+        try {
+          v.pause();
+          // Release BOTH source kinds — WHEP uses srcObject, HLS uses src.
+          (v as HTMLVideoElement & { srcObject: MediaStream | null }).srcObject = null;
+          v.removeAttribute("src");
+          v.load();
+        } catch {
+          /* best-effort teardown */
+        }
+      }
+      setState("error");
+      setErrorMsg(t("video.sessionEnded"));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("playroom:session-ended"));
+      }
     };
 
     // Track ALL cleanup so a fast unmount during async negotiation
@@ -347,6 +411,10 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         } finally {
           clearTimeout(whepTimer);
         }
+        if (res.status === 401 || res.status === 403) {
+          cutSession(`WHEP ${res.status}`);
+          return false;
+        }
         if (!res.ok) {
           throw new Error(`WHEP POST ${res.status}`);
         }
@@ -368,7 +436,7 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
      * every other browser needs hls.js for MSE-based playback.
      */
     const tryHls = async (): Promise<void> => {
-      if (cancelled) return;
+      if (cancelled || sessionCutRef.current) return;
       stopStallWatchdog();
       if (pc) {
         pc.close();
@@ -430,6 +498,15 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
         });
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (cancelled) return;
+          // The shim answers 401 for a revoked session. hls.js surfaces it on
+          // networkDetails (the XHR); treat it as the session ending, not as a
+          // transient error to retry — retrying is what let the picture return.
+          const status = (data as { networkDetails?: { status?: number } })
+            ?.networkDetails?.status;
+          if (status === 401 || status === 403) {
+            cutSession(`HLS ${status}`);
+            return;
+          }
           if (data.fatal) {
             setErrorMsg(`HLS error: ${data.details}`);
             setState("fallback");

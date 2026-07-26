@@ -167,6 +167,7 @@ const en: Record<string, string> = {
   "seat.blockBody": "Your balance has dropped below the minimum required to keep your seat at this table. Top up on your site to keep playing, or return to the lobby.",
   "seat.requiredEnterLabel": "Minimum balance to play here",
   "seat.requiredKeepLabel": "Minimum balance to keep your seat",
+  "video.sessionEnded": "Your seat was released — the live feed has stopped.",
   "seat.enterTitle": "Minimum Balance To Play",
   "seat.enterBody": "You need a little more in your balance before you can start playing at this table. Top up on your site, or pick another table from the lobby.",
   "seat.return": "Back to lobby",
