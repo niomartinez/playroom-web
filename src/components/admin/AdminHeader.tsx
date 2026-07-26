@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAdmin } from "@/lib/admin-context";
 import AdminManualDialog from "@/components/admin/AdminManualDialog";
+import { clearAdminQueryCache } from "@/lib/admin-query";
 
 /** Build breadcrumb segments from the current pathname. */
 function buildBreadcrumbs(pathname: string): { label: string; href: string }[] {
@@ -84,6 +85,12 @@ export default function AdminHeader() {
 
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
+    // The admin query cache lives at module level so it survives navigation —
+    // which also means it survives a logout done via router.push (a client-side
+    // navigation, no page reload). Without this the next account signing in on
+    // the same tab would be shown the previous account's cached players,
+    // reports and audit rows until each key went stale.
+    clearAdminQueryCache();
     router.push("/admin/login");
   }
 
