@@ -464,7 +464,7 @@ export default function EmulatorPage() {
           <div style={{ width: 120, height: 64 }}>
             <img
               src="/logo.png"
-              alt="Play Room Gaming"
+              alt="Playroom Gaming"
               className="w-full h-full object-contain"
             />
           </div>

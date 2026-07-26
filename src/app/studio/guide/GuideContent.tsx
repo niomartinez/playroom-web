@@ -570,7 +570,7 @@ export default function GuideContent() {
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
           </svg>
           <h1 className="font-bold text-white" style={{ fontSize: 17 }}>Studio Guide</h1>
-          <span className="text-xs" style={{ color: "#6a7282" }}>Play Room Gaming</span>
+          <span className="text-xs" style={{ color: "#6a7282" }}>Playroom Gaming</span>
         </div>
         <div className="flex items-center gap-3">
           <button

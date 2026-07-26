@@ -23,7 +23,7 @@ export default function StudioHeader() {
         <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ width: 120, height: 64 }}>
           <img
             src="/logo.png"
-            alt="Play Room Gaming"
+            alt="Playroom Gaming"
             className="w-full h-full object-contain"
           />
         </div>

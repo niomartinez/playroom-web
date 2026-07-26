@@ -113,7 +113,7 @@ export default function ReportsPage() {
 
   function exportCsv() {
     const rows: (string | number)[][] = [
-      ["Play Room Gaming — GGR Report"],
+      ["Playroom Gaming — GGR Report"],
       ["Period", `${dateFrom} to ${dateTo}`],
       [],
       ["Summary"],

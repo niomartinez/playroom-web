@@ -70,7 +70,7 @@ export default function OcmsReportsControls({
 
   function exportCsv() {
     const rows: (string | number)[][] = [
-      ["Play Room Gaming — Partner GGR Report"],
+      ["Playroom Gaming — Partner GGR Report"],
       ["Period", `${dateFrom} to ${dateTo}`],
       [],
       ["Summary"],

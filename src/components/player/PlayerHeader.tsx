@@ -103,7 +103,7 @@ export default function PlayerHeader() {
       >
         {/* Left: Logo */}
         <button onClick={handleBack} style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
-          <img src="/logo.png" alt="Play Room Gaming" style={{ height: 22, objectFit: "contain" }} />
+          <img src="/logo.png" alt="Playroom Gaming" style={{ height: 22, objectFit: "contain" }} />
         </button>
 
         {/* Center: LIVE badge + Table label — a real flex column, NOT absolutely
@@ -182,7 +182,7 @@ export default function PlayerHeader() {
     >
       <div className="flex items-center gap-[0.8vw]">
         <button onClick={handleBack} className="cursor-pointer">
-          <img src="/logo.png" alt="Play Room Gaming" className="object-contain h-[3.5vh]" />
+          <img src="/logo.png" alt="Playroom Gaming" className="object-contain h-[3.5vh]" />
         </button>
         <span className="text-[1.1vh] text-[#99a1af]">{t("header.liveBaccarat")}</span>
         <span className="text-[1vh] text-[#6a7282]">|</span>

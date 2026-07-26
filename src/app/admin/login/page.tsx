@@ -56,7 +56,7 @@ export default function AdminLogin() {
         <div className="flex justify-center mb-2">
           <img
             src="/logo.png"
-            alt="Play Room Gaming"
+            alt="Playroom Gaming"
             className="h-12 object-contain"
           />
         </div>

@@ -174,7 +174,7 @@ export default function AdminSidebar() {
         {!sidebarCollapsed && (
           <img
             src="/logo.png"
-            alt="Play Room Gaming"
+            alt="Playroom Gaming"
             className="h-8 object-contain"
           />
         )}

@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Play Room Gaming",
+  title: "Playroom Gaming",
   description: "Live Baccarat",
 };
 

@@ -12,13 +12,13 @@ function handlePrint() {
   if (!content) return;
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(`<!DOCTYPE html><html><head><title>Admin Manual — Play Room Gaming</title>
+  win.document.write(`<!DOCTYPE html><html><head><title>Admin Manual — Playroom Gaming</title>
     <style>body{font-family:system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#222;line-height:1.7}
     h1{color:#b8860b;border-bottom:2px solid #b8860b;padding-bottom:8px}h2{color:#b8860b;margin-top:32px;border-bottom:1px solid #ddd;padding-bottom:6px}h3{color:#555;margin-top:20px}
     table{width:100%;border-collapse:collapse;margin:12px 0}th,td{padding:8px;border:1px solid #ddd;text-align:left}
     th{background:#f5f5f5;font-weight:600}code{background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:13px}
     @media print{body{margin:0;padding:20px}}</style></head><body>
-    <h1>Play Room Gaming — Admin Manual</h1>${content.innerHTML}</body></html>`);
+    <h1>Playroom Gaming — Admin Manual</h1>${content.innerHTML}</body></html>`);
   win.document.close();
   win.print();
 }
