@@ -100,11 +100,6 @@ export default function PlayerLayout() {
           <LowBalanceGate />
         </div>
 
-        {/* Evolution-style info strip, directly under the table so it is always
-            on screen. Placing it at the very end of the scroll would have hidden
-            the balance behind a scroll — the opposite of the point. */}
-        <TableInfoBar />
-
         {/* Roadmap — moved ABOVE the bet panel so the road is the first
             thing the player sees after the video stream. Players asked for
             this hierarchy because the road is what they consult before
@@ -139,13 +134,26 @@ export default function PlayerLayout() {
             Gated on the admin live_chat_enabled feature flag. */}
         {liveChatEnabled && <MobileChat />}
 
-        {/* Score Cards — below the fold */}
-        <div style={{ padding: "0 19px", marginTop: 16, marginBottom: 24 }}>
+        {/* Score Cards — below the fold. The bottom margin also reserves room
+            for the pinned TableInfoBar so it never covers the last row. */}
+        <div
+          style={{
+            padding: "0 19px",
+            marginTop: 16,
+            marginBottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
           <BaccaratTable />
         </div>
 
         <FlyingChips />
         <WinFlash />
+
+        {/* Pinned to the bottom of the VIEWPORT, Evolution-style — not to the end
+            of the scroll, where it would only appear after scrolling past the
+            score cards. The scroll container reserves matching space below so it
+            never covers the last row of content. */}
+        <TableInfoBar fixed />
       </div>
     );
   }
@@ -156,7 +164,10 @@ export default function PlayerLayout() {
       className="h-screen overflow-hidden"
       style={{
         display: "grid",
-        gridTemplateRows: "5.5vh 1fr 30vh",
+        // 4th row = the bottom info strip. Declared EXPLICITLY: adding a
+        // fourth child to a three-row template made the grid invent an
+        // implicit row and collapsed the video row into a huge gap.
+        gridTemplateRows: "5.5vh 1fr 30vh auto",
         background: "#0a0f1a",
       }}
     >
@@ -164,23 +175,16 @@ export default function PlayerLayout() {
 
       <PlayerHeader />
 
-      {/* The video row is ONE grid cell (gridTemplateRows above defines exactly
-          three). TableInfoBar shares that cell as a flex column instead of
-          becoming a fourth child — adding a child created an implicit row and
-          collapsed the layout into a large empty gap. */}
-      <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-        <div className="relative flex-1 min-h-0 overflow-hidden bg-black flex items-center justify-center">
-          <VideoPlayer
-            webrtcUrl={webrtcUrl}
-            hlsUrl={hlsUrl}
-            fallback={<DealVisualizer />}
-          />
-          <RoundCountdown />
-          <WinnersMarquee />
-          <LowBalanceGate />
-          {liveChatEnabled && <LiveChat />}
-        </div>
-        <TableInfoBar />
+      <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
+        <VideoPlayer
+          webrtcUrl={webrtcUrl}
+          hlsUrl={hlsUrl}
+          fallback={<DealVisualizer />}
+        />
+        <RoundCountdown />
+        <WinnersMarquee />
+        <LowBalanceGate />
+        {liveChatEnabled && <LiveChat />}
       </div>
 
       <div
@@ -219,6 +223,8 @@ export default function PlayerLayout() {
           <BaccaratTable />
         </div>
       </div>
+
+      <TableInfoBar />
 
       <FlyingChips />
       <WinFlash />

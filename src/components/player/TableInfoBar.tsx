@@ -18,8 +18,14 @@ import { formatMoney, symbolFor } from "@/lib/currency";
  *
  * Deliberately non-interactive and low-contrast: it is reference information,
  * not a control, so it must never pull attention off the felt.
+ *
+ * `fixed` pins it to the bottom of the VIEWPORT (mobile, where the page
+ * scrolls). Without it the strip would sit at the end of the scroll and only
+ * appear after scrolling past the score cards — the balance has to be glanceable
+ * mid-hand. Desktop passes nothing: there it is the last row of a full-height
+ * grid, already at the bottom of the screen.
  */
-export default function TableInfoBar() {
+export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
   const {
     balance,
     balanceLoaded,
@@ -66,8 +72,21 @@ export default function TableInfoBar() {
         padding: "4px 10px",
         fontSize: "clamp(10px, 1.5vh, 12px)",
         lineHeight: 1.35,
-        background: "rgba(3,7,18,0.55)",
-        borderTop: "1px solid rgba(255,255,255,0.05)",
+        background: fixed ? "rgba(3,7,18,0.92)" : "rgba(3,7,18,0.55)",
+        borderTop: "1px solid rgba(255,255,255,0.07)",
+        ...(fixed
+          ? ({
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 60,
+              // Clear the iOS home indicator.
+              paddingBottom: "calc(4px + env(safe-area-inset-bottom, 0px))",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+            } as const)
+          : null),
         // Reference text, never a tap target — must not intercept a mis-aimed
         // chip placement near the bottom of the screen.
         pointerEvents: "none",
