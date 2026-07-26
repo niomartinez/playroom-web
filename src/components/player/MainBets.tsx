@@ -10,6 +10,7 @@ import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
 import PadCards, { PAD_CARD_KEYFRAMES } from "./PadCards";
 import { useDrawPhase } from "@/lib/use-draw-phase";
+import { useDrawStake, type PadStake } from "@/lib/use-draw-stake";
 import { useToast } from "@/lib/toast-context";
 
 const BETS: Array<{
@@ -60,6 +61,96 @@ function formatCompact(amount: number, symbol: string): string {
   return `${symbol}${amount}`;
 }
 
+/**
+ * The player's own stake, exact. Compacted only once it gets long enough to
+ * crowd the pad — an amount you personally staked should read literally, so
+ * ₱1,250 stays ₱1,250 rather than rounding to "₱1K" the way the table totals do.
+ */
+function formatStake(amount: number, symbol: string): string {
+  if (amount >= 1_000_000) {
+    return `${symbol}${(amount / 1_000_000).toFixed(2).replace(/\.?0+$/, "")}M`;
+  }
+  if (amount >= 10_000) {
+    return `${symbol}${(amount / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return `${symbol}${amount.toLocaleString()}`;
+}
+
+/**
+ * "Your money is here" — a chip + amount pinned to the bottom of a pad that has
+ * been handed over to the hand.
+ *
+ * Once the cards take the pad, every number on it disappears, which also took
+ * away the only reminder of where the player was actually invested. This is the
+ * one number that still matters while the hand plays out, so it survives the
+ * takeover; everything else (table totals, player counts, share) does not.
+ *
+ * `compact` is for the narrow Tie pad — one chip instead of two, smaller type.
+ */
+function PadMyBet({
+  stake,
+  sym,
+  compact = false,
+}: {
+  stake: PadStake | undefined;
+  sym: string;
+  compact?: boolean;
+}) {
+  if (!stake || stake.amount <= 0) return null;
+  const chipSize = compact ? 11 : 14;
+  // Denoms can legitimately be empty — bets restored by state recovery after a
+  // refresh come back without their chip markers. The amount alone still reads.
+  const denoms = stake.denoms.slice(0, compact ? 1 : 2);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "50%",
+        bottom: 5,
+        transform: "translateX(-50%)",
+        display: "flex",
+        alignItems: "center",
+        gap: 3,
+        padding: compact ? "1px 4px 1px 3px" : "1px 6px 1px 4px",
+        borderRadius: 999,
+        background: "rgba(0,0,0,0.45)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        maxWidth: "94%",
+        zIndex: 4,
+        pointerEvents: "none",
+      }}
+    >
+      {denoms.map((d) => (
+        <img
+          key={d}
+          src={`/mobile-assets/chip-${d}.png`}
+          alt=""
+          style={{
+            width: chipSize,
+            height: chipSize,
+            borderRadius: "50%",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}
+        />
+      ))}
+      <span
+        style={{
+          fontSize: compact ? 9 : 11,
+          fontWeight: 800,
+          color: "#fff",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {formatStake(stake.amount, sym)}
+      </span>
+    </div>
+  );
+}
+
 // Map a UI bet code to the bucket key used in MainBetCounts payloads.
 const COUNTS_KEY: Record<BetCode, "Player" | "Tie" | "Banker" | null> = {
   BAC_Player: "Player",
@@ -102,6 +193,9 @@ export default function MainBets() {
   // Now it holds until the next betting window actually opens.
   const drawPhase = useDrawPhase();
   const showCards = isMobile && drawPhase;
+  // The player's own stake per side, frozen for the whole hand — the pads lose
+  // every other number when the cards take over, but not this one.
+  const drawStake = useDrawStake();
   const t = useT();
   const sym = symbolFor(currency);
 
@@ -376,14 +470,30 @@ export default function MainBets() {
 
   /* ── Mobile layout ── */
   if (isMobile) {
-    // Tie collapses to zero width during the draw — it has no cards of its own,
-    // so it was dead space between the two hands. Animating the COLUMN TRACK
-    // (not the pad) lets Player and Banker glide into the room rather than jump.
+    const tieWon = currentRound?.winner === "T";
+    /**
+     * Tie NARROWS during the draw rather than collapsing away.
+     *
+     * It has no cards of its own, so it gives most of its width to the two
+     * hands — but it cannot disappear, because a player with money on Tie has to
+     * keep seeing that stake while the hand plays out. Then, if the hand
+     * actually ties, it grows back to a full third: the pad opening out from the
+     * middle IS the announcement, arriving at the same moment the two side pads
+     * stop being the story.
+     *
+     * The COLUMN TRACK is animated, not the pad, so Player and Banker glide
+     * aside to make room instead of jumping.
+     */
+    const cols = showCards
+      ? tieWon
+        ? "1fr 1fr 1fr"
+        : "1fr 0.42fr 1fr"
+      : "1fr 1fr 1fr";
     return (
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: showCards ? "1fr 0fr 1fr" : "1fr 1fr 1fr",
+          gridTemplateColumns: cols,
           gap: 8,
           transition: "grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
@@ -445,10 +555,11 @@ export default function MainBets() {
                       };
                     })()
                   : null),
-                // Tie is collapsed away during the draw; fade it with the track
-                // so it doesn't clip visibly as the column closes.
+                // A grid item defaults to min-width:auto, which refuses to
+                // shrink below its own content — without this the narrow Tie
+                // track would simply be ignored and the columns would not move.
                 ...(showCards && bet.betCode === "BAC_Tie"
-                  ? { opacity: 0, pointerEvents: "none" as const, minWidth: 0, padding: 0, border: "none" }
+                  ? { minWidth: 0 as const }
                   : null),
                 transition: "opacity 0.25s ease",
                 cursor: disabled ? "not-allowed" : "pointer",
@@ -498,20 +609,52 @@ export default function MainBets() {
                     compact
                   />
                 ) : showCards ? (
-                  /* Tie has no cards of its own — keep the label only, so the
-                     middle pad doesn't sit empty while the sides fill. */
-                  <span
+                  /* Tie has no cards of its own, so it keeps its label — sized
+                     down while it is the narrow middle column, and back up when
+                     the hand ties and it opens out. */
+                  <div
                     style={{
-                      fontSize: "clamp(11px, 3.4vw, 17px)",
-                      fontWeight: 800,
-                      color: "rgba(255,255,255,0.85)",
-                      letterSpacing: 0.3,
-                      whiteSpace: "nowrap",
                       margin: "auto",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 4,
+                      minWidth: 0,
                     }}
                   >
-                    {t(bet.nameKey)}
-                  </span>
+                    <span
+                      style={{
+                        fontSize: tieWon
+                          ? "clamp(12px, 3.6vw, 18px)"
+                          : "clamp(9px, 2.6vw, 13px)",
+                        fontWeight: 800,
+                        color: "#fff",
+                        letterSpacing: 0.3,
+                        whiteSpace: "nowrap",
+                        transition: "font-size 0.35s ease",
+                      }}
+                    >
+                      {t(bet.nameKey)}
+                    </span>
+                    {tieWon && (
+                      /* Same pill PadCards puts on a winning side, so the three
+                         pads mark the outcome the same way. */
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          letterSpacing: 0.6,
+                          padding: "2px 6px",
+                          borderRadius: 999,
+                          color: "#0b0b0b",
+                          background: "#00c950",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        WIN
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <>
                 {/* Full word, not the P / T / B initial — a lone letter reads as
@@ -598,6 +741,44 @@ export default function MainBets() {
                   </>
                 )}
               </div>
+
+              {/* Which side this is. The cards take the pad over, and without a
+                  word on it the two hands were only distinguishable by the
+                  blue/red gradient — which is a convention, not a label. Small
+                  and pinned to the top so it costs the cards no room. Tie draws
+                  its own label in the content block above. */}
+              {showCards && bet.betCode !== "BAC_Tie" && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: 4,
+                    left: 0,
+                    right: 0,
+                    textAlign: "center",
+                    fontSize: 9,
+                    fontWeight: 800,
+                    letterSpacing: 0.7,
+                    color: "rgba(255,255,255,0.8)",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                    zIndex: 4,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {t(bet.nameKey)}
+                </span>
+              )}
+
+              {/* Where your money is. Outside the content block on purpose: it
+                  pins to the bottom of the pad regardless of whether that pad is
+                  currently showing cards, a Tie label, or nothing. */}
+              {showCards && (
+                <PadMyBet
+                  stake={drawStake[bet.betCode]}
+                  sym={sym}
+                  compact={bet.betCode === "BAC_Tie" && !tieWon}
+                />
+              )}
             </button>
           );
         })}

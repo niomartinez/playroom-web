@@ -6,6 +6,14 @@ interface StatCardProps {
   icon?: React.ReactNode;
   trend?: "up" | "down" | "neutral";
   color?: string;
+  /**
+   * Makes the card a button. Use when the number has a drill-down — a count on
+   * its own tells an operator that something happened but not what, so wherever
+   * the detail exists the card should be the way in.
+   */
+  onClick?: () => void;
+  /** Shown under the value, e.g. "Click to see the failures". */
+  hint?: string;
 }
 
 const TREND_COLORS: Record<string, string> = {
@@ -14,10 +22,14 @@ const TREND_COLORS: Record<string, string> = {
   neutral: "#6a7282",
 };
 
-export default function StatCard({ label, value, icon, trend, color }: StatCardProps) {
+export default function StatCard({ label, value, icon, trend, color, onClick, hint }: StatCardProps) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div
-      className="rounded-xl p-5 flex flex-col gap-2"
+    <Tag
+      onClick={onClick}
+      className={`rounded-xl p-5 flex flex-col gap-2 text-left w-full ${
+        onClick ? "cursor-pointer transition-colors hover:bg-white/[0.04]" : ""
+      }`}
       style={{
         backgroundColor: "#171717",
         border: "1px solid rgba(208,135,0,0.2)",
@@ -48,6 +60,12 @@ export default function StatCard({ label, value, icon, trend, color }: StatCardP
           </span>
         )}
       </div>
-    </div>
+
+      {hint && (
+        <span className="text-[11px]" style={{ color: "#6a7282" }}>
+          {hint}
+        </span>
+      )}
+    </Tag>
   );
 }

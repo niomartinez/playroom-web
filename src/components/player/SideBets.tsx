@@ -121,6 +121,10 @@ export default function SideBets() {
             <button
               key={bet.name}
               data-bet-code={bet.betCode}
+              /* A side bet is a bet — it gets the chip-on-felt sample like the
+                 main pads. Without this it fell through to the generic UI click,
+                 so placing a pair bet sounded like opening a menu. */
+              data-sfx="betPlace"
               onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
               disabled={disabled}
               style={{
@@ -224,6 +228,7 @@ export default function SideBets() {
           <button
             key={bet.name}
             data-bet-code={bet.betCode}
+            data-sfx="betPlace"
             onClick={(e) => handleBet(bet.betCode, e.currentTarget)}
             disabled={disabled}
             className="relative text-center transition-all hover:brightness-110 active:scale-95 cursor-pointer overflow-hidden flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
