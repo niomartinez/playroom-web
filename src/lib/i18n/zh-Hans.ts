@@ -23,6 +23,7 @@ const zhHans: Record<string, string> = {
 
   /* Balance bar */
   "balance.label": "余额",
+  "balance.clear": "清除",
   "balance.clearBets": "清除下注",
   "balance.chipAria": "{amount} 筹码",
 

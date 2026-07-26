@@ -102,6 +102,33 @@ function ChevronRight() {
   );
 }
 
+/** Leading icon for a mobile menu row. Inherits colour from the row. */
+function MenuIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0, opacity: 0.85 }}
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+const rowInner: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  minWidth: 0,
+};
+
 export default function PlayerMenu() {
   const isMobile = useIsMobile();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
@@ -239,27 +266,12 @@ export default function PlayerMenu() {
             <div style={{ overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
               {view === "root" && (
                 <>
-                  <button style={rowBtn} onClick={() => setView("howto")}>
-                    {t("menu.howToPlay")}
-                    <ChevronRight />
-                  </button>
-                  <button style={rowBtn} onClick={() => setView("payouts")}>
-                    {t("menu.payouts")}
-                    <ChevronRight />
-                  </button>
-                  <button style={rowBtn} onClick={() => setView("history")}>
-                    {t("menu.history")}
-                    <ChevronRight />
-                  </button>
-                  <button style={rowBtn} onClick={() => setView("sound")}>
-                    {t("menu.soundVideo")}
-                    <ChevronRight />
-                  </button>
-                  {/* Chat lives here on MOBILE only: the floating bubble was
-                      removed because it sat over the bet pads. Desktop keeps its
-                      always-visible chat panel, so an entry here would be dead
-                      weight there. Hidden entirely when the operator has live
-                      chat switched off. */}
+                  {/* MOBILE gets leading icons and Live Chat first. Desktop is
+                      approved as-is and keeps its plain, text-only list — the
+                      same component serves both, so the difference is explicit
+                      rather than a fork. On a phone this menu is the ONLY route
+                      to chat (the floating bubble was removed), which is why it
+                      leads. */}
                   {isMobile && liveChatEnabled && (
                     <button
                       style={rowBtn}
@@ -268,10 +280,65 @@ export default function PlayerMenu() {
                         window.dispatchEvent(new CustomEvent("prg:open-chat"));
                       }}
                     >
-                      {t("chat.title")}
+                      <span style={rowInner}>
+                        <MenuIcon>
+                          <path d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </MenuIcon>
+                        {t("chat.title")}
+                      </span>
                       <ChevronRight />
                     </button>
                   )}
+                  <button style={rowBtn} onClick={() => setView("howto")}>
+                    <span style={rowInner}>
+                      {isMobile && (
+                        <MenuIcon>
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8v.3" />
+                          <line x1="12" y1="17" x2="12" y2="17.01" />
+                        </MenuIcon>
+                      )}
+                      {t("menu.howToPlay")}
+                    </span>
+                    <ChevronRight />
+                  </button>
+                  <button style={rowBtn} onClick={() => setView("payouts")}>
+                    <span style={rowInner}>
+                      {isMobile && (
+                        <MenuIcon>
+                          <line x1="12" y1="1" x2="12" y2="23" />
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </MenuIcon>
+                      )}
+                      {t("menu.payouts")}
+                    </span>
+                    <ChevronRight />
+                  </button>
+                  <button style={rowBtn} onClick={() => setView("history")}>
+                    <span style={rowInner}>
+                      {isMobile && (
+                        <MenuIcon>
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3 2" />
+                        </MenuIcon>
+                      )}
+                      {t("menu.history")}
+                    </span>
+                    <ChevronRight />
+                  </button>
+                  <button style={rowBtn} onClick={() => setView("sound")}>
+                    <span style={rowInner}>
+                      {isMobile && (
+                        <MenuIcon>
+                          <path d="M11 5 6 9H3v6h3l5 4z" />
+                          <path d="M16 9a4 4 0 0 1 0 6" />
+                          <path d="M19 6.5a8 8 0 0 1 0 11" />
+                        </MenuIcon>
+                      )}
+                      {t("menu.soundVideo")}
+                    </span>
+                    <ChevronRight />
+                  </button>
                 </>
               )}
 

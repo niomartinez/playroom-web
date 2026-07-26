@@ -23,6 +23,7 @@ const en: Record<string, string> = {
 
   /* Balance bar */
   "balance.label": "Balance",
+  "balance.clear": "CLEAR",
   "balance.clearBets": "CLEAR BETS",
   "balance.chipAria": "{amount} chip",
 

@@ -172,76 +172,30 @@ export default function BalanceBar() {
         }}
       >
         <style>{SEAT_WARN_KEYFRAMES}</style>
-        {/* Top section: balance (left) + CLEAR BETS (right, opposite the
-            balance) — sits above the chips so the two live controls bracket
-            the row. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          {/* MOBILE ONLY: the balance moved out of the chip area and into
-              TableInfoBar (pinned bottom-left, Evolution-style). It was the
-              widest thing in this row and squeezed the chip denominations, which
-              are what a player actually needs to hit accurately on a phone.
-              Desktop keeps its balance where it was. A low-balance warning still
-              shows here, as a compact one-liner. */}
-          {warnLow ? (
-            <div
-              role="status"
-              style={{
-                minWidth: 0,
-                fontSize: 10,
-                fontWeight: 700,
-                color: "#fb2c36",
-                lineHeight: 1.2,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                animation: "prg-balance-pulse 1.2s ease-in-out infinite",
-              }}
-            >
-              {warnLowText}
-            </div>
-          ) : (
-            <div />
-          )}
-          {isBettingOpen && (
-            <button
-              onClick={cancelPlacedBets}
-              disabled={!hasPlacedBets}
-              style={{
-                flexShrink: 0,
-                padding: "5px 12px",
-                borderRadius: 999,
-                background: hasPlacedBets ? "rgba(251,44,54,0.92)" : "rgba(20,24,34,0.85)",
-                border: `1.4px solid ${hasPlacedBets ? "#fb2c36" : "rgba(255,255,255,0.18)"}`,
-                color: hasPlacedBets ? "#fff" : "rgba(255,255,255,0.5)",
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: 0.6,
-                cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                boxShadow: hasPlacedBets ? "0 2px 8px rgba(251,44,54,0.35)" : "none",
-                whiteSpace: "nowrap",
-                transition: "background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              {t("balance.clearBets")}
-            </button>
-          )}
-          {warnLow && (
-            <span
-              role="status"
-              style={{
-                fontSize: 9,
-                fontWeight: 600,
-                color: "#fb2c36",
-                opacity: 0.6,
-                lineHeight: 1.2,
-                flexBasis: "100%",
-              }}
-            >
-              {warnLowText}
-            </span>
-          )}
-        </div>
+        {/* The old top row held balance + CLEAR BETS. The balance moved to
+            TableInfoBar, which left CLEAR BETS marooned alone on a full-width
+            row — a big red pill floating above the chips with nothing to
+            balance it. Both live controls now sit IN the chip row (Evolution
+            keeps UNDO / x2 / DOUBLE inline with the chip for the same reason),
+            so this row only exists when there is a low-balance warning to show. */}
+        {warnLow && (
+          <div
+            role="status"
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "#fb2c36",
+              lineHeight: 1.2,
+              marginBottom: 8,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              animation: "prg-balance-pulse 1.2s ease-in-out infinite",
+            }}
+          >
+            {warnLowText}
+          </div>
+        )}
 
         {/* Bottom section: chip row + ×2 toggle (bigger than the chips).
             space-between (no fixed gap) keeps 6 × 36px chips + the 50px ×2
@@ -306,6 +260,49 @@ export default function BalanceBar() {
               </button>
             );
           })}
+
+          {/* CLEAR BETS — inline with the chips, sized like the ×2 control.
+              It used to be a full-width red pill on its own row above; once the
+              balance moved out it had nothing to sit beside and read as a stray
+              alert bar. Evolution keeps UNDO / x2 / DOUBLE inline with the chip
+              for the same reason. Rendered only while betting is open, and
+              inert until there is something to clear. */}
+          {isBettingOpen && (
+            <button
+              type="button"
+              onClick={cancelPlacedBets}
+              disabled={!hasPlacedBets}
+              aria-label={t("balance.clearBets")}
+              title={t("balance.clearBets")}
+              style={{
+                width: 50,
+                height: 50,
+                flexShrink: 0,
+                borderRadius: 14,
+                border: `1.6px solid ${hasPlacedBets ? "rgba(251,44,54,0.85)" : "rgba(255,255,255,0.18)"}`,
+                background: hasPlacedBets ? "rgba(251,44,54,0.16)" : "rgba(255,255,255,0.04)",
+                color: hasPlacedBets ? "#ff6467" : "rgba(255,255,255,0.4)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                cursor: hasPlacedBets ? "pointer" : "not-allowed",
+                padding: 0,
+                transition: "all 0.15s ease",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="M19 6l-1 14H6L5 6" />
+              </svg>
+              <span style={{ fontSize: 7, fontWeight: 800, letterSpacing: 0.3 }}>
+                {t("balance.clear")}
+              </span>
+            </button>
+          )}
 
           {/* ×2 toggle — deliberately larger than a chip so it reads as a
               distinct control, not another denomination. */}

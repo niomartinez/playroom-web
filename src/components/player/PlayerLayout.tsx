@@ -83,19 +83,22 @@ export default function PlayerLayout() {
         <style>{PAD_CARD_KEYFRAMES}</style>
 
         {/* Header — sticky */}
-        <div style={{ position: "sticky", top: 0, zIndex: 50 }}>
+        {/* z ABOVE the pinned TableInfoBar (60). PlayerMenu renders inside this
+            header, so the header's stacking context caps it: at 50 the menu's
+            own z-120 was still trapped below the info bar and the footer painted
+            over the open menu. */}
+        <div style={{ position: "sticky", top: 0, zIndex: 70 }}>
           <PlayerHeader />
         </div>
 
-        {/* Video / Deal area — 16:9, widening to 4:3 while the hand is dealt so
-            the deal gets more of a small screen. Animated on aspect-ratio so the
-            page below reflows smoothly instead of snapping. */}
+        {/* Video / Deal area — fixed 16:9. It briefly widened to 4:3 during the
+            deal; that just cropped the table and shoved the page around for no
+            gain, so the feed stays put and the pads alone carry the hand. */}
         <div
           style={{
             position: "relative",
             width: "100%",
-            aspectRatio: dealing ? "4 / 3" : "16 / 9",
-            transition: "aspect-ratio 0.45s cubic-bezier(0.4, 0, 0.2, 1)",
+            aspectRatio: "16 / 9",
             background: "#000",
             overflow: "hidden",
             flexShrink: 0,
@@ -107,7 +110,6 @@ export default function PlayerLayout() {
             fallback={<DealVisualizer />}
           />
           <RoundCountdown />
-          <WinnersMarquee />
           <LowBalanceGate />
         </div>
 
@@ -152,6 +154,14 @@ export default function PlayerLayout() {
 
             The spacer remains to reserve room for the pinned TableInfoBar so it
             never covers the last row of content. */}
+        {/* The space the score-card panel used to take: winners animate through
+            here instead, small and unboxed like the floating chat. Off the video
+            entirely, so nothing covers the table. */}
+        <div style={{ padding: "8px 19px 0" }}>
+          <WinnersMarquee inline />
+        </div>
+
+        {/* Reserves room for the pinned TableInfoBar so it never covers content. */}
         <div
           style={{ height: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
           aria-hidden

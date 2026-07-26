@@ -30,7 +30,7 @@ const STYLES = `
  * RIGHT of the live feed (screen name + net win). Fed by the system-wide
  * `RoundWinners` broadcast. Non-interactive; auto-hides after a few seconds.
  */
-export default function WinnersMarquee() {
+export default function WinnersMarquee({ inline = false }: { inline?: boolean }) {
   const { roundWinners, currency } = useGame();
   const t = useT();
   const [visible, setVisible] = useState(false);
@@ -56,25 +56,38 @@ export default function WinnersMarquee() {
   return (
     <div
       aria-hidden
-      style={{
-        position: "absolute",
-        // Right side now — chat took the left. Dropped below the shortcut icon
-        // row (top 10, 30px tall) so the two never overlap.
-        top: 52,
-        right: 12,
-        zIndex: 16,
-        width: "min(46vw, 220px)",
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: 12,
-        overflow: "hidden",
-        background: "rgba(3,7,18,0.42)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
-        pointerEvents: "none",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-      }}
+      style={
+        inline
+          ? {
+              // MOBILE: a bare strip in the space the score-card panel used to
+              // occupy — no box, matching the unboxed floating chat, so it reads
+              // as names drifting past rather than another panel competing with
+              // the felt. Not positioned, so it simply occupies the gap.
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              pointerEvents: "none",
+            }
+          : {
+              // DESKTOP (approved): boxed overlay, top-right of the video, below
+              // the shortcut icon row (top 10, 30px tall).
+              position: "absolute",
+              top: 52,
+              right: 12,
+              zIndex: 16,
+              width: "min(46vw, 220px)",
+              display: "flex",
+              flexDirection: "column",
+              borderRadius: 12,
+              overflow: "hidden",
+              background: "rgba(3,7,18,0.42)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              pointerEvents: "none",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            }
+      }
     >
       <style>{STYLES}</style>
       <div
@@ -82,8 +95,8 @@ export default function WinnersMarquee() {
           display: "flex",
           alignItems: "center",
           gap: 6,
-          padding: "6px 10px",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          padding: inline ? "2px 2px 4px" : "6px 10px",
+          borderBottom: inline ? "none" : "1px solid rgba(255,255,255,0.08)",
         }}
       >
         <span style={{ fontSize: 13 }}>🏆</span>
@@ -91,7 +104,7 @@ export default function WinnersMarquee() {
           {t("winners.title")}
         </span>
       </div>
-      <div style={{ position: "relative", overflow: "hidden", maxHeight: 148 }}>
+      <div style={{ position: "relative", overflow: "hidden", maxHeight: inline ? 96 : 148 }}>
         <div style={scroll ? { animation: `prgMarqueeV ${duration}s linear infinite` } : undefined}>
           {items.map((w, i) => (
             <div
@@ -101,14 +114,15 @@ export default function WinnersMarquee() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 8,
-                padding: "6px 10px",
+                padding: inline ? "3px 2px" : "6px 10px",
               }}
             >
               <span
                 style={{
-                  fontSize: 11,
+                  fontSize: inline ? 10 : 11,
                   fontWeight: 600,
                   color: "#e5e7eb",
+                  textShadow: inline ? "0 1px 3px rgba(0,0,0,0.9)" : undefined,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -117,7 +131,7 @@ export default function WinnersMarquee() {
               >
                 {w.user}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#05df72", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+              <span style={{ fontSize: inline ? 10 : 11, fontWeight: 800, color: "#05df72", fontVariantNumeric: "tabular-nums", flexShrink: 0, textShadow: inline ? "0 1px 3px rgba(0,0,0,0.9)" : undefined }}>
                 {/* formatBalance, not formatMoney: the backend broadcasts the
                     NET win to the cent (a P50 banker win nets P47.50), and
                     formatMoney rounds — it showed +P48. Same defect #3 exists

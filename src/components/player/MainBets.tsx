@@ -415,7 +415,11 @@ export default function MainBets() {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: disabled ? "not-allowed" : "pointer",
-                opacity: disabled ? 0.5 : 1,
+                // Dimming signals "you can't press this". While the pad is
+                // showing the hand it is not a button any more, it is the
+                // scoreboard — and greying out the cards makes them hard to
+                // read for no benefit.
+                opacity: disabled && !showCards ? 0.5 : 1,
                 padding: 0,
                 WebkitTapHighlightColor: "transparent",
               }}
@@ -461,29 +465,33 @@ export default function MainBets() {
                      middle pad doesn't sit empty while the sides fill. */
                   <span
                     style={{
-                      fontSize: 18,
+                      fontSize: "clamp(11px, 3.4vw, 17px)",
                       fontWeight: 800,
                       color: "rgba(255,255,255,0.85)",
-                      letterSpacing: 0.4,
+                      letterSpacing: 0.3,
+                      whiteSpace: "nowrap",
                       margin: "auto",
                     }}
                   >
-                    {bet.abbrev}
+                    {t(bet.nameKey)}
                   </span>
                 ) : (
                   <>
-                {/* Bet name abbreviation — dominant element */}
+                {/* Full word, not the P / T / B initial — a lone letter reads as
+                    a placeholder. Sized with clamp+vw so BANKER (the longest)
+                    still fits a narrow phone without wrapping. */}
                 <span
                   style={{
-                    fontSize: 20,
+                    fontSize: "clamp(11px, 3.4vw, 17px)",
                     fontWeight: 800,
                     color: "#fff",
                     lineHeight: 1,
-                    letterSpacing: 0.4,
+                    letterSpacing: 0.3,
+                    whiteSpace: "nowrap",
                     textShadow: "0 1px 3px rgba(0,0,0,0.35)",
                   }}
                 >
-                  {bet.abbrev}
+                  {t(bet.nameKey)}
                 </span>
 
                 {/* Total bet amount across all players — second most important */}
