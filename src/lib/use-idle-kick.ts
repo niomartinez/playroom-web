@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
 import { getIdleExempt, IDLE_EXEMPT_EVENT } from "./idle-exempt";
+import { markSessionCut } from "./session-cut";
 import { resolveIdlePolicy, type IdlePolicy } from "./idle-policy";
 
 /**
@@ -45,6 +46,25 @@ export function useIdleSession(): IdleSessionState {
 
   const [warnLevel, setWarnLevel] = useState<0 | 1 | 2>(0);
   const [expired, setExpired] = useState(false);
+
+  /**
+   * Whenever the seat is released — for ANY reason — order the video stopped.
+   *
+   * Relying on the player noticing a 401 was not enough: an ALREADY-ESTABLISHED
+   * WHEP peer connection or HLS session makes no new authorised request, so no
+   * 401 ever arrives and the picture keeps flowing behind the "Seat Released"
+   * dialog. Since that dialog is a deletable DOM node, covering the video was
+   * never enforcement.
+   *
+   * So the overlay and the teardown are driven by one fact: expired => stop.
+   * VideoPlayer listens for this and tears the media down. Safe against a loop —
+   * VideoPlayer's cutSession is idempotent, and this effect only fires on the
+   * false -> true edge of `expired`.
+   */
+  useEffect(() => {
+    if (!expired) return;
+    markSessionCut();
+  }, [expired]);
 
   // Server-authoritative session end: the bet route rejected with 1013
   // (idle stream-cut = full session end). Freeze immediately — the local

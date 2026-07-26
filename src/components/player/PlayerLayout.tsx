@@ -14,6 +14,7 @@ import RoadmapPanel from "./RoadmapPanel";
 import DealVisualizer from "./DealVisualizer";
 import VideoPlayer from "./VideoPlayer";
 import RoundCountdown from "./RoundCountdown";
+import TableInfoBar from "./TableInfoBar";
 import WinnersMarquee from "./WinnersMarquee";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
@@ -99,6 +100,11 @@ export default function PlayerLayout() {
           <LowBalanceGate />
         </div>
 
+        {/* Evolution-style info strip, directly under the table so it is always
+            on screen. Placing it at the very end of the scroll would have hidden
+            the balance behind a scroll — the opposite of the point. */}
+        <TableInfoBar />
+
         {/* Roadmap — moved ABOVE the bet panel so the road is the first
             thing the player sees after the video stream. Players asked for
             this hierarchy because the road is what they consult before
@@ -169,6 +175,8 @@ export default function PlayerLayout() {
         <LowBalanceGate />
         {liveChatEnabled && <LiveChat />}
       </div>
+
+      <TableInfoBar />
 
       <div
         className="min-h-0 overflow-hidden"

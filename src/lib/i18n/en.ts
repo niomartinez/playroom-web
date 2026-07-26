@@ -168,6 +168,8 @@ const en: Record<string, string> = {
   "seat.requiredEnterLabel": "Minimum balance to play here",
   "seat.requiredKeepLabel": "Minimum balance to keep your seat",
   "video.sessionEnded": "Your seat was released — the live feed has stopped.",
+  "info.totalBet": "Total Bet",
+  "info.balance": "Balance",
   "seat.enterTitle": "Minimum Balance To Play",
   "seat.enterBody": "You need a little more in your balance before you can start playing at this table. Top up on your site, or pick another table from the lobby.",
   "seat.return": "Back to lobby",

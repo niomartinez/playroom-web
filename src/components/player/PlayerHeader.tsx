@@ -42,27 +42,12 @@ function LanguageSelect({ compact }: { compact?: boolean }) {
 }
 
 export default function PlayerHeader() {
-  const { currentRound, roundStatus, lobbyUrl, tableName, dealerName } = useGame();
+  const { roundStatus, lobbyUrl, tableName, dealerName } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   // Shared betting countdown — same source as the big feed overlay so the
   // header pill and the on-video number never disagree.
   const countdown = useCountdown();
-
-  const roundLabel = (() => {
-    if (!currentRound?.roundNumber) return t("header.noRound");
-    const rn = String(currentRound.roundNumber);
-    // Clean up internal IDs like "ROUND-EA6EC7C8" → just show short hash
-    if (rn.startsWith("ROUND-")) return t("header.round", { n: rn.slice(6, 10) });
-    return t("header.round", { n: rn });
-  })();
-
-  const statusColor: Record<string, string> = {
-    waiting: "#6a7282",
-    betting_open: "#05df72",
-    dealing: "#f0b100",
-    result: "#fb2c36",
-  };
 
   const statusLabel: Record<string, string> = {
     waiting: t("status.waiting"),
@@ -106,67 +91,16 @@ export default function PlayerHeader() {
           <img src="/logo.png" alt="Playroom Gaming" style={{ height: 22, objectFit: "contain" }} />
         </button>
 
-        {/* Center: LIVE badge + Table label — a real flex column, NOT absolutely
-            positioned. Absolute centering ignored the siblings' widths, so on a
-            phone the opaque menu/language controls painted over the tail of
-            "Live Baccarat" and shredded it into gibberish. It now lives in flow,
-            centered, and the label truncates cleanly instead of overlapping. */}
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            padding: "0 8px",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: "rgba(251, 44, 54, 0.15)",
-              border: "1px solid rgba(251, 44, 54, 0.4)",
-              borderRadius: 999,
-              padding: "2px 8px",
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                backgroundColor: "#FB2C36",
-                animation: "live-pulse 2.4s ease-in-out infinite",
-                boxShadow: "0 0 6px rgba(251,44,54,0.4)",
-              }}
-            />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#ffffff", letterSpacing: 0.4 }}>{t("status.live")}</span>
-          </div>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              color: "#99A1AF",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              minWidth: 0,
-            }}
-          >
-            {t("header.liveBaccarat")}
-          </span>
-        </div>
+        {/* Centre intentionally empty: the LIVE pulse and "Live Baccarat"
+            label were removed — they competed with the video for attention and
+            said nothing a player needs mid-hand. The table name and round now
+            live in TableInfoBar at the bottom, Evolution-style. */}
+        <div style={{ flex: 1, minWidth: 0 }} />
 
-        {/* Right: menu + language switcher + round number */}
+        {/* Right: menu + language switcher. Round number moved to TableInfoBar. */}
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
           <PlayerMenu />
           <LanguageSelect compact />
-          <span style={{ fontSize: 11, fontWeight: 500, color: "#ffffff", whiteSpace: "nowrap" }}>{roundLabel}</span>
         </div>
       </header>
     );
@@ -184,8 +118,6 @@ export default function PlayerHeader() {
         <button onClick={handleBack} className="cursor-pointer">
           <img src="/logo.png" alt="Playroom Gaming" className="object-contain h-[3.5vh]" />
         </button>
-        <span className="text-[1.1vh] text-[#99a1af]">{t("header.liveBaccarat")}</span>
-        <span className="text-[1vh] text-[#6a7282]">|</span>
         <span className="text-[1.1vh] text-white font-semibold">{tableName}</span>
         <span className="text-[1vh] text-[#6a7282]">•</span>
         <span className="text-[1.1vh] text-[#99a1af]">{dealerName}</span>
@@ -200,18 +132,6 @@ export default function PlayerHeader() {
           }}
         >
           <span
-            className="rounded-full"
-            style={{
-              width: "0.8vh",
-              height: "0.8vh",
-              /* Always red with a calm slow pulse to show the stream is live,
-                 independent of round phase. */
-              backgroundColor: roundStatus === "betting_open" ? statusColor.betting_open : "#fb2c36",
-              animation: "live-pulse 2.4s ease-in-out infinite",
-              boxShadow: "0 0 6px rgba(251,44,54,0.4)",
-            }}
-          />
-          <span
             className="font-semibold"
             style={{
               fontSize: "1.2vh",
@@ -223,14 +143,7 @@ export default function PlayerHeader() {
         </div>
         {/* Language switcher */}
         <LanguageSelect />
-        {/* Round number */}
-        <div className="flex items-center gap-[0.4vw] bg-[#1e2939] border border-[#364153] rounded-[0.6vw] px-[0.8vw] py-[0.4vh]">
-          <svg className="text-[#99a1af]" style={{ width: "1.2vh", height: "1.2vh" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v6l4 2" />
-          </svg>
-          <span className="font-semibold text-white" style={{ fontSize: "1.2vh" }}>{roundLabel}</span>
-        </div>
+        {/* Round number moved to TableInfoBar (bottom-right), Evolution-style. */}
         <PlayerMenu />
       </div>
     </header>

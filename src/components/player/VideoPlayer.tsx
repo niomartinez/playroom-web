@@ -12,6 +12,7 @@ import {
   onVideoReload,
 } from "@/lib/media-prefs";
 import { useStreamToken, withStreamToken } from "@/lib/use-stream-token";
+import { SESSION_CUT_EVENT, isSessionCut, markSessionCut } from "@/lib/session-cut";
 
 /**
  * Live video player for a baccarat table.
@@ -255,6 +256,8 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
     const cutSession = (why: string) => {
       if (sessionCutRef.current) return;
       sessionCutRef.current = true;
+      // Latch globally: a later effect run (retry/remount) must not reconnect.
+      markSessionCut();
       console.warn("[VideoPlayer] session revoked by the edge — stopping video:", why);
       stopStallWatchdog();
       if (retryTimer) {
@@ -289,10 +292,18 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       }
     };
 
+    // The seat was released (idle overlay showing) — stop the picture even if
+    // no request has failed. An established WHEP/HLS session makes no further
+    // authorised call, so waiting for a 401 left the video playing behind the
+    // dialog indefinitely.
+    const onStopVideo = () => cutSession("seat released");
+    window.addEventListener(SESSION_CUT_EVENT, onStopVideo);
+
     // Track ALL cleanup so a fast unmount during async negotiation
     // doesn't leak peer connections or HLS workers.
     const cleanup = () => {
       cancelled = true;
+      window.removeEventListener(SESSION_CUT_EVENT, onStopVideo);
       stopStallWatchdog();
       if (retryTimer) {
         clearTimeout(retryTimer);
@@ -314,6 +325,14 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       video.removeAttribute("src");
       video.load();
     };
+
+    // Already cut before this effect run registered its listener (first mount,
+    // or a reconnect that started after the seat was released): honour the latch
+    // now rather than wait for an event that has already fired.
+    if (isSessionCut()) {
+      cutSession("seat released (latched)");
+      return cleanup;
+    }
 
     /**
      * WHEP handshake — minimal spec implementation. POST a local SDP
