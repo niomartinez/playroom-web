@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import { useDebounce } from "@/lib/use-debounce";
+import { useAdminQuery } from "@/lib/admin-query";
+import { useUrlFilters } from "@/lib/use-url-filters";
 
 interface Player {
   id: string;
@@ -26,60 +28,49 @@ interface OperatorOption {
 
 export default function PlayersPage() {
   const router = useRouter();
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [operators, setOperators] = useState<OperatorOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  /* Filters */
-  const [filterOperator, setFilterOperator] = useState("");
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
+  /* Filters live in the URL, so Back restores the exact view and re-selecting a
+     previous filter rebuilds a request URL that is already in the query cache —
+     which is what makes it repaint with no request and no spinner. */
+  const { values, setValues, setFilter } = useUrlFilters({
+    page: "1",
+    operator_id: "",
+    search: "",
+  });
+  const page = Math.max(1, Number(values.page) || 1);
 
-  // Fetch operators for filter dropdown
+  // The search box is typed into, so it needs local state; the URL is updated
+  // only once typing settles, or every keystroke would be a router.replace.
+  const [searchInput, setSearchInput] = useState(values.search);
+  const debouncedSearch = useDebounce(searchInput, 300);
   useEffect(() => {
-    fetch("/api/admin/operators")
-      .then((r) => r.json())
-      .then((json) => {
-        const data = Array.isArray(json) ? json : json.data ?? [];
-        setOperators(data);
-      })
-      .catch(() => {});
-  }, []);
+    if (debouncedSearch !== values.search) setFilter({ search: debouncedSearch });
+  }, [debouncedSearch, values.search, setFilter]);
 
-  const fetchPlayers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("page_size", String(pageSize));
-      if (filterOperator) params.set("operator_id", filterOperator);
-      if (debouncedSearch) params.set("search", debouncedSearch);
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (values.operator_id) query.set("operator_id", values.operator_id);
+  if (values.search) query.set("search", values.search);
 
-      const res = await fetch(`/api/admin/players?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setPlayers(data.players ?? []);
-        setTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [page, filterOperator, debouncedSearch]);
+  const {
+    data: playersData,
+    loading,
+    refreshing,
+  } = useAdminQuery<{ players: Player[]; total: number }>(
+    `/api/admin/players?${query.toString()}`,
+  );
+  const players = playersData?.players ?? [];
+  const total = playersData?.total ?? 0;
 
-  useEffect(() => {
-    fetchPlayers();
-  }, [fetchPlayers]);
-
-  function handleSearch(q: string) {
-    setSearch(q);
-    setPage(1);
-  }
+  // The operator list barely changes and is shared with other pages, so it is
+  // cached under its own key and costs nothing after the first visit anywhere.
+  const { data: operatorsData } = useAdminQuery<OperatorOption[]>(
+    "/api/admin/operators",
+  );
+  const operators = operatorsData ?? [];
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -156,11 +147,8 @@ export default function PlayersPage() {
               Operator
             </label>
             <select
-              value={filterOperator}
-              onChange={(e) => {
-                setFilterOperator(e.target.value);
-                setPage(1);
-              }}
+              value={values.operator_id}
+              onChange={(e) => setFilter({ operator_id: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
@@ -182,14 +170,36 @@ export default function PlayersPage() {
             <input
               type="text"
               placeholder="Username or external ID..."
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none min-w-[220px]"
               style={inputStyle}
             />
           </div>
         </div>
       </div>
+
+      {refreshing && !loading && (
+        <div
+          className="text-xs flex items-center gap-2"
+          style={{ color: "#6a7282" }}
+          role="status"
+        >
+          <span
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              border: "2px solid rgba(240,177,0,0.35)",
+              borderTopColor: "#f0b100",
+              display: "inline-block",
+              animation: "prg-spin 0.7s linear infinite",
+            }}
+          />
+          Refreshing…
+        </div>
+      )}
+      <style>{"@keyframes prg-spin{to{transform:rotate(360deg)}}"}</style>
 
       <DataTable
         columns={columns}
@@ -214,7 +224,7 @@ export default function PlayersPage() {
           <div className="flex gap-2">
             <button
               disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
+              onClick={() => setValues({ page: String(page - 1) })}
               className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
               style={{ color: "#99a1af" }}
             >
@@ -222,7 +232,7 @@ export default function PlayersPage() {
             </button>
             <button
               disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
+              onClick={() => setValues({ page: String(page + 1) })}
               className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
               style={{ color: "#99a1af" }}
             >
