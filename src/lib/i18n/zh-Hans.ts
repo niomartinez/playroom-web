@@ -164,7 +164,8 @@ const zhHans: Record<string, string> = {
 
   /* Seat-balance gate */
   "seat.blockTitle": "需要最低余额",
-  "seat.blockBody": "您的余额已低于保留本桌座位所需的最低金额。请充值以继续游戏，或返回大厅。",
+  "seat.blockBody": "您的余额已低于保留本桌座位所需的最低金额。请在您的网站充值以继续游戏，或返回大厅。",
+  "seat.requiredLabel": "所需最低余额",
   "seat.return": "返回大厅",
   "seat.addFunds": "充值",
   "seat.warnLow": "余额偏低——请至少保留 {amount} 以保留座位。",

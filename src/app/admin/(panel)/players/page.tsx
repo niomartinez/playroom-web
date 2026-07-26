@@ -99,7 +99,7 @@ export default function PlayersPage() {
     },
     {
       key: "operator_name",
-      label: "Operator",
+      label: "System Provider",
       render: (row) => (
         <span>{row.operator_name || "\u2014"}</span>
       ),
@@ -164,7 +164,7 @@ export default function PlayersPage() {
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
-              <option value="">All Operators</option>
+              <option value="">All System Providers</option>
               {operators.map((op) => (
                 <option key={op.id} value={op.id}>
                   {op.name}

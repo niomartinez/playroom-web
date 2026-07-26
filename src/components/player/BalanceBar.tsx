@@ -258,6 +258,7 @@ export default function BalanceBar() {
               <button
                 key={chip.value}
                 data-chip-denom={chip.value}
+                data-sfx="chip"
                 onClick={() => {
                   if (isDisabled) return;
                   setSelectedChip(chip.value);
@@ -429,6 +430,7 @@ export default function BalanceBar() {
             <button
               key={chip.value}
               data-chip-denom={chip.value}
+              data-sfx="chip"
               onClick={() => {
                 if (isDisabled) return;
                 setSelectedChip(chip.value);

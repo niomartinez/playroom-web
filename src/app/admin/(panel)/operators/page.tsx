@@ -72,7 +72,7 @@ export default function OperatorsPage() {
         setNewWalletUrl("");
         setNewWalletMode("seamless");
         fetchOperators();
-        toast({ type: "success", message: "Operator created" });
+        toast({ type: "success", message: "System Provider created" });
       } else {
         const data = await res.json().catch(() => ({}));
         const msg = data.message || `Failed to create operator (${res.status})`;
@@ -112,13 +112,13 @@ export default function OperatorsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Operators</h1>
+        <h1 className="text-2xl font-bold text-white">System Providers</h1>
         <button
           onClick={() => setShowCreate(true)}
           className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
           style={{ backgroundColor: "#f0b100" }}
         >
-          Create Operator
+          Create System Provider
         </button>
       </div>
 
@@ -131,11 +131,11 @@ export default function OperatorsPage() {
         onRowClick={(row) => router.push(`/admin/operators/${row.id}`)}
       />
 
-      {/* Create Operator Dialog */}
+      {/* Create System Provider Dialog */}
       <FormDialog
         open={showCreate}
         onClose={() => { setShowCreate(false); setError(null); }}
-        title="Create Operator"
+        title="Create System Provider"
         onSave={handleCreate}
         saving={saving}
       >

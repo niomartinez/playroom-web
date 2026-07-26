@@ -29,10 +29,14 @@ export default function RoundCountdown() {
       aria-hidden
       style={{
         position: "absolute",
-        inset: 0,
+        // Anchored bottom-right instead of centred: dead-centre put the dial
+        // squarely over the dealer and the cards being dealt. The corner keeps
+        // the countdown glanceable without covering the action.
+        inset: "auto 0 0 auto",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "flex-end",
+        justifyContent: "flex-end",
+        padding: "clamp(8px, 1.8vw, 20px)",
         pointerEvents: "none",
         opacity: show ? 1 : 0,
         transition: "opacity 0.4s ease",
@@ -42,23 +46,40 @@ export default function RoundCountdown() {
       <div
         style={{
           position: "relative",
-          width: "min(32vw, 20vh)",
-          maxWidth: 240,
+          // Smaller than the old centrepiece — it no longer needs to read from
+          // across the table, just from the corner.
+          width: "min(18vw, 13vh)",
+          minWidth: 66,
+          maxWidth: 132,
           aspectRatio: "1 / 1",
         }}
       >
+        {/* A dark disc behind the dial: at corner size the number has to stay
+            legible over whatever the camera happens to be showing (bright felt,
+            a dealer's white shirt), which the old low-opacity centre treatment
+            no longer guarantees. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: "6%",
+            borderRadius: "50%",
+            background: "rgba(3,7,18,0.46)",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)",
+          }}
+        />
         <svg
           viewBox="0 0 100 100"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", transform: "rotate(-90deg)" }}
         >
-          <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={3} />
+          <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth={5} />
           <circle
             cx="50"
             cy="50"
             r={R}
             fill="none"
-            stroke={urgent ? "rgba(251,44,54,0.5)" : "rgba(255,255,255,0.4)"}
-            strokeWidth={3}
+            stroke={urgent ? "rgba(251,44,54,0.9)" : "rgba(255,255,255,0.78)"}
+            strokeWidth={5}
             strokeLinecap="round"
             strokeDasharray={CIRC}
             strokeDashoffset={CIRC * (1 - frac)}
@@ -74,10 +95,10 @@ export default function RoundCountdown() {
             justifyContent: "center",
             fontWeight: 800,
             lineHeight: 1,
-            fontSize: "clamp(38px, 13vh, 116px)",
+            fontSize: "clamp(24px, 6.4vh, 56px)",
             fontVariantNumeric: "tabular-nums",
-            color: urgent ? "rgba(251,44,54,0.85)" : "rgba(255,255,255,0.62)",
-            textShadow: "0 2px 18px rgba(0,0,0,0.6)",
+            color: urgent ? "rgba(255,92,100,0.98)" : "rgba(255,255,255,0.95)",
+            textShadow: "0 2px 12px rgba(0,0,0,0.85)",
           }}
         >
           {remaining ?? ""}

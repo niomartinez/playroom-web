@@ -122,8 +122,8 @@ export default function ReportsPage() {
         ? [summary.total_wagered, summary.total_payout, summary.ggr, summary.bet_count, summary.round_count]
         : ["-", "-", "-", "-", "-"],
       [],
-      ["By Operator"],
-      ["Operator", "Wagered", "Payout", "GGR", "Bets"],
+      ["By System Provider"],
+      ["System Provider", "Wagered", "Payout", "GGR", "Bets"],
       ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count]),
       [],
       ["By Table"],
@@ -261,7 +261,7 @@ export default function ReportsPage() {
                         : "2px solid transparent",
                   }}
                 >
-                  By {tab}
+                  By {tab === "operator" ? "System Provider" : "Table"}
                 </button>
               ))}
             </div>
@@ -280,7 +280,7 @@ export default function ReportsPage() {
                         className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider"
                         style={{ color: "#d08700" }}
                       >
-                        {activeTab === "operator" ? "Operator" : "Table"}
+                        {activeTab === "operator" ? "System Provider" : "Table"}
                       </th>
                       {["Wagered", "Payout", "GGR", "Bets"].map((h) => (
                         <th

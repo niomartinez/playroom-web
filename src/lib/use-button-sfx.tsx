@@ -14,6 +14,7 @@ import { buttonSfx } from "./audio/button-sfx";
  * Per-button behaviour, resolved from the nearest ancestor `<button>`:
  *   - `data-sfx="off"`   → silent (opt-out).
  *   - `data-sfx="press"` → the heavier `press` sound (primary bet/confirm).
+ *   - `data-sfx="chip"`  → the synthesized chip clink (chip denomination picker).
  *   - anything else      → the default `click` sound.
  *
  * The same gesture also unlocks Web Audio (iOS needs the context created +
@@ -34,7 +35,11 @@ export default function ButtonSfxProvider({ children }: { children: ReactNode })
 
       const mode = btn.getAttribute("data-sfx");
       if (mode === "off") return;
-      buttonSfx.play(mode === "press" ? "press" : "click");
+      if (mode === "press" || mode === "chip") {
+        buttonSfx.play(mode);
+        return;
+      }
+      buttonSfx.play("click");
     };
 
     // Capture phase so stopPropagation on the button can't swallow the sound.

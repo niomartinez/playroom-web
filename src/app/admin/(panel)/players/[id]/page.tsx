@@ -198,7 +198,7 @@ export default function PlayerDetailPage() {
             </p>
           </div>
           <div>
-            <span style={{ color: "#6a7282" }}>Operator</span>
+            <span style={{ color: "#6a7282" }}>System Provider</span>
             <p className="text-white mt-0.5">{player.operator_name}</p>
           </div>
           <div>

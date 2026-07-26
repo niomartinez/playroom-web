@@ -52,13 +52,23 @@ const PANEL_ALLOWED_IPS = parseIps(process.env.PANEL_ALLOWED_IPS);
 const STUDIO_ALLOWED_IPS = parseIps(process.env.STUDIO_ALLOWED_IPS);
 const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116");
 
-const IP_GATE_ACTIVE =
-  PANEL_ALLOWED_IPS.length > 0 || STUDIO_ALLOWED_IPS.length > 0;
-const PANEL_IP_ALLOWLIST = new Set([
-  ...PANEL_ALLOWED_IPS,
-  ...STUDIO_ALLOWED_IPS,
-  ...BREAK_GLASS_IPS,
-]);
+// The two surfaces gate INDEPENDENTLY.
+//
+// They used to share one unioned allowlist, which meant setting PANEL_ALLOWED_IPS
+// to lock the back office ALSO gated /studio — and allowed only the office IPs
+// there, locking out dealers at the studio. The back office and the studio are
+// different places with different IPs, so each gets its own list and each
+// activates only when its OWN var is set. Setting PANEL_ALLOWED_IPS alone now
+// locks the back office and leaves the studio (and all player traffic) open,
+// which is the operational intent.
+//
+// BREAK_GLASS_IPS is honoured on both, so a bad allowlist edit can't lock the
+// office out of either surface.
+const ADMIN_IP_ALLOWLIST = new Set([...PANEL_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
+const STUDIO_IP_ALLOWLIST = new Set([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
+
+const ADMIN_GATE_ACTIVE = PANEL_ALLOWED_IPS.length > 0;
+const STUDIO_GATE_ACTIVE = STUDIO_ALLOWED_IPS.length > 0;
 
 /** Real client IP at the Vercel edge. Prefer Vercel's trusted headers over the
  *  raw left-most X-Forwarded-For entry, which a client can spoof. */
@@ -71,21 +81,30 @@ function resolveClientIp(req: NextRequest): string {
   );
 }
 
-/** True for the internal-panel + studio surfaces the IP gate covers. Excludes
- *  the OCMS partner portal (/admin-ocms + /api/admin-ocms). */
-function isPanelIpScoped(pathname: string): boolean {
+/** Which IP-gated surface this path belongs to, if any.
+ *
+ *  `admin`  — the internal back office (/admin + /api/admin/).
+ *  `studio` — the dealer surface (/studio + /api/studio/).
+ *  `null`   — everything else: all player traffic AND the OCMS partner portal
+ *             (/admin-ocms + /api/admin-ocms), whose partner IPs are unknown and
+ *             rotating, so it is NEVER IP-gated here.
+ *
+ *  The /admin-ocms check must come first: "/admin-ocms" also matches
+ *  startsWith("/admin"), so testing admin first would gate the partner portal. */
+function ipGateSurface(pathname: string): "admin" | "studio" | null {
   if (
     pathname.startsWith("/admin-ocms") ||
     pathname.startsWith("/api/admin-ocms")
   ) {
-    return false;
+    return null;
   }
-  return (
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/api/admin/") ||
-    pathname.startsWith("/studio") ||
-    pathname.startsWith("/api/studio/")
-  );
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin/")) {
+    return "admin";
+  }
+  if (pathname.startsWith("/studio") || pathname.startsWith("/api/studio/")) {
+    return "studio";
+  }
+  return null;
 }
 
 /**
@@ -126,12 +145,22 @@ async function verifyStudioCookie(
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Option A IP allowlist — edge-enforced, /admin + /studio only, OCMS excluded.
-  // Inert until PANEL_ALLOWED_IPS (or legacy STUDIO_ALLOWED_IPS) is set in Vercel.
-  if (IP_GATE_ACTIVE && isPanelIpScoped(pathname)) {
-    const clientIp = resolveClientIp(req);
-    if (!clientIp || !PANEL_IP_ALLOWLIST.has(clientIp)) {
-      return new NextResponse("Forbidden", { status: 403 });
+  // Option A IP allowlist — edge-enforced, per-surface, OCMS + players excluded.
+  // Each surface is inert until its OWN env var is set in Vercel:
+  //   PANEL_ALLOWED_IPS  -> locks /admin  (back office)
+  //   STUDIO_ALLOWED_IPS -> locks /studio (dealer surface)
+  // so the back office can be locked down without risking a studio lockout.
+  const ipSurface = ipGateSurface(pathname);
+  if (ipSurface) {
+    const gateActive =
+      ipSurface === "admin" ? ADMIN_GATE_ACTIVE : STUDIO_GATE_ACTIVE;
+    if (gateActive) {
+      const allowlist =
+        ipSurface === "admin" ? ADMIN_IP_ALLOWLIST : STUDIO_IP_ALLOWLIST;
+      const clientIp = resolveClientIp(req);
+      if (!clientIp || !allowlist.has(clientIp)) {
+        return new NextResponse("Forbidden", { status: 403 });
+      }
     }
   }
 

@@ -235,7 +235,7 @@ export default function PitchLinksPage() {
             <table className="w-full text-xs" style={{ color: "#d1d5db" }}>
               <thead style={{ color: "#6b7280" }}>
                 <tr className="text-left">
-                  <th className="px-3 py-2 font-medium whitespace-nowrap">Operator</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">System Provider</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Link</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Status</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Sent by</th>

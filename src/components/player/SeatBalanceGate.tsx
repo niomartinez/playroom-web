@@ -4,6 +4,7 @@ import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
 import { sendToParent } from "@/lib/iframe-bridge";
+import { formatMoney } from "@/lib/currency";
 
 /**
  * Minimum seat-balance gate.
@@ -29,7 +30,6 @@ export default function SeatBalanceGate() {
     minSeatBalance,
     placedBets,
     lobbyUrl,
-    cashierUrl,
   } = useGame();
   const t = useT();
 
@@ -70,17 +70,6 @@ export default function SeatBalanceGate() {
     }
   };
 
-  // ADD FUNDS reachability mirrors LowBalanceGate: a launch cashierUrl, or an
-  // operator iframe that can open its own cashier via postMessage.
-  const canAddFunds = Boolean(cashierUrl) || embedded;
-  const addFunds = () => {
-    if (cashierUrl && typeof window !== "undefined") {
-      window.location.href = cashierUrl;
-    } else if (embedded) {
-      sendToParent("openCashier", { reason: "below_min_seat_balance" });
-    }
-  };
-
   if (!gated) return null;
 
   return (
@@ -95,9 +84,13 @@ export default function SeatBalanceGate() {
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
-        background: "rgba(3,7,18,0.82)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
+        // The live studio feed sits behind this overlay. A player who can no
+        // longer fund a seat should not keep watching the table, so the cover is
+        // near-opaque AND heavily blurred — enough that the stream reads as
+        // obscured rather than merely dimmed.
+        background: "rgba(3,7,18,0.94)",
+        backdropFilter: "blur(22px) saturate(0.6)",
+        WebkitBackdropFilter: "blur(22px) saturate(0.6)",
       }}
     >
       <div
@@ -132,29 +125,42 @@ export default function SeatBalanceGate() {
         <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: 0.4, marginBottom: 10 }}>
           {t("seat.blockTitle")}
         </div>
-        <p style={{ fontSize: 13, lineHeight: 1.55, color: "#cbd5e1", marginBottom: 22 }}>
+        <p style={{ fontSize: 13, lineHeight: 1.55, color: "#cbd5e1", marginBottom: 18 }}>
           {t("seat.blockBody")}
         </p>
-        {canAddFunds && (
-          <button
-            onClick={addFunds}
+        {/* The actual figure, stated plainly. The old copy only said "below the
+            minimum required" and left the player guessing what to top up to.
+            Driven by the server threshold, so retuning min_seat_balance in
+            /admin changes this number with no client release. */}
+        <div
+          style={{
+            marginBottom: 22,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: "rgba(240,177,0,0.08)",
+            border: "1px solid rgba(240,177,0,0.28)",
+          }}
+        >
+          <div
             style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: 10,
-              background: "#f0b100",
-              border: "none",
-              color: "#0b0b0b",
-              fontSize: 15,
-              fontWeight: 800,
-              cursor: "pointer",
-              marginBottom: 10,
-              WebkitTapHighlightColor: "transparent",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              color: "#99a1af",
+              marginBottom: 4,
             }}
           >
-            {t("seat.addFunds")}
-          </button>
-        )}
+            {t("seat.requiredLabel")}
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#f0b100", lineHeight: 1.1 }}>
+            {formatMoney(block, currency)}
+          </div>
+        </div>
+        {/* No "Add funds" here by design: we serve multiple operators and have no
+            universal cashier to send a player to — each operator funds its own
+            players on its own site. "Back to lobby" is the only action we can
+            honour for everyone. */}
         <button
           onClick={returnToSite}
           style={{

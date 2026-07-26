@@ -49,6 +49,14 @@ export default function SettingsPage() {
   const [idleWarn1, setIdleWarn1] = useState("1");
   const [idleWarn2, setIdleWarn2] = useState("2");
 
+  // Minimum seat balance — `enter` to sit down, `block` to keep the seat after
+  // each settlement, `warn` for the soft low-balance nudge. Defaults mirror the
+  // backend (config_cache._MIN_SEAT_BALANCE_DEFAULT) so an unsaved form never
+  // implies different numbers than the server is actually enforcing.
+  const [seatEnter, setSeatEnter] = useState("1000");
+  const [seatBlock, setSeatBlock] = useState("1000");
+  const [seatWarn, setSeatWarn] = useState("2000");
+
   /* Danger zone */
   const [showForceClose, setShowForceClose] = useState(false);
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
@@ -98,6 +106,18 @@ export default function SettingsPage() {
                 if (p.expire != null) setIdleExpire(String(p.expire));
                 setIdleWarn1(p.warn1 != null ? String(p.warn1) : "");
                 setIdleWarn2(p.warn2 != null ? String(p.warn2) : "");
+              }
+              break;
+            case "min_seat_balance":
+              if (typeof val === "object" && val !== null) {
+                const s = val as { enter?: number; block?: number; warn?: number };
+                if (s.block != null) setSeatBlock(String(s.block));
+                if (s.warn != null) setSeatWarn(String(s.warn));
+                // Configs saved before `enter` existed only carry block/warn.
+                // Mirror the backend's back-compat rule (enter falls back to
+                // block) so the form shows what is actually being enforced.
+                if (s.enter != null) setSeatEnter(String(s.enter));
+                else if (s.block != null) setSeatEnter(String(s.block));
               }
               break;
           }
@@ -399,6 +419,85 @@ export default function SettingsPage() {
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "player_idle_policy" ? "Applying..." : "Apply"}
+        </button>
+      </div>
+
+      {/* Minimum seat balance */}
+      <div
+        className="rounded-xl p-6 space-y-4"
+        style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
+            Minimum seat balance
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            Wallet floors for holding a seat, in PHP. <strong>To enter</strong> is
+            checked when a player opens a table; <strong>to keep seat</strong> is
+            re-checked after every settlement, and a player below it gets the
+            &ldquo;Minimum Balance Required&rdquo; overlay (the figure shown in that
+            dialog is this number). A player with a live bet is never cut
+            mid-round. Set <strong>to enter</strong> higher than{" "}
+            <strong>to keep seat</strong> to make buying in stricter than staying.
+            Warning is a soft nudge only. Applies platform-wide, on the next
+            balance update after Save.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              Required to enter
+            </label>
+            <input
+              type="number" min={0} step={50}
+              value={seatEnter}
+              onChange={(e) => setSeatEnter(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              Required to keep seat
+            </label>
+            <input
+              type="number" min={0} step={50}
+              value={seatBlock}
+              onChange={(e) => setSeatBlock(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+              Low-balance warning below
+            </label>
+            <input
+              type="number" min={0} step={50}
+              value={seatWarn}
+              onChange={(e) => setSeatWarn(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            const num = (v: string) => Math.max(0, Number(v) || 0);
+            const block = num(seatBlock);
+            // Keep the ladder coherent before it ever reaches the server (which
+            // clamps identically): entering below the keep-seat floor would admit
+            // a player and gate them on the spot, and a warning under the floor
+            // is a band that can never fire.
+            const enter = Math.max(num(seatEnter), block);
+            const warn = Math.max(num(seatWarn), block);
+            saveKey("min_seat_balance", { enter, block, warn });
+          }}
+          disabled={saving === "min_seat_balance"}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          style={{ backgroundColor: "#f0b100" }}
+        >
+          {saving === "min_seat_balance" ? "Applying..." : "Apply"}
         </button>
       </div>
 

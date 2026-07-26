@@ -164,7 +164,8 @@ const en: Record<string, string> = {
 
   /* Seat-balance gate */
   "seat.blockTitle": "Minimum Balance Required",
-  "seat.blockBody": "Your balance has dropped below the minimum required to keep your seat at this table. Add funds to keep playing, or return to the lobby.",
+  "seat.blockBody": "Your balance has dropped below the minimum required to keep your seat at this table. Top up on your site to keep playing, or return to the lobby.",
+  "seat.requiredLabel": "Minimum balance required",
   "seat.return": "Back to lobby",
   "seat.addFunds": "Add funds",
   "seat.warnLow": "Low balance — keep at least {amount} to hold your seat.",

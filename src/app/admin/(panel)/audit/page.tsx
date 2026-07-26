@@ -107,7 +107,7 @@ export default function AuditPage() {
               style={inputStyle}
             >
               <option value="">All</option>
-              <option value="operator">Operator</option>
+              <option value="operator">System Provider</option>
               <option value="table">Table</option>
               <option value="round">Round</option>
               <option value="player">Player</option>
