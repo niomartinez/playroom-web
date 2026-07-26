@@ -292,35 +292,51 @@ export default function BalanceBar() {
           style={{ width: "clamp(28px, 3.4vh, 48px)", height: "clamp(28px, 3.4vh, 48px)" }}
         />
         <style>{SEAT_WARN_KEYFRAMES}</style>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>{t("balance.label")}</div>
-          <div
-            className="font-bold text-white"
-            style={{
-              fontSize: "clamp(18px, 2.4vh, 30px)",
-              fontVariantNumeric: "tabular-nums",
-              fontFeatureSettings: '"tnum"',
-              ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
-            }}
-          >
-            {formatted}
-          </div>
-          {warnLow && (
+          {/* The warning sits BESIDE the amount, not under it.
+              This bar is h-full inside a fixed grid row, so it cannot grow: a
+              third line pushed the warning onto — and past — the bottom border.
+              Keeping the block at two lines means the warning appearing never
+              changes the height, so there is nothing to overflow. */}
+          <div className="flex items-baseline" style={{ gap: "0.6vw", minWidth: 0 }}>
             <div
-              role="status"
+              className="font-bold text-white flex-shrink-0"
               style={{
-                fontSize: "clamp(8px, 1vh, 11px)",
-                fontWeight: 600,
-                color: "#fb2c36",
-                opacity: 0.6,
-                lineHeight: 1.2,
-                marginTop: 2,
-                maxWidth: "16vw",
+                fontSize: "clamp(18px, 2.4vh, 30px)",
+                fontVariantNumeric: "tabular-nums",
+                fontFeatureSettings: '"tnum"',
+                ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
               }}
             >
-              {warnLowText}
+              {formatted}
             </div>
-          )}
+            {warnLow && (
+              <div
+                role="status"
+                style={{
+                  fontSize: "clamp(9px, 1.1vh, 12px)",
+                  fontWeight: 600,
+                  color: "#fb2c36",
+                  opacity: 0.85,
+                  lineHeight: 1.2,
+                  // Truncate rather than wrap: a second line would put the
+                  // height back exactly where it started.
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  minWidth: 0,
+                  // The whole left group is flex-shrink-0, so without a ceiling
+                  // this would widen the group and shove CLEAR BETS instead of
+                  // truncating. Full text stays available on hover.
+                  maxWidth: "clamp(140px, 16vw, 300px)",
+                }}
+                title={warnLowText}
+              >
+                {warnLowText}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
