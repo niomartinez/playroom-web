@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Undo2 } from "lucide-react";
+import { useDisplayBalance } from "@/lib/use-display-balance";
 import { useGame } from "@/lib/game-context";
 import { useSessionCut } from "@/lib/session-cut";
 import { useIsMobile } from "@/lib/use-mobile";
@@ -34,79 +36,6 @@ const SEAT_WARN_KEYFRAMES = `
   [style*="prg-balance-pulse"] { animation: none !important; color: #fb2c36 !important; }
 }
 `;
-
-/** Post-settlement odometer crawl on the balance number (wins + losses). */
-const BALANCE_CRAWL_DURATION_MS = 1500;
-/** Quick tick for small balance changes (e.g. placing a chip). */
-const BALANCE_CRAWL_FAST_DURATION_MS = 300;
-/** Above this delta, we treat the change as "settlement-sized" -> long crawl. */
-const BALANCE_CRAWL_FAST_THRESHOLD = 1000;
-
-/**
- * Smoothly animates a `displayed` balance toward the live `target` balance.
- * Uses requestAnimationFrame interpolation. Picks a longer duration for
- * settlement-sized changes (>$1k) and a fast tick for chip-sized changes
- * so individual bet placements feel snappy.
- */
-function useDisplayBalance(target: number): number {
-  const [display, setDisplay] = useState(target);
-  const fromRef = useRef(target);
-  const startRef = useRef(0);
-  const durationRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const hasInitRef = useRef(false);
-
-  useEffect(() => {
-    // First non-zero target: snap, don't animate. The GameContext balance
-    // starts at 0 and gets populated by the balance WS later — we don't want
-    // a 1.5s odometer crawl from $0 -> balance on initial page load.
-    if (!hasInitRef.current && target !== 0) {
-      hasInitRef.current = true;
-      fromRef.current = target;
-      setDisplay(target);
-      return;
-    }
-
-    // First mount: snap immediately.
-    if (display === target && fromRef.current === target) return;
-
-    const delta = Math.abs(target - display);
-    const duration =
-      delta >= BALANCE_CRAWL_FAST_THRESHOLD
-        ? BALANCE_CRAWL_DURATION_MS
-        : BALANCE_CRAWL_FAST_DURATION_MS;
-
-    fromRef.current = display;
-    startRef.current = performance.now();
-    durationRef.current = duration;
-
-    const tick = (now: number) => {
-      const elapsed = now - startRef.current;
-      const t = Math.min(1, elapsed / durationRef.current);
-      // ease-out cubic — feels good for an odometer
-      const eased = 1 - Math.pow(1 - t, 3);
-      const next = fromRef.current + (target - fromRef.current) * eased;
-      setDisplay(next);
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        setDisplay(target);
-        rafRef.current = null;
-      }
-    };
-
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target]);
-
-  return display;
-}
 
 export default function BalanceBar() {
   const { balance, balanceLoaded, currency, selectedChip, setSelectedChip, chipMultiplier, setChipMultiplier, roundStatus, placedBets, cancelPlacedBets, token, minSeatBalance } = useGame();
@@ -211,14 +140,15 @@ export default function BalanceBar() {
           {/* CLEAR at the HEAD of the row, ×2 at the tail — the two actions
               bracket the denominations instead of competing with them. Both are
               deliberately smaller than a chip (42 vs 50): they are occasional
-              controls, while the chips are what a thumb has to hit accurately,
-              so the chips get the room. Rendered only while betting is open and
-              inert until there is something to clear. */}
-          {isBettingOpen && (
-            <button
+              controls, while the chips are what a thumb has to hit accurately.
+
+              ALWAYS rendered, only disabled. Showing/hiding it re-flowed the
+              whole chip row every time betting opened or closed, so the
+              denominations shifted under the player's thumb mid-tap. */}
+          <button
               type="button"
               onClick={cancelPlacedBets}
-              disabled={!hasPlacedBets}
+              disabled={!isBettingOpen || !hasPlacedBets}
               aria-label={t("balance.clearBets")}
               title={t("balance.clearBets")}
               style={{
@@ -240,22 +170,15 @@ export default function BalanceBar() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {/* Broom — sweeping the chips off the table. A bin read as
-                  destructive and the undo arrow was illegible at this size (a
-                  tiny circular arrow turns to mush at 16px); a broom keeps a
-                  distinct silhouette when small. */}
-              <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 5l-7 7" />
-                <path d="M14 8.5l3.5 3.5" />
-                <path d="M12.5 10.5 6 17l3 3 6.5-6.5z" />
-                <path d="M7.5 15.5 10 18" />
-                <path d="M5 21l1-1" />
-              </svg>
+              {/* Lucide's Undo2 — a real icon from a real set, rather than SVG
+                  paths hand-drawn here. Reads as "take it back", which is what
+                  this does, and stays legible at 17px where my earlier attempts
+                  did not. */}
+              <Undo2 size={17} strokeWidth={2.1} />
               <span style={{ fontSize: 6.5, fontWeight: 800, letterSpacing: 0.3 }}>
                 {t("balance.clear")}
               </span>
             </button>
-          )}
 
           {CHIPS.map((chip) => {
             const isSelected = selectedChip === chip.value;

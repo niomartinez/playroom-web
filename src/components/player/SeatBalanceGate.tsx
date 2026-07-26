@@ -31,8 +31,20 @@ export default function SeatBalanceGate() {
     minSeatBalance,
     placedBets,
     lobbyUrl,
+    currentRound,
   } = useGame();
   const t = useT();
+
+  // Short round reference for the dialog below — players screenshot these when
+  // they think a kick was wrong, and without it the screenshot says nothing
+  // about WHICH round it happened in.
+  const roundRef = (() => {
+    const raw = currentRound?.roundNumber ?? currentRound?.roundId;
+    if (raw == null) return null;
+    const v = String(raw);
+    return v.startsWith("ROUND-") ? v.slice(6) : v;
+  })();
+
 
   // Effective thresholds — server value, with the off-prod QA URL override.
   const { enter, block } = resolveMinSeatBalance(minSeatBalance);
@@ -180,6 +192,35 @@ export default function SeatBalanceGate() {
             universal cashier to send a player to — each operator funds its own
             players on its own site. "Back to lobby" is the only action we can
             honour for everyone. */}
+        {/* Round reference, small: players screenshot this dialog when they
+            think a kick was wrong, and without it the screenshot says nothing
+            about WHICH round it happened in. */}
+        {roundRef && (
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 10,
+              letterSpacing: 0.4,
+              color: "#4a5565",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            # {roundRef}
+          </div>
+        )}
+        {roundRef && (
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 10,
+              letterSpacing: 0.4,
+              color: "#4a5565",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            # {roundRef}
+          </div>
+        )}
         <button
           onClick={returnToSite}
           style={{

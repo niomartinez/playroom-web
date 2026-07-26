@@ -117,9 +117,10 @@ export default function RoundCountdown() {
           position: "relative",
           // Smaller than the old centrepiece — it no longer needs to read from
           // across the table, just from the corner.
-          width: "min(18vw, 13vh)",
-          minWidth: 66,
-          maxWidth: 132,
+          // Slightly smaller dial — it was crowding the corner of the picture.
+          width: "min(15vw, 11vh)",
+          minWidth: 58,
+          maxWidth: 112,
           aspectRatio: "1 / 1",
         }}
       >
@@ -164,7 +165,13 @@ export default function RoundCountdown() {
             justifyContent: "center",
             fontWeight: 800,
             lineHeight: 1,
-            fontSize: "clamp(24px, 6.4vh, 56px)",
+            // Two digits need to be narrower than one or they touch the ring;
+            // the number is the only thing here so it can afford a touch less
+            // size rather than overflow the circle it sits in.
+            fontSize:
+              (remaining ?? 0) >= 10
+                ? "clamp(18px, 4.6vh, 40px)"
+                : "clamp(20px, 5.2vh, 46px)",
             fontVariantNumeric: "tabular-nums",
             color: urgent ? "rgba(255,92,100,0.98)" : "rgba(255,255,255,0.95)",
             textShadow: "0 2px 12px rgba(0,0,0,0.85)",

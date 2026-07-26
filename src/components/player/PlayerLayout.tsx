@@ -2,6 +2,8 @@
 
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame } from "@/lib/game-context";
+import { useIdleSession } from "@/lib/use-idle-kick";
+import { useCountdown } from "@/lib/use-countdown";
 import { useFeatures } from "@/lib/use-features";
 import PlayerHeader from "./PlayerHeader";
 import LiveChat from "./LiveChat";
@@ -44,6 +46,23 @@ const BET_PANEL_STYLES = `
 .prg-bet-panel--open {
   animation: prgBetPanelPulse 2s ease-in-out infinite;
 }
+/* Red pulse — same rhythm, urgent colour. Used when the player is one or two
+   rounds from being kicked, and when the countdown itself has gone red. Both
+   mean "act now", so the panel should not be reassuring green while the clock
+   is red at the other side of the screen. */
+@keyframes prgBetPanelPulseUrgent {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(251, 44, 54, 0.55), 0 0 14px rgba(251, 44, 54, 0.35);
+    border-color: rgba(251, 44, 54, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(251, 44, 54, 0.95), 0 0 28px rgba(251, 44, 54, 0.75);
+    border-color: rgba(251, 44, 54, 0.95);
+  }
+}
+.prg-bet-panel--urgent {
+  animation: prgBetPanelPulseUrgent 1.4s ease-in-out infinite;
+}
 .prg-bet-panel--closed {
   border-color: rgba(54, 65, 83, 0.6) !important;
   box-shadow: none;
@@ -61,7 +80,19 @@ export default function PlayerLayout() {
   const dealing = roundStatus === "dealing" || roundStatus === "result";
 
   const isBettingOpen = roundStatus === "betting_open";
-  const panelClass = isBettingOpen ? "prg-bet-panel--open" : "prg-bet-panel--closed";
+  // The panel turns red when there is a reason to hurry: an idle warning is
+  // active (a round or two from losing the seat) OR the countdown has gone red.
+  // RoundCountdown flips red at <= 5s, so the same threshold is used here rather
+  // than a second, differing definition of "urgent".
+  const { warnLevel } = useIdleSession();
+  const secondsLeft = useCountdown();
+  const clockUrgent = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 5;
+  const urgent = isBettingOpen && (warnLevel > 0 || clockUrgent);
+  const panelClass = !isBettingOpen
+    ? "prg-bet-panel--closed"
+    : urgent
+      ? "prg-bet-panel--urgent"
+      : "prg-bet-panel--open";
 
   if (isMobile) {
     return (

@@ -15,8 +15,19 @@ import { sendToParent } from "@/lib/iframe-bridge";
  * manually. Fixed-position, so it can be rendered as a sibling of the layout.
  */
 export default function SessionGuard() {
-  const { roundStatus, lobbyUrl } = useGame();
+  const { roundStatus, lobbyUrl, currentRound } = useGame();
   const t = useT();
+
+  // Short round reference for the dialog below — players screenshot these when
+  // they think a kick was wrong, and without it the screenshot says nothing
+  // about WHICH round it happened in.
+  const roundRef = (() => {
+    const raw = currentRound?.roundNumber ?? currentRound?.roundId;
+    if (raw == null) return null;
+    const v = String(raw);
+    return v.startsWith("ROUND-") ? v.slice(6) : v;
+  })();
+
   const { warnLevel, expired } = useIdleSession();
 
   const showWarn = !expired && warnLevel > 0 && roundStatus === "betting_open";
@@ -145,6 +156,35 @@ export default function SessionGuard() {
                 already rejoins, and offering a button for it invited players to
                 press that instead of the one action we can always honour.
                 Back to lobby is the only control here. */}
+            {/* Round reference, small: players screenshot this dialog when they
+                think a kick was wrong, and without it the screenshot says nothing
+                about WHICH round it happened in. */}
+            {roundRef && (
+              <div
+                style={{
+                  marginTop: 14,
+                  fontSize: 10,
+                  letterSpacing: 0.4,
+                  color: "#4a5565",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                # {roundRef}
+              </div>
+            )}
+            {roundRef && (
+              <div
+                style={{
+                  marginTop: 14,
+                  fontSize: 10,
+                  letterSpacing: 0.4,
+                  color: "#4a5565",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                # {roundRef}
+              </div>
+            )}
             <button
               onClick={returnToSite}
               style={{

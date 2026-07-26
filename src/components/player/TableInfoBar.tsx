@@ -3,6 +3,7 @@
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { formatMoney, symbolFor } from "@/lib/currency";
+import { useDisplayBalance } from "@/lib/use-display-balance";
 
 /**
  * The strip under the table, modelled on Evolution's.
@@ -42,7 +43,13 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
   // The round's staked total — the sum of what is actually on the table now.
   // Recomputed from placedBets rather than tracked separately so it can never
   // drift from the chips the player can see.
-  const totalBet = placedBets.reduce((sum, b) => sum + (b.amount || 0), 0);
+  const rawTotalBet = placedBets.reduce((sum, b) => sum + (b.amount || 0), 0);
+
+  // Both numbers keep the odometer crawl they had before moving down here —
+  // money changing should be watchable, not a jump cut. Same hook BalanceBar
+  // uses (extracted to a lib so the two can't drift).
+  const totalBet = useDisplayBalance(rawTotalBet);
+  const shownBalance = useDisplayBalance(balance);
 
   // Evolution shows a short round reference, not the full internal id. Our
   // roundNumber is sometimes "ROUND-1234…" — trim it to the meaningful tail so a
@@ -107,7 +114,7 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
           <span style={{ whiteSpace: "nowrap" }}>
             <span style={label}>{t("info.balance")} </span>
             <span style={value}>
-              {balanceLoaded ? formatMoney(balance, currency) : "—"}
+              {balanceLoaded ? formatMoney(shownBalance, currency) : "—"}
             </span>
           </span>
         )}
