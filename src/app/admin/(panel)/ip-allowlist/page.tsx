@@ -5,6 +5,7 @@ import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
 import { useToast } from "@/lib/toast-context";
+import { isApiOk, apiErrorMessage } from "@/lib/api-result";
 
 /** Gate names the backend accepts. Must match proxy.ts ipGateSurface() and the
  *  ip_allowlist_surfaces_valid CHECK constraint. The OCMS partner portal is
@@ -114,8 +115,8 @@ export default function IPAllowlistPage() {
           ),
         },
       );
-      const json = await res.json();
-      if (res.ok && !json.error_code) {
+      const json = await res.json().catch(() => null);
+      if (isApiOk(res, json)) {
         toast({
           type: "success",
           message: editingEntry ? "Entry updated" : `${ip.trim()} added`,
@@ -125,7 +126,7 @@ export default function IPAllowlistPage() {
         resetForm();
         fetchEntries();
       } else {
-        toast({ type: "error", message: json.message || "Could not save" });
+        toast({ type: "error", message: apiErrorMessage(json, "Could not save") });
       }
     } catch {
       toast({ type: "error", message: "Could not save" });
@@ -140,13 +141,13 @@ export default function IPAllowlistPage() {
       const res = await fetch(`/api/admin/ip-allowlist/${entry.id}`, {
         method: "DELETE",
       });
-      const json = await res.json();
-      if (res.ok && !json.error_code) {
+      const json = await res.json().catch(() => null);
+      if (isApiOk(res, json)) {
         toast({ type: "success", message: `${entry.ip_address} removed` });
         setConfirmDelete(null);
         fetchEntries();
       } else {
-        toast({ type: "error", message: json.message || "Could not remove" });
+        toast({ type: "error", message: apiErrorMessage(json, "Could not remove") });
       }
     } catch {
       toast({ type: "error", message: "Could not remove" });
