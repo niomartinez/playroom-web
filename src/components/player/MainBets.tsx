@@ -8,6 +8,7 @@ import { dispatchChipFly } from "@/lib/chip-fly";
 import { symbolFor } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
+import PadCards, { PAD_CARD_KEYFRAMES } from "./PadCards";
 import { useToast } from "@/lib/toast-context";
 
 const BETS: Array<{
@@ -76,6 +77,19 @@ export default function MainBets() {
   const { placeBet, moveMainBet, isBettingOpen, isOpposingBlocked, placedBets, selectedChip, effectiveChip } = useBetting();
   const { toast } = useToast();
   const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound, stackedChips } = useGame();
+
+  /**
+   * Once the cards come out, the pads stop being a betting surface and become
+   * the hand.
+   *
+   * Staked totals, player counts and share percentages only matter while a
+   * player can still act on them; after betting closes they are noise sitting
+   * exactly where the cards want to be. So from `dealing` until the next round
+   * opens we hide the chips and every number, and give the Player and Banker
+   * pads over to the draw. `waiting`/`betting_open` restore the normal face,
+   * which is also the reset — there is no separate teardown to get wrong.
+   */
+  const showCards = roundStatus === "dealing" || roundStatus === "result";
   const isMobile = useIsMobile();
   const t = useT();
   const sym = symbolFor(currency);
@@ -400,7 +414,7 @@ export default function MainBets() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <BetStackedChips betCode={bet.betCode} />
+              {!showCards && <BetStackedChips betCode={bet.betCode} />}
               {/* Marble texture overlay */}
               <div
                 style={{
@@ -430,6 +444,28 @@ export default function MainBets() {
                   boxSizing: "border-box",
                 }}
               >
+                {showCards && bet.betCode !== "BAC_Tie" ? (
+                  /* The hand takes the pad over: cards + score for this side. */
+                  <PadCards
+                    side={bet.betCode === "BAC_Player" ? "player" : "banker"}
+                    compact
+                  />
+                ) : showCards ? (
+                  /* Tie has no cards of its own — keep the label only, so the
+                     middle pad doesn't sit empty while the sides fill. */
+                  <span
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "rgba(255,255,255,0.85)",
+                      letterSpacing: 0.4,
+                      margin: "auto",
+                    }}
+                  >
+                    {bet.abbrev}
+                  </span>
+                ) : (
+                  <>
                 {/* Bet name abbreviation — dominant element */}
                 <span
                   style={{
@@ -508,6 +544,8 @@ export default function MainBets() {
                     }}
                   />
                 </div>
+                  </>
+                )}
               </div>
             </button>
           );
@@ -558,12 +596,25 @@ export default function MainBets() {
               touchAction: myTotal > 0 ? "none" : undefined,
             }}
           >
-            <BetStackedChips betCode={bet.betCode} size={22} />
+            {!showCards && <BetStackedChips betCode={bet.betCode} size={22} />}
             <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ borderRadius: "0.7vw" }}>
               <div className="absolute inset-0" style={{ backgroundImage: bet.gradient, borderRadius: "0.7vw" }} />
               <img alt="" className="absolute inset-0 w-full h-full object-cover" style={{ mixBlendMode: "color-burn", borderRadius: "0.7vw" }} src="/texture.png" />
             </div>
 
+            {showCards ? (
+              /* Drawing/result: the pad becomes the hand. Player and Banker get
+                 their cards + score; Tie keeps only its label so the middle pad
+                 doesn't sit empty while the sides fill. */
+              <div className="relative z-10 w-full h-full flex flex-col items-center justify-center" style={{ padding: "0.6vh 0.8vw", gap: "0.4vh" }}>
+                <div className="font-bold text-white/85 text-center leading-none" style={{ fontSize: "clamp(11px, 1.4vh, 18px)", letterSpacing: 0.4 }}>
+                  {t(bet.nameKey)}
+                </div>
+                {bet.betCode !== "BAC_Tie" && (
+                  <PadCards side={bet.betCode === "BAC_Player" ? "player" : "banker"} />
+                )}
+              </div>
+            ) : (
             <div className="relative z-10 w-full flex flex-col items-center justify-start h-full" style={{ padding: "0.6vh 0.8vw 3.2vh", gap: "0.3vh" }}>
               {/* Bet title */}
               <div className="font-bold text-white text-center leading-none" style={{ fontSize: "clamp(14px, 1.8vh, 24px)" }}>{t(bet.nameKey)}</div>
@@ -598,6 +649,7 @@ export default function MainBets() {
                 <span>{sharePct}%</span>
               </div>
             </div>
+            )}
           </button>
         );
       })}

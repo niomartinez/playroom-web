@@ -15,6 +15,7 @@ import DealVisualizer from "./DealVisualizer";
 import VideoPlayer from "./VideoPlayer";
 import RoundCountdown from "./RoundCountdown";
 import TableInfoBar from "./TableInfoBar";
+import { PAD_CARD_KEYFRAMES } from "./PadCards";
 import VideoQuickIcons from "./VideoQuickIcons";
 import WinnersMarquee from "./WinnersMarquee";
 import FlyingChips from "./FlyingChips";
@@ -54,6 +55,10 @@ export default function PlayerLayout() {
   const isMobile = useIsMobile();
   const { roundStatus, webrtcUrl, hlsUrl } = useGame();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
+  // While the hand is being dealt, give the video more room: betting is closed,
+  // so the bet panel has nothing the player can act on, and the deal is the only
+  // thing worth looking at. Restores itself when the next round opens.
+  const dealing = roundStatus === "dealing" || roundStatus === "result";
 
   const isBettingOpen = roundStatus === "betting_open";
   const panelClass = isBettingOpen ? "prg-bet-panel--open" : "prg-bet-panel--closed";
@@ -74,18 +79,23 @@ export default function PlayerLayout() {
         }}
       >
         <style>{BET_PANEL_STYLES}</style>
+      <style>{PAD_CARD_KEYFRAMES}</style>
+        <style>{PAD_CARD_KEYFRAMES}</style>
 
         {/* Header — sticky */}
         <div style={{ position: "sticky", top: 0, zIndex: 50 }}>
           <PlayerHeader />
         </div>
 
-        {/* Video / Deal area — 16:9 */}
+        {/* Video / Deal area — 16:9, widening to 4:3 while the hand is dealt so
+            the deal gets more of a small screen. Animated on aspect-ratio so the
+            page below reflows smoothly instead of snapping. */}
         <div
           style={{
             position: "relative",
             width: "100%",
-            aspectRatio: "16 / 9",
+            aspectRatio: dealing ? "4 / 3" : "16 / 9",
+            transition: "aspect-ratio 0.45s cubic-bezier(0.4, 0, 0.2, 1)",
             background: "#000",
             overflow: "hidden",
             flexShrink: 0,
@@ -168,7 +178,8 @@ export default function PlayerLayout() {
         // 4th row = the bottom info strip. Declared EXPLICITLY: adding a
         // fourth child to a three-row template made the grid invent an
         // implicit row and collapsed the video row into a huge gap.
-        gridTemplateRows: "5.5vh 1fr 30vh auto",
+        gridTemplateRows: dealing ? "5.5vh 1fr 20vh auto" : "5.5vh 1fr 30vh auto",
+        transition: "grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1)",
         background: "#0a0f1a",
       }}
     >
