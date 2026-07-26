@@ -9,6 +9,8 @@ export interface ChatMessage {
   user: string;
   text: string;
   time: string;
+  /** Locally-generated notice shown only to this player; never broadcast. */
+  system?: boolean;
 }
 
 interface UseChatWsResult {
@@ -77,7 +79,28 @@ export function useChatWs(): UseChatWsResult {
               return next.length > 100 ? next.slice(-100) : next;
             });
           } else if (type === "error") {
-            setLastError(String(data.message ?? "Chat error"));
+            const text = String(data.message ?? "Chat error");
+            if (data.code === "min_wager") {
+              // The wager gate gets a SYSTEM LINE in the transcript rather than
+              // a toast that vanishes in 4 seconds: it tells the player what to
+              // do, and they should still be able to read it after looking away.
+              // The server sent this on our socket only, so no one else sees it.
+              setMessages((prev) => {
+                const next = [
+                  ...prev,
+                  {
+                    id: `sys-${Date.now()}`,
+                    user: "System",
+                    text,
+                    time: new Date().toISOString(),
+                    system: true,
+                  } as ChatMessage,
+                ];
+                return next.length > 100 ? next.slice(-100) : next;
+              });
+              return;
+            }
+            setLastError(text);
             // auto-clear after 4s
             setTimeout(() => setLastError(null), 4000);
           }

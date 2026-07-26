@@ -57,6 +57,9 @@ export default function SettingsPage() {
   const [seatBlock, setSeatBlock] = useState("1000");
   const [seatWarn, setSeatWarn] = useState("2000");
 
+  /* Minimum wagered before a player may use live chat. 0 = off. */
+  const [chatMinWager, setChatMinWager] = useState("500");
+
   /* Danger zone */
   const [showForceClose, setShowForceClose] = useState(false);
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
@@ -106,6 +109,11 @@ export default function SettingsPage() {
                 if (p.expire != null) setIdleExpire(String(p.expire));
                 setIdleWarn1(p.warn1 != null ? String(p.warn1) : "");
                 setIdleWarn2(p.warn2 != null ? String(p.warn2) : "");
+              }
+              break;
+            case "chat_min_wager":
+              if (typeof val === "number" || typeof val === "string") {
+                setChatMinWager(String(val));
               }
               break;
             case "min_seat_balance":
@@ -419,6 +427,47 @@ export default function SettingsPage() {
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "player_idle_policy" ? "Applying..." : "Apply"}
+        </button>
+      </div>
+
+      {/* Chat minimum wager */}
+      <div
+        className="rounded-xl p-6 space-y-4"
+        style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
+            Live chat minimum wager
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            How much a player must have <strong>wagered</strong> (accepted +
+            settled bets, lifetime) before they may send chat messages. Chat is
+            the one place a visitor can address every seated player, so access is
+            earned by playing — a funded balance that never bets does not count.
+            A player under the bar gets a private system line telling them the
+            amount; nobody else sees it. Set <strong>0</strong> to let everyone
+            chat.
+          </p>
+        </div>
+        <div className="max-w-xs">
+          <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+            Minimum wagered (PHP)
+          </label>
+          <input
+            type="number" min={0} step={50}
+            value={chatMinWager}
+            onChange={(e) => setChatMinWager(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            style={inputStyle}
+          />
+        </div>
+        <button
+          onClick={() => saveKey("chat_min_wager", Math.max(0, Number(chatMinWager) || 0))}
+          disabled={saving === "chat_min_wager"}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          style={{ backgroundColor: "#f0b100" }}
+        >
+          {saving === "chat_min_wager" ? "Applying..." : "Apply"}
         </button>
       </div>
 

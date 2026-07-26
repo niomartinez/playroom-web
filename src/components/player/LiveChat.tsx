@@ -311,12 +311,22 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
               <div key={msg.id} className="flex gap-[10px]">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="font-semibold text-[11px] text-white truncate max-w-[140px]">{msg.user}</span>
+                    <span
+                      className="font-semibold text-[11px] truncate max-w-[140px]"
+                      style={{ color: msg.system ? "#f0b100" : "#fff" }}
+                    >
+                      {msg.user}
+                    </span>
                     <span className="text-[10px] text-[#6a7282]">{fmtTime(msg.time)}</span>
                   </div>
                   <div
                     className="rounded-[12px] min-h-[28px] px-[10px] py-[6px] flex items-center"
-                    style={{ backgroundColor: "rgba(30,41,57, calc(var(--chat-opacity) + 0.2))" }}
+                    style={{
+                      backgroundColor: msg.system
+                        ? "rgba(240,177,0,0.14)"
+                        : "rgba(30,41,57, calc(var(--chat-opacity) + 0.2))",
+                      border: msg.system ? "1px solid rgba(240,177,0,0.35)" : undefined,
+                    }}
                   >
                     <span className="text-[12px] text-[#f3f4f6] break-words">{msg.text}</span>
                   </div>

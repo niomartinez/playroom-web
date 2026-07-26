@@ -682,7 +682,9 @@ export default function MobileChat() {
                         style={{
                           fontWeight: 600,
                           fontSize: 11,
-                          color: "#fff",
+                          // System notices are amber so a private message from
+                          // us is never mistaken for another player talking.
+                          color: msg.system ? "#f0b100" : "#fff",
                           maxWidth: 160,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -700,7 +702,10 @@ export default function MobileChat() {
                         padding: "6px 10px",
                         display: "flex",
                         alignItems: "center",
-                        backgroundColor: "rgba(30,41,57, calc(var(--chat-opacity) + 0.28))",
+                        backgroundColor: msg.system
+                          ? "rgba(240,177,0,0.14)"
+                          : "rgba(30,41,57, calc(var(--chat-opacity) + 0.28))",
+                        border: msg.system ? "1px solid rgba(240,177,0,0.35)" : undefined,
                       }}
                     >
                       <span style={{ fontSize: 13, color: "#f3f4f6", wordBreak: "break-word" }}>{msg.text}</span>
