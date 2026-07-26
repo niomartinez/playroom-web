@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
@@ -26,7 +26,7 @@ interface OperatorOption {
   name: string;
 }
 
-export default function PlayersPage() {
+function PlayersPageInner() {
   const router = useRouter();
   const pageSize = 20;
 
@@ -242,5 +242,34 @@ export default function PlayersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+
+/**
+ * useSearchParams() forces a client-side bail-out during prerender, and Next
+ * fails the BUILD unless the component reading it sits under a Suspense
+ * boundary. Filters live in the URL now (see useUrlFilters), so every page that
+ * adopts that pattern needs this wrapper.
+ *
+ * The fallback is the same skeleton state the table shows while loading, so the
+ * boundary is invisible in practice — it exists to satisfy prerendering, not to
+ * introduce a second loading look.
+ */
+export default function PlayersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <h1 className="text-2xl font-bold text-white">Players</h1>
+          <div
+            className="rounded-xl"
+            style={{ height: 360, backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
+          />
+        </div>
+      }
+    >
+      <PlayersPageInner />
+    </Suspense>
   );
 }
