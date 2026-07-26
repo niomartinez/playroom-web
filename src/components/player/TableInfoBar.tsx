@@ -100,7 +100,10 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
           <span style={label}>{t("info.totalBet")} </span>
           <span style={value}>{formatMoney(totalBet, currency)}</span>
         </span>
-        {token !== "demo" && (
+        {/* Balance appears here only on MOBILE, where it was removed from the
+            chip row to give the denominations room. Desktop still shows it in
+            BalanceBar, so repeating it here would just be clutter. */}
+        {fixed && token !== "demo" && (
           <span style={{ whiteSpace: "nowrap" }}>
             <span style={label}>{t("info.balance")} </span>
             <span style={value}>

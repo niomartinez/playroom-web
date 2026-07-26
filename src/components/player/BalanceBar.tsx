@@ -174,31 +174,32 @@ export default function BalanceBar() {
             balance) — sits above the chips so the two live controls bracket
             the row. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-            <img
-              src="/mobile-assets/balance-icon.png"
-              alt={t("balance.label")}
-              style={{ width: 16, height: 16, flexShrink: 0 }}
-            />
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 400, color: "#99A1AF" }}>
-                {t("balance.label")}
-              </span>
-              <span
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  lineHeight: 1,
-                  fontVariantNumeric: "tabular-nums",
-                  fontFeatureSettings: '"tnum"',
-                  ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
-                }}
-              >
-                {formatted}
-              </span>
+          {/* MOBILE ONLY: the balance moved out of the chip area and into
+              TableInfoBar (pinned bottom-left, Evolution-style). It was the
+              widest thing in this row and squeezed the chip denominations, which
+              are what a player actually needs to hit accurately on a phone.
+              Desktop keeps its balance where it was. A low-balance warning still
+              shows here, as a compact one-liner. */}
+          {warnLow ? (
+            <div
+              role="status"
+              style={{
+                minWidth: 0,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#fb2c36",
+                lineHeight: 1.2,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                animation: "prg-balance-pulse 1.2s ease-in-out infinite",
+              }}
+            >
+              {warnLowText}
             </div>
-          </div>
+          ) : (
+            <div />
+          )}
           {isBettingOpen && (
             <button
               onClick={cancelPlacedBets}
@@ -355,32 +356,45 @@ export default function BalanceBar() {
         gap: "0.5vw",
       }}
     >
-      {/* Balance moved OUT of the chip row and into TableInfoBar (bottom-left,
-          Evolution-style). It was the widest element here and squeezed the chip
-          denominations on narrow phones — the chips are what players actually
-          need to hit accurately, so they get the room.
-
-          The low-balance warning stays, but as a compact one-liner: it used to
-          wrap to three lines on a phone and shove the chip row down mid-hand. */}
-      <style>{SEAT_WARN_KEYFRAMES}</style>
-      {warnLow && (
-        <div
-          role="status"
-          className="flex-shrink min-w-0"
-          style={{
-            fontSize: "clamp(8px, 1vh, 11px)",
-            fontWeight: 700,
-            color: "#fb2c36",
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            animation: "prg-balance-pulse 1.2s ease-in-out infinite",
-          }}
-        >
-          {warnLowText}
+      <div className="flex items-center flex-shrink-0" style={{ gap: "0.7vw" }}>
+        <img
+          src="/mobile-assets/balance-icon.png"
+          alt={t("balance.label")}
+          className="flex-shrink-0"
+          style={{ width: "clamp(28px, 3.4vh, 48px)", height: "clamp(28px, 3.4vh, 48px)" }}
+        />
+        <style>{SEAT_WARN_KEYFRAMES}</style>
+        <div>
+          <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>{t("balance.label")}</div>
+          <div
+            className="font-bold text-white"
+            style={{
+              fontSize: "clamp(18px, 2.4vh, 30px)",
+              fontVariantNumeric: "tabular-nums",
+              fontFeatureSettings: '"tnum"',
+              ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
+            }}
+          >
+            {formatted}
+          </div>
+          {warnLow && (
+            <div
+              role="status"
+              style={{
+                fontSize: "clamp(8px, 1vh, 11px)",
+                fontWeight: 600,
+                color: "#fb2c36",
+                opacity: 0.6,
+                lineHeight: 1.2,
+                marginTop: 2,
+                maxWidth: "16vw",
+              }}
+            >
+              {warnLowText}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {isBettingOpen && (
         <button
