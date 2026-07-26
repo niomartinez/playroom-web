@@ -43,7 +43,6 @@ const STYLES = `
   68% { transform: rotate(-3deg); }
   82% { transform: rotate(1deg); }
 }
-.prg-chat-wiggle { animation: prgChatWiggle 0.7s ease-in-out; transform-origin: 50% 55%; }
 @keyframes prgChatBadgePop {
   0% { transform: scale(0.4); opacity: 0; }
   60% { transform: scale(1.18); }
@@ -166,7 +165,6 @@ export default function MobileChat() {
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const [unread, setUnread] = useState(0);
-  const [wiggling, setWiggling] = useState(false);
   // #7 — recent messages that float over the feed while the sheet is closed.
   const [floating, setFloating] = useState<{ key: string; user: string; text: string; expires: number }[]>([]);
   // #12 — chat settings sub-view + the player's current screen name.
@@ -289,11 +287,18 @@ export default function MobileChat() {
     }
   }, [messages, isOpen]);
 
-  // Wiggle the button whenever a fresh unread arrives while closed.
+  // Opened from the hamburger (PlayerMenu) now that the floating button is gone.
   useEffect(() => {
-    if (unread > prevUnreadRef.current && !isOpen) setWiggling(true);
+    const onOpen = () => openSheet();
+    window.addEventListener("prg:open-chat", onOpen);
+    return () => window.removeEventListener("prg:open-chat", onOpen);
+  });
+
+  // `unread` still drives which recent lines float over the feed; the button
+  // wiggle it also fed is gone with the button.
+  useEffect(() => {
     prevUnreadRef.current = unread;
-  }, [unread, isOpen]);
+  }, [unread]);
 
   // #7 — while the sheet is closed, surface newly-arrived messages as
   // transient bubbles over the feed (the last 3, each auto-expiring).
@@ -354,7 +359,6 @@ export default function MobileChat() {
 
   const openSheet = () => {
     setIsOpen(true);
-    setWiggling(false);
   };
 
   const closeSheet = () => {
@@ -464,83 +468,17 @@ export default function MobileChat() {
     willChange: "transform, height",
   } as CSSProperties;
 
-  const badgeText = unread > 99 ? "99+" : String(unread);
   const sendDisabled = !connected || !draft.trim() || cooldownLeft > 0;
 
   return (
     <>
       <style>{STYLES}</style>
 
-      {/* Floating chat button (closed state) */}
-      {!isOpen && (
-        <button
-          onClick={openSheet}
-          aria-label={unread > 0 ? t("chat.newMessages", { count: unread }) : t("chat.title")}
-          className="prg-chat-fab-in"
-          style={{
-            position: "fixed",
-            right: "calc(env(safe-area-inset-right, 0px) + 16px)",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-            zIndex: 60,
-            width: 58,
-            height: 58,
-            borderRadius: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "rgba(18,26,42,0.55)",
-            backdropFilter: "blur(16px) saturate(140%)",
-            WebkitBackdropFilter: "blur(16px) saturate(140%)",
-            border: "1px solid rgba(255,255,255,0.16)",
-            boxShadow:
-              "0 8px 24px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -8px 18px rgba(0,0,0,0.28)",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <span
-            className={wiggling ? "prg-chat-wiggle" : undefined}
-            onAnimationEnd={() => setWiggling(false)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth={2}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 10.5h8M8 13.5h5M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
-          </span>
-          {unread > 0 && (
-            <span
-              key={unread}
-              className="prg-chat-badge"
-              style={{
-                position: "absolute",
-                top: -3,
-                right: -3,
-                minWidth: 22,
-                height: 22,
-                padding: "0 6px",
-                borderRadius: 9999,
-                background: "#fb2c36",
-                border: "2px solid #0a0f1a",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 800,
-                lineHeight: "18px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {badgeText}
-            </span>
-          )}
-        </button>
-      )}
+      {/* The floating chat button and its unread badge were removed: on a phone
+          the bubble sat over the bet pads and the red count competed with the
+          game for attention. Chat now opens from the hamburger menu, which is
+          where every other secondary action already lives. The sheet itself is
+          unchanged — see the `prg:open-chat` listener above. */}
 
       {/* #7 — floating recent messages over the feed while the sheet is closed */}
       {!isOpen && floating.length > 0 && (

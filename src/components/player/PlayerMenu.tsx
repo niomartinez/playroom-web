@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
+import { useFeatures } from "@/lib/use-features";
 import { useT, type TFunction } from "@/lib/i18n";
 import { formatBalance, formatMoney } from "@/lib/currency";
 import {
@@ -103,6 +104,7 @@ function ChevronRight() {
 
 export default function PlayerMenu() {
   const isMobile = useIsMobile();
+  const { live_chat_enabled: liveChatEnabled } = useFeatures();
   const t = useT();
   const { currency, minBet, maxBet, token } = useGame();
   const [open, setOpen] = useState(false);
@@ -240,6 +242,23 @@ export default function PlayerMenu() {
                     {t("menu.soundVideo")}
                     <ChevronRight />
                   </button>
+                  {/* Chat lives here on MOBILE only: the floating bubble was
+                      removed because it sat over the bet pads. Desktop keeps its
+                      always-visible chat panel, so an entry here would be dead
+                      weight there. Hidden entirely when the operator has live
+                      chat switched off. */}
+                  {isMobile && liveChatEnabled && (
+                    <button
+                      style={rowBtn}
+                      onClick={() => {
+                        close();
+                        window.dispatchEvent(new CustomEvent("prg:open-chat"));
+                      }}
+                    >
+                      {t("chat.title")}
+                      <ChevronRight />
+                    </button>
+                  )}
                 </>
               )}
 
