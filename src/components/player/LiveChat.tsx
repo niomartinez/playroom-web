@@ -23,6 +23,15 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const t = useT();
   const [isOpen, setIsOpen] = useState(true);
   const [draft, setDraft] = useState("");
+
+  // The chat icon in the video's shortcut row toggles this panel, so a player
+  // who minimised chat can bring it back without hunting for the small
+  // reopen affordance.
+  useEffect(() => {
+    const onToggle = () => setIsOpen((v) => !v);
+    window.addEventListener("prg:toggle-chat", onToggle);
+    return () => window.removeEventListener("prg:toggle-chat", onToggle);
+  }, []);
   const [showOpacity, setShowOpacity] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0); // seconds remaining

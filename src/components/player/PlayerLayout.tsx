@@ -15,6 +15,7 @@ import DealVisualizer from "./DealVisualizer";
 import VideoPlayer from "./VideoPlayer";
 import RoundCountdown from "./RoundCountdown";
 import TableInfoBar from "./TableInfoBar";
+import VideoQuickIcons from "./VideoQuickIcons";
 import WinnersMarquee from "./WinnersMarquee";
 import FlyingChips from "./FlyingChips";
 import WinFlash from "./WinFlash";
@@ -184,6 +185,7 @@ export default function PlayerLayout() {
         <RoundCountdown />
         <WinnersMarquee />
         <LowBalanceGate />
+        <VideoQuickIcons />
         {liveChatEnabled && <LiveChat />}
       </div>
 

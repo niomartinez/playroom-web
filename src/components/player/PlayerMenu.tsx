@@ -110,6 +110,19 @@ export default function PlayerMenu() {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("root");
 
+  // The circular shortcuts over the video (VideoQuickIcons) open this panel
+  // straight at a view. They deliberately hold no panel markup of their own, so
+  // the two can never drift apart.
+  useEffect(() => {
+    const onOpenMenu = (e: Event) => {
+      const view = (e as CustomEvent<View>).detail;
+      setView(view && typeof view === "string" ? view : "root");
+      setOpen(true);
+    };
+    window.addEventListener("prg:open-menu", onOpenMenu);
+    return () => window.removeEventListener("prg:open-menu", onOpenMenu);
+  }, []);
+
   const close = () => {
     setOpen(false);
     setView("root");
