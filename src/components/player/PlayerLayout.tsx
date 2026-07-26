@@ -86,7 +86,12 @@ export default function PlayerLayout() {
   // than a second, differing definition of "urgent".
   const { warnLevel } = useIdleSession();
   const secondsLeft = useCountdown();
-  const clockUrgent = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 5;
+  // Note the missing `> 0`. The round stays `betting_open` for a moment after
+  // the clock reaches zero — the studio closes it server-side — and requiring a
+  // positive value meant the panel dropped out of urgent at 0 and flipped BACK to
+  // a calm green pulse for those seconds. Green after the clock has run out
+  // reads as "you still have time", which is the opposite of true.
+  const clockUrgent = secondsLeft !== null && secondsLeft <= 5;
   const urgent = isBettingOpen && (warnLevel > 0 || clockUrgent);
   const panelClass = !isBettingOpen
     ? "prg-bet-panel--closed"
@@ -120,6 +125,13 @@ export default function PlayerLayout() {
           position: "relative",
         }}
       >
+        {/* Keyframes for the bet-panel pulse and the pad card/win animations.
+            Both were lost when the felt backdrop layer was removed, which left
+            the panel pulse and the winner glow referencing animations that did
+            not exist — silently, since a missing @keyframes just does nothing. */}
+        <style>{BET_PANEL_STYLES}</style>
+        <style>{PAD_CARD_KEYFRAMES}</style>
+
         {/* Header — sticky */}
         {/* z ABOVE the pinned TableInfoBar (60). PlayerMenu renders inside this
             header, so the header's stacking context caps it: at 50 the menu's
@@ -205,8 +217,19 @@ export default function PlayerLayout() {
             minHeight: 96,
           }}
         >
-          {liveChatEnabled ? <MobileChat /> : <div />}
-          <WinnersMarquee inline />
+          {/* Each side gets its OWN wrapper with an explicit column.
+
+              Without them the grid had only one IN-FLOW child most of the time:
+              MobileChat's sheet is position:fixed (out of flow) and its floats
+              only exist while there are recent messages, so with the chat side
+              empty auto-placement put the winners in column 1 — i.e. on the
+              LEFT, which is exactly what it was moved off. */}
+          <div style={{ gridColumn: 1, minWidth: 0 }}>
+            {liveChatEnabled && <MobileChat />}
+          </div>
+          <div style={{ gridColumn: 2, minWidth: 0 }}>
+            <WinnersMarquee inline />
+          </div>
         </div>
 
         {/* Reserves room for the pinned TableInfoBar so it never covers content. */}
@@ -243,6 +266,7 @@ export default function PlayerLayout() {
       }}
     >
       <style>{BET_PANEL_STYLES}</style>
+      <style>{PAD_CARD_KEYFRAMES}</style>
 
       <PlayerHeader />
 

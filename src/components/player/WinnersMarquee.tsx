@@ -96,6 +96,7 @@ export default function WinnersMarquee({ inline = false }: { inline?: boolean })
           alignItems: "center",
           gap: 6,
           padding: inline ? "2px 2px 4px" : "6px 10px",
+          justifyContent: inline ? "flex-end" : undefined,
           borderBottom: inline ? "none" : "1px solid rgba(255,255,255,0.08)",
         }}
       >

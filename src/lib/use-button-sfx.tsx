@@ -11,6 +11,9 @@ import { buttonSfx } from "./audio/button-sfx";
  * so a click sound is guaranteed for every button regardless of what its
  * onClick does.
  *
+ * Disabled buttons are silent — a refused action must not sound like an
+ * accepted one.
+ *
  * Per-button behaviour, resolved from the nearest ancestor `<button>`:
  *   - `data-sfx="off"`   → silent (opt-out).
  *   - `data-sfx="press"`    → the heavier `press` sound.
@@ -35,6 +38,19 @@ export default function ButtonSfxProvider({ children }: { children: ReactNode })
       const target = e.target as Element | null;
       const btn = target?.closest?.("button");
       if (!btn) return;
+
+      // Never sound a control that can't be used. Tapping PLAYER while you
+      // already have money on BANKER is refused, but it still played the
+      // chip-on-felt sample — which tells the player the opposite of what
+      // happened. Engines differ on whether a disabled button (or a child of
+      // one) dispatches pointer events at all, so this is checked here rather
+      // than relied upon.
+      if (
+        (btn as HTMLButtonElement).disabled ||
+        btn.getAttribute("aria-disabled") === "true"
+      ) {
+        return;
+      }
 
       const mode = btn.getAttribute("data-sfx");
       if (mode === "off") return;

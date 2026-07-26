@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
+import { useChatFloats, FLOAT_FADE_MS } from "@/lib/use-chat-floats";
 import { useChatWs } from "@/lib/use-chat-ws";
 import { useT, type TFunction } from "@/lib/i18n";
 import {
@@ -164,7 +165,6 @@ export default function MobileChat() {
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const [unread, setUnread] = useState(0);
   // #7 — recent messages that float over the feed while the sheet is closed.
-  const [floating, setFloating] = useState<{ key: string; user: string; text: string; expires: number }[]>([]);
   // #12 — chat settings sub-view + the player's current screen name.
   const [showSettings, setShowSettings] = useState(false);
   const [myName, setMyName] = useState<string | null>(null);
@@ -298,41 +298,16 @@ export default function MobileChat() {
     prevUnreadRef.current = unread;
   }, [unread]);
 
-  // #7 — while the sheet is closed, surface newly-arrived messages as
-  // transient bubbles over the feed (the last 3, each auto-expiring).
-  useEffect(() => {
-    if (!hydratedRef.current) return;
-    if (isOpen) {
-      setFloating([]);
-      for (const m of messages) floatSeenIdsRef.current.add(m.id);
-      return;
-    }
-    // Fresh = ids not yet floated. Robust to the 100-cap and to a reconnect
-    // replacing the array: old ids are already in the set, so a reconnect
-    // never floods the feed with history, and the counter can't get stuck.
-    const fresh = messages.filter((m) => !floatSeenIdsRef.current.has(m.id));
-    if (fresh.length === 0) return;
-    for (const m of fresh) floatSeenIdsRef.current.add(m.id);
-    // Your OWN messages don't float back at you (spec). Best-effort by name —
-    // the only signal the wire gives us; when myName is unknown nothing is
-    // wrongly suppressed, it just can't filter yet.
-    const incoming = myName ? fresh.filter((m) => m.user !== myName) : fresh;
-    if (incoming.length === 0) return;
-    const now = Date.now();
-    setFloating((prev) =>
-      [...prev, ...incoming.map((m) => ({ key: m.id, user: m.user, text: m.text, expires: now + 5000 }))].slice(-3),
-    );
-  }, [messages, isOpen, myName]);
+  // Floats use the SHARED hook, same as desktop. Mobile had its own simpler
+  // copy — hard 5s expiry, max 3, no fade, no queue — which is why lines
+  // vanished noticeably faster here and a burst just dropped messages. One
+  // implementation means one behaviour: 5s fully opaque, 3s fade, at most 10 on
+  // screen and the rest queued.
+  //
+  // myName is null so your OWN lines float too. The old copy filtered them out,
+  // which is what made sending a message look like nothing happened.
+  const floating = useChatFloats(messages, !isOpen, null, historyLoaded);
 
-  // Prune expired floating bubbles.
-  useEffect(() => {
-    if (floating.length === 0) return;
-    const id = setInterval(() => {
-      const now = Date.now();
-      setFloating((prev) => (prev.some((f) => f.expires <= now) ? prev.filter((f) => f.expires > now) : prev));
-    }, 500);
-    return () => clearInterval(id);
-  }, [floating.length]);
 
   // Keep the newest message in view on new content / open / expand.
   useEffect(() => {
@@ -499,7 +474,12 @@ export default function MobileChat() {
             <div
               key={f.key}
               className="prg-float-msg"
-              style={{ padding: "1px 0", textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}
+              style={{
+                padding: "1px 0",
+                textShadow: "0 1px 3px rgba(0,0,0,0.95)",
+                opacity: f.fading ? 0 : 1,
+                transition: `opacity ${FLOAT_FADE_MS}ms linear`,
+              }}
             >
               <span style={{ fontSize: 10, fontWeight: 700, color: "#93b8ff", marginRight: 5 }}>{f.user}</span>
               <span style={{ fontSize: 11, color: "#f3f4f6", wordBreak: "break-word" }}>{f.text}</span>
