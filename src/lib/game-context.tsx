@@ -232,7 +232,9 @@ export interface GameState {
   /** Server-delivered idle thresholds (table state). null = use default. */
   idlePolicy: IdlePolicy | null;
   /** Server-delivered seat-balance thresholds (table state). null = default. */
-  minSeatBalance: MinSeatBalance | null;
+  /** Raw server thresholds; may omit `enter` on older configs.
+   *  Always read through resolveMinSeatBalance(), which fills + clamps. */
+  minSeatBalance: Partial<MinSeatBalance> | null;
 
   /* Setters — accept direct values or functional updaters */
   setWebrtcUrl: (u: string | null) => void;
@@ -283,7 +285,7 @@ export interface GameState {
   setRoundWinners: (w: RoundWinners | null) => void;
   setConfirmedBetRoundId: (id: string | null) => void;
   setIdlePolicy: (p: IdlePolicy | null) => void;
-  setMinSeatBalance: (p: MinSeatBalance | null) => void;
+  setMinSeatBalance: (p: Partial<MinSeatBalance> | null) => void;
 }
 
 const DEFAULT_ROADS: Roads = {
@@ -397,7 +399,7 @@ export function GameProvider({
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
   const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
-  const [minSeatBalance, setMinSeatBalance] = useState<MinSeatBalance | null>(null);
+  const [minSeatBalance, setMinSeatBalance] = useState<Partial<MinSeatBalance> | null>(null);
 
   // Reset the ×2 toggle at the start of each betting round. Fires only on the
   // transition INTO betting_open (roundStatus is a stable string within a

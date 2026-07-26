@@ -34,7 +34,15 @@ export default function SeatBalanceGate() {
   const t = useT();
 
   // Effective thresholds — server value, with the off-prod QA URL override.
-  const { block } = resolveMinSeatBalance(minSeatBalance);
+  const { enter, block } = resolveMinSeatBalance(minSeatBalance);
+
+  // Which floor applies right now mirrors the server (internal/bets.py):
+  //   money on the table  -> the keep-seat floor (`block`)
+  //   nothing on the table -> the buy-in floor (`enter`)
+  // Quoting `block` while actually refusing entry at `enter` is what made the
+  // dialog say "minimum balance 100" to a player blocked by a 500 entry bar.
+  const seated = placedBets.length > 0;
+  const required = seated ? block : enter;
 
   // Money already on the table buys the seat: a player who went all-in this
   // round is BELOW the floor immediately, but that stake is riding on the hand
@@ -45,13 +53,13 @@ export default function SeatBalanceGate() {
   // exempt while a bet is live/settling, re-evaluate once it clears (a loss
   // clears placedBets via the settlement fly-back → the gate then applies next
   // round; a win credits the balance back above the floor first).
-  const hasLiveStake = placedBets.length > 0;
+  const hasLiveStake = seated;
 
   const gated =
     token !== "demo" &&
     balanceLoaded && // never flash before the first real balance frame
     minSeatBalance != null &&
-    balance < block &&
+    balance < required &&
     !hasLiveStake;
 
   // Return the player to wherever they launched from — same priority ladder as
@@ -123,10 +131,10 @@ export default function SeatBalanceGate() {
           </svg>
         </div>
         <div style={{ fontSize: 19, fontWeight: 800, color: "#fff", letterSpacing: 0.4, marginBottom: 10 }}>
-          {t("seat.blockTitle")}
+          {seated ? t("seat.blockTitle") : t("seat.enterTitle")}
         </div>
         <p style={{ fontSize: 13, lineHeight: 1.55, color: "#cbd5e1", marginBottom: 18 }}>
-          {t("seat.blockBody")}
+          {seated ? t("seat.blockBody") : t("seat.enterBody")}
         </p>
         {/* The actual figure, stated plainly. The old copy only said "below the
             minimum required" and left the player guessing what to top up to.
@@ -151,10 +159,10 @@ export default function SeatBalanceGate() {
               marginBottom: 4,
             }}
           >
-            {t("seat.requiredLabel")}
+            {seated ? t("seat.requiredKeepLabel") : t("seat.requiredEnterLabel")}
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: "#f0b100", lineHeight: 1.1 }}>
-            {formatMoney(block, currency)}
+            {formatMoney(required, currency)}
           </div>
         </div>
         {/* No "Add funds" here by design: we serve multiple operators and have no

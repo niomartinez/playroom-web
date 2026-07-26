@@ -22,7 +22,9 @@ import { urlOverrideAllowed } from "./idle-policy";
  * treated as prod. (Mirrors idle-policy.ts.)
  */
 export interface MinSeatBalance {
-  /** Seat is blocked below this wallet balance. */
+  /** Balance needed to START playing (buy-in bar). >= block. */
+  enter: number;
+  /** Balance needed to KEEP a seat once money is on the table. */
   block: number;
   /** Amber warning zone floor (>= block). */
   warn: number;
@@ -33,6 +35,7 @@ export interface MinSeatBalance {
  * table). Mirrors the backend default so the two never silently disagree.
  */
 export const DEFAULT_MIN_SEAT_BALANCE: MinSeatBalance = {
+  enter: 1000,
   block: 1000,
   warn: 2000,
 };
@@ -45,10 +48,12 @@ function readNum(raw: string | null | undefined): number | null {
 }
 
 function clamp(p: MinSeatBalance): MinSeatBalance {
-  // A warn threshold at or below the block can never fire — pin it to block so
-  // the warning zone is simply empty rather than inverted.
+  // Mirrors the server clamp (config_cache._merge_min_seat_balance):
+  //  - entering below the keep-seat floor would admit a player then gate them.
+  //  - a warn at/below the block is a band that can never fire.
+  const enter = p.enter >= p.block ? p.enter : p.block;
   const warn = p.warn >= p.block ? p.warn : p.block;
-  return { block: p.block, warn };
+  return { enter, block: p.block, warn };
 }
 
 /**
@@ -63,6 +68,10 @@ export function resolveMinSeatBalance(
 ): MinSeatBalance {
   // Base = server value, falling back field-by-field to the default.
   const base: MinSeatBalance = {
+    // Configs written before `enter` existed only carry {block, warn}; fall back
+    // to block rather than the compile-time default, exactly as the server does,
+    // so an admin-lowered floor is never silently raised on the client.
+    enter: server?.enter ?? server?.block ?? DEFAULT_MIN_SEAT_BALANCE.enter,
     block: server?.block ?? DEFAULT_MIN_SEAT_BALANCE.block,
     warn: server?.warn ?? DEFAULT_MIN_SEAT_BALANCE.warn,
   };
@@ -75,7 +84,8 @@ export function resolveMinSeatBalance(
   const qs =
     search ?? (typeof window !== "undefined" ? window.location.search : "");
   const params = new URLSearchParams(qs);
+  const enter = readNum(params.get("seatEnter")) ?? base.enter;
   const block = readNum(params.get("seatBlock")) ?? base.block;
   const warn = readNum(params.get("seatWarn")) ?? base.warn;
-  return clamp({ block, warn });
+  return clamp({ enter, block, warn });
 }

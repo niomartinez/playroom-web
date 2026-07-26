@@ -432,21 +432,21 @@ export default function SettingsPage() {
             Minimum seat balance
           </h2>
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
-            Wallet floors for holding a seat, in PHP. <strong>To enter</strong> is
-            checked when a player opens a table; <strong>to keep seat</strong> is
-            re-checked after every settlement, and a player below it gets the
-            &ldquo;Minimum Balance Required&rdquo; overlay (the figure shown in that
-            dialog is this number). A player with a live bet is never cut
-            mid-round. Set <strong>to enter</strong> higher than{" "}
-            <strong>to keep seat</strong> to make buying in stricter than staying.
-            Warning is a soft nudge only. Applies platform-wide, on the next
-            balance update after Save.
+            Two wallet floors, in PHP, both enforced server-side.{" "}
+            <strong>To start playing</strong> is the buy-in bar: a player with
+            nothing on the table needs at least this much to bet at all.{" "}
+            <strong>To keep a seat</strong> is the lower bar that applies once
+            money IS on the table — it stops a player being ejected mid-hand by
+            the stricter entry number, and is re-checked after each settlement.
+            A player with a live bet is never cut mid-round. The overlay quotes
+            whichever figure actually applies to that player. Warning is a soft
+            nudge only. Applies platform-wide, from the next balance update.
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
-              Required to enter
+              Required to start playing
             </label>
             <input
               type="number" min={0} step={50}
@@ -458,7 +458,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
-              Required to keep seat
+              Required to keep a seat (once betting)
             </label>
             <input
               type="number" min={0} step={50}

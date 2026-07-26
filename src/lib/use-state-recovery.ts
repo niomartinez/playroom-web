@@ -40,7 +40,7 @@ interface TableStatePayload {
   betting_remaining_seconds: number | null;
   idle_policy?: { expire: number; warn1: number | null; warn2: number | null } | null;
   idle_exempt?: boolean | null;
-  min_seat_balance?: { block: number; warn: number } | null;
+  min_seat_balance?: { enter?: number; block: number; warn: number } | null;
   /** Server-owned bet-limit model. See config_cache.get_bet_limits. */
   bet_limits?: {
     chip_min: number;

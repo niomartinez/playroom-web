@@ -19,49 +19,30 @@
  *     (i.e. NOT muted) when no preference is stored.
  */
 
-export type SfxKey = "click" | "press" | "chip";
+export type SfxKey = "click" | "press" | "chip" | "betPlace";
 
 const MUTE_KEY = "prg_sfx_muted";
 
-/** Keys backed by an mp3 on disk. `chip` is synthesized — see makeChipBuffer. */
-const SOURCES: Record<"click" | "press", string> = {
+/** Keys backed by a single mp3. */
+const SOURCES: Record<"click" | "press" | "chip", string> = {
   click: "/assets/audio/click.mp3",
   press: "/assets/audio/click-press.mp3",
+  // Selecting a chip denomination. Replaces the earlier synthesized clink now
+  // that a real recording exists.
+  chip: "/assets/audio/chip-select-sfx.mp3",
 };
 
-/**
- * Build the chip "clink" procedurally instead of shipping another mp3.
+/** Placing a bet picks one of these at random each time.
  *
- * The two existing files are byte-identical, so `click` and `press` sound the
- * same and selecting a chip was audibly indistinguishable from any other button
- * — which is what made chips feel silent. A chip needs its own voice, and
- * synthesizing one keeps it asset-free (nothing to 404, nothing to download).
- *
- * Recipe: two short detuned sine partials (a ceramic/clay ring, ~2.6kHz and its
- * slightly sharp neighbour) plus a tiny noise transient for the initial contact,
- * all under a fast exponential decay (~90ms). Short and dry so rapid chip
- * spamming doesn't smear into a drone.
- */
-function makeChipBuffer(ctx: BaseAudioContext): AudioBuffer {
-  const dur = 0.09;
-  const sr = ctx.sampleRate;
-  const len = Math.max(1, Math.floor(sr * dur));
-  const buf = ctx.createBuffer(1, len, sr);
-  const d = buf.getChannelData(0);
-  const TAU = Math.PI * 2;
-  for (let i = 0; i < len; i++) {
-    const t = i / sr;
-    // Fast percussive decay.
-    const env = Math.exp(-t * 46);
-    // Detuned partials give the slight metallic beat of chip-on-chip.
-    const ring =
-      Math.sin(TAU * 2640 * t) * 0.6 + Math.sin(TAU * 3510 * t) * 0.4;
-    // Contact transient: noise, gone within the first few ms.
-    const click = (Math.random() * 2 - 1) * Math.exp(-t * 520) * 0.5;
-    d[i] = (ring * env + click) * 0.34;
-  }
-  return buf;
-}
+ *  A single fixed sample gets grating fast — players tap these constantly, and
+ *  an identical waveform on every tap reads as a UI beep rather than chips
+ *  landing on felt. Rotating randomly keeps a run of bets sounding physical. */
+const BET_PLACE_SOURCES = [
+  "/assets/audio/chip-bet-place-1.mp3",
+  "/assets/audio/chip-bet-place-2.mp3",
+  "/assets/audio/chip-bet-placed-3.mp3",
+  "/assets/audio/chip-bet-placed-4.mp3",
+];
 
 function readMutedPref(): boolean {
   if (typeof window === "undefined") return false;
@@ -88,6 +69,8 @@ class ButtonSfx {
   private ctx: AudioContext | null = null;
   private sfxBus: GainNode | null = null;
   private buffers = new Map<SfxKey, AudioBuffer>();
+  /** Decoded bet-place variants; one is picked at random per bet. */
+  private betPlaceBuffers: AudioBuffer[] = [];
   private fetchStarted = false;
 
   constructor() {
@@ -137,29 +120,37 @@ class ButtonSfx {
     void this.fetchBuffers();
   }
 
-  /** Decode the file-backed buffers once, at unlock, and synthesize `chip`.
-   *  Missing files simply stay absent (that key becomes a no-op). */
+  /** Decode every one-shot buffer once, at unlock. A missing or undecodable
+   *  file simply stays absent and that key becomes a no-op — audio must never
+   *  throw into the UI. */
   private async fetchBuffers(): Promise<void> {
     if (!this.ctx || this.fetchStarted) return;
     this.fetchStarted = true;
-    // Synthesized, so it's ready immediately — no fetch to lose a race with.
-    try {
-      this.buffers.set("chip", makeChipBuffer(this.ctx));
-    } catch {
-      /* fail-silent, same contract as a missing file */
-    }
-    await Promise.all(
-      (Object.keys(SOURCES) as Array<"click" | "press">).map(async (key) => {
-        try {
-          const res = await fetch(SOURCES[key]);
-          if (!res.ok) return;
-          const buf = await this.ctx!.decodeAudioData(await res.arrayBuffer());
-          this.buffers.set(key, buf);
-        } catch {
-          /* fail-silent — this key stays a no-op */
-        }
-      }),
-    );
+
+    const decode = async (url: string): Promise<AudioBuffer | null> => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        return await this.ctx!.decodeAudioData(await res.arrayBuffer());
+      } catch {
+        return null;
+      }
+    };
+
+    await Promise.all([
+      ...(Object.keys(SOURCES) as Array<"click" | "press" | "chip">).map(
+        async (key) => {
+          const buf = await decode(SOURCES[key]);
+          if (buf) this.buffers.set(key, buf);
+        },
+      ),
+      // Keep only the variants that actually decoded, so a missing file thins
+      // the rotation instead of producing silent picks.
+      (async () => {
+        const bufs = await Promise.all(BET_PLACE_SOURCES.map(decode));
+        this.betPlaceBuffers = bufs.filter((b): b is AudioBuffer => b !== null);
+      })(),
+    ]);
   }
 
   play(key: SfxKey): void {
@@ -171,7 +162,14 @@ class ButtonSfx {
       return;
     }
     if (this.ctx.state !== "running") return;
-    const buf = this.buffers.get(key);
+    const buf =
+      key === "betPlace"
+        ? this.betPlaceBuffers.length
+          ? this.betPlaceBuffers[
+              Math.floor(Math.random() * this.betPlaceBuffers.length)
+            ]
+          : undefined
+        : this.buffers.get(key);
     if (!buf) return;
     try {
       const src = this.ctx.createBufferSource();
