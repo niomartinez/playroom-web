@@ -208,6 +208,51 @@ export default function BalanceBar() {
             alignItems: "center",
           }}
         >
+          {/* CLEAR at the HEAD of the row, ×2 at the tail — the two actions
+              bracket the denominations instead of competing with them. Both are
+              deliberately smaller than a chip (42 vs 50): they are occasional
+              controls, while the chips are what a thumb has to hit accurately,
+              so the chips get the room. Rendered only while betting is open and
+              inert until there is something to clear. */}
+          {isBettingOpen && (
+            <button
+              type="button"
+              onClick={cancelPlacedBets}
+              disabled={!hasPlacedBets}
+              aria-label={t("balance.clearBets")}
+              title={t("balance.clearBets")}
+              style={{
+                width: 42,
+                height: 42,
+                flexShrink: 0,
+                borderRadius: 14,
+                border: `1.6px solid ${hasPlacedBets ? "rgba(251,44,54,0.85)" : "rgba(255,255,255,0.18)"}`,
+                background: hasPlacedBets ? "rgba(251,44,54,0.16)" : "rgba(255,255,255,0.04)",
+                color: hasPlacedBets ? "#ff6467" : "rgba(255,255,255,0.4)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                cursor: hasPlacedBets ? "pointer" : "not-allowed",
+                padding: 0,
+                transition: "all 0.15s ease",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              {/* Undo arrow, not a bin: this takes your chips back, it does not
+                  destroy anything, and a trash can reads as something harsher
+                  than it is. */}
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7v6h6" />
+                <path d="M3.5 13a9 9 0 1 0 2.1-9.4L3 7" />
+              </svg>
+              <span style={{ fontSize: 6.5, fontWeight: 800, letterSpacing: 0.3 }}>
+                {t("balance.clear")}
+              </span>
+            </button>
+          )}
+
           {CHIPS.map((chip) => {
             const isSelected = selectedChip === chip.value;
             const isDisabled = balance < chip.value * (chipMultiplier || 1);
@@ -261,59 +306,16 @@ export default function BalanceBar() {
             );
           })}
 
-          {/* CLEAR BETS — inline with the chips, sized like the ×2 control.
-              It used to be a full-width red pill on its own row above; once the
-              balance moved out it had nothing to sit beside and read as a stray
-              alert bar. Evolution keeps UNDO / x2 / DOUBLE inline with the chip
-              for the same reason. Rendered only while betting is open, and
-              inert until there is something to clear. */}
-          {isBettingOpen && (
-            <button
-              type="button"
-              onClick={cancelPlacedBets}
-              disabled={!hasPlacedBets}
-              aria-label={t("balance.clearBets")}
-              title={t("balance.clearBets")}
-              style={{
-                width: 50,
-                height: 50,
-                flexShrink: 0,
-                borderRadius: 14,
-                border: `1.6px solid ${hasPlacedBets ? "rgba(251,44,54,0.85)" : "rgba(255,255,255,0.18)"}`,
-                background: hasPlacedBets ? "rgba(251,44,54,0.16)" : "rgba(255,255,255,0.04)",
-                color: hasPlacedBets ? "#ff6467" : "rgba(255,255,255,0.4)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
-                cursor: hasPlacedBets ? "pointer" : "not-allowed",
-                padding: 0,
-                transition: "all 0.15s ease",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="M19 6l-1 14H6L5 6" />
-              </svg>
-              <span style={{ fontSize: 7, fontWeight: 800, letterSpacing: 0.3 }}>
-                {t("balance.clear")}
-              </span>
-            </button>
-          )}
-
-          {/* ×2 toggle — deliberately larger than a chip so it reads as a
-              distinct control, not another denomination. */}
+          {/* ×2 toggle — matches CLEAR at 42 so both read as controls rather
+              than denominations, and neither steals width from the chips. */}
           <button
             type="button"
             onClick={toggleX2}
             aria-pressed={x2On}
             aria-label="Double the selected chip"
             style={{
-              width: 50,
-              height: 50,
+              width: 42,
+              height: 42,
               flexShrink: 0,
               borderRadius: 14,
               border: x2On ? "1.6px solid #f0b100" : "1.6px solid rgba(255,255,255,0.18)",

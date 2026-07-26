@@ -9,6 +9,7 @@ import { symbolFor } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
 import BetStackedChips from "./BetStackedChips";
 import PadCards, { PAD_CARD_KEYFRAMES } from "./PadCards";
+import { useDrawPhase } from "@/lib/use-draw-phase";
 import { useToast } from "@/lib/toast-context";
 
 const BETS: Array<{
@@ -95,8 +96,12 @@ export default function MainBets() {
   // video is small, so handing them to the hand buys a lot. Desktop already has
   // a large video and room for both, and keeps its live bet totals — which are
   // still useful to watch during a deal when you have money on the table.
-  const showCards =
-    isMobile && (roundStatus === "dealing" || roundStatus === "result");
+  // Latched via useDrawPhase: settlement used to drop this the instant the round
+  // left `result`, so the cards and the WIN badge flashed and vanished before
+  // anyone could read them — while the studio still hadn't reopened betting.
+  // Now it holds until the next betting window actually opens.
+  const drawPhase = useDrawPhase();
+  const showCards = isMobile && drawPhase;
   const t = useT();
   const sym = symbolFor(currency);
 
@@ -371,8 +376,18 @@ export default function MainBets() {
 
   /* ── Mobile layout ── */
   if (isMobile) {
+    // Tie collapses to zero width during the draw — it has no cards of its own,
+    // so it was dead space between the two hands. Animating the COLUMN TRACK
+    // (not the pad) lets Player and Banker glide into the room rather than jump.
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: showCards ? "1fr 0fr 1fr" : "1fr 1fr 1fr",
+          gap: 8,
+          transition: "grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+      >
         {BETS.map((bet) => {
           const myBets = placedBets.filter((b) => b.betCode === bet.betCode);
           const myTotal = myBets.reduce((sum, b) => sum + b.amount, 0);
@@ -414,6 +429,12 @@ export default function MainBets() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                // Tie is collapsed away during the draw; fade it with the track
+                // so it doesn't clip visibly as the column closes.
+                ...(showCards && bet.betCode === "BAC_Tie"
+                  ? { opacity: 0, pointerEvents: "none" as const, minWidth: 0, padding: 0, border: "none" }
+                  : null),
+                transition: "opacity 0.25s ease",
                 cursor: disabled ? "not-allowed" : "pointer",
                 // Dimming signals "you can't press this". While the pad is
                 // showing the hand it is not a button any more, it is the

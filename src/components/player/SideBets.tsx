@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useBetting } from "@/lib/use-betting";
+import { useDrawPhase } from "@/lib/use-draw-phase";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useGame, type BetCode } from "@/lib/game-context";
 import { dispatchChipFly } from "@/lib/chip-fly";
@@ -85,8 +86,26 @@ export default function SideBets() {
     [isBettingOpen, placeBet, selectedChip, effectiveChip, balance, addFlyingChip, toast],
   );
 
+  const drawPhase = useDrawPhase();
+
   if (isMobile) {
     return (
+      // Side bets fold away for the whole draw: none of them can be placed once
+      // betting closes, and the only thing worth looking at is the hand. The
+      // wrapper animates max-height + opacity rather than unmounting, so the
+      // pads glide up into the freed room and glide back when betting reopens —
+      // and the buttons stay unreachable while collapsed.
+      <div
+        style={{
+          maxHeight: drawPhase ? 0 : 200,
+          opacity: drawPhase ? 0 : 1,
+          overflow: "hidden",
+          pointerEvents: drawPhase ? "none" : undefined,
+          transition:
+            "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease",
+        }}
+        aria-hidden={drawPhase}
+      >
       <div
         style={{
           display: "grid",
@@ -190,6 +209,7 @@ export default function SideBets() {
             </button>
           );
         })}
+      </div>
       </div>
     );
   }

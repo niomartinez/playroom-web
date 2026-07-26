@@ -47,6 +47,12 @@ type PlaybackState = "connecting" | "playing" | "fallback" | "error";
 /** How long to wait before re-attempting a failed/ended stream connection. */
 const RECONNECT_DELAY_MS = 6000;
 
+/** A 401 within this long of page load may be the edge's stale revoked set
+ *  (the shim re-polls every ~2s) rather than a real revocation. */
+const STALE_REVOKE_GRACE_MS = 8000;
+/** Comfortably past one shim poll, so the retry sees a refreshed set. */
+const STALE_REVOKE_RETRY_MS = 3000;
+
 export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayerProps) {
   const t = useT();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -74,6 +80,21 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
    * up underneath the "Seat Released" overlay.
    */
   const sessionCutRef = useRef(false);
+  /**
+   * When this page load began, and whether we have already forgiven one 401.
+   *
+   * On refresh the UI calls /stream/rejoin, which clears the server-side revoke
+   * immediately — but the VPS shim serves a CACHED revoked set that it only
+   * re-polls every 2s. So the first handshake after a refresh can still be
+   * answered 401 from a set that is already out of date. Latching on that told
+   * the player their seat was released the instant they came back, and they had
+   * to refresh a second time for it to stick.
+   *
+   * So an early 401 is treated as possibly-stale: retry once after the shim has
+   * had time to re-poll, and only latch if it says no again.
+   */
+  const startedAtRef = useRef(Date.now());
+  const forgaveStaleRevokeRef = useRef(false);
   // Short-lived stream-access token (renewed silently every 60s + heartbeats
   // presence for idle tracking). Read via .current when a connection is
   // (re)built so a renewal never re-negotiates a healthy WHEP session.
@@ -431,6 +452,23 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
           clearTimeout(whepTimer);
         }
         if (res.status === 401 || res.status === 403) {
+          const sinceLoad = Date.now() - startedAtRef.current;
+          if (sinceLoad < STALE_REVOKE_GRACE_MS && !forgaveStaleRevokeRef.current) {
+            // Almost certainly the shim's 2s-stale revoked set, not a real
+            // revocation — rejoin has just cleared it server-side. Give it time
+            // to re-poll and try once more before believing the answer.
+            forgaveStaleRevokeRef.current = true;
+            console.info(
+              "[VideoPlayer] early 401 after (re)join — retrying once in case the edge cache is stale",
+            );
+            if (!retryTimer) {
+              retryTimer = setTimeout(
+                () => setAttempt((a) => a + 1),
+                STALE_REVOKE_RETRY_MS,
+              );
+            }
+            return false;
+          }
           cutSession(`WHEP ${res.status}`);
           return false;
         }
