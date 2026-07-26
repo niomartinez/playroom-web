@@ -10,7 +10,10 @@ import { useToast } from "@/lib/toast-context";
 interface Table {
   id: string;
   external_game_id: string;
+  /** Internal/studio label. */
   name: string;
+  /** Player-facing lobby name; null = lobby falls back to `name`. */
+  lobby_name: string | null;
   table_type: string;
   is_active: boolean;
   min_bet: number;
@@ -28,6 +31,7 @@ export default function TablesPage() {
   /* Create dialog state */
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
+  const [newLobbyName, setNewLobbyName] = useState("");
   const [newGameId, setNewGameId] = useState("");
   const [newType, setNewType] = useState("standard");
   const [newMinBet, setNewMinBet] = useState("10");
@@ -66,6 +70,8 @@ export default function TablesPage() {
         body: JSON.stringify({
           external_game_id: newGameId.trim(),
           name: newName.trim(),
+          // Blank => the lobby falls back to the internal name server-side.
+          lobby_name: newLobbyName.trim() || null,
           table_type: newType,
           min_bet: parseFloat(newMinBet) || 10,
           max_bet: parseFloat(newMaxBet) || 10000,
@@ -74,6 +80,7 @@ export default function TablesPage() {
       if (res.ok) {
         setShowCreate(false);
         setNewName("");
+        setNewLobbyName("");
         setNewGameId("");
         setNewType("standard");
         setNewMinBet("10");
@@ -117,7 +124,16 @@ export default function TablesPage() {
   };
 
   const columns: Column<Table>[] = [
-    { key: "name", label: "Name", sortable: true },
+    { key: "name", label: "Name (studio)", sortable: true },
+    {
+      key: "lobby_name",
+      label: "Lobby Name (players)",
+      render: (r) => (
+        <span style={{ color: r.lobby_name ? undefined : "#6a7282" }}>
+          {(r.lobby_name as string) || "— same as name"}
+        </span>
+      ),
+    },
     { key: "external_game_id", label: "Game ID" },
     { key: "table_type", label: "Type" },
     {
@@ -211,16 +227,40 @@ export default function TablesPage() {
             className="block text-xs font-medium mb-1"
             style={{ color: "#99a1af" }}
           >
-            Table Name
+            Table Name (internal)
           </label>
           <input
             type="text"
-            placeholder="e.g. Baccarat A1"
+            placeholder="e.g. Baccarat Table 1"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
             style={inputStyle}
           />
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            What dealers pick from in the studio. Keep it plain and stable.
+          </p>
+        </div>
+        <div>
+          <label
+            className="block text-xs font-medium mb-1"
+            style={{ color: "#99a1af" }}
+          >
+            Lobby Name (player-facing)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. XXX Baccarat Table 1"
+            value={newLobbyName}
+            onChange={(e) => setNewLobbyName(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            style={inputStyle}
+          />
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            What players see in the operator&rsquo;s lobby (GameSpot &rarr; Games
+            &rarr; PRG &rarr; …). Rebrand this freely — it does not touch the
+            studio. Leave blank to reuse the internal name.
+          </p>
         </div>
         <div>
           <label
