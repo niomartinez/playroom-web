@@ -24,14 +24,18 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   const [isOpen, setIsOpen] = useState(true);
   const [draft, setDraft] = useState("");
 
-  // The chat icon in the video's shortcut row toggles this panel, so a player
-  // who minimised chat can bring it back without hunting for the small
-  // reopen affordance.
+  // Desktop no longer has a panel to open or close — the composer is always
+  // there. The chat icon in the video's shortcut row now opens the chat
+  // SETTINGS (opacity, display name), which is where those controls moved.
   useEffect(() => {
-    const onToggle = () => setIsOpen((v) => !v);
+    const onToggle = () => {
+      if (isMobile) setIsOpen((v) => !v);
+      else setShowSettings((v) => !v);
+    };
     window.addEventListener("prg:toggle-chat", onToggle);
     return () => window.removeEventListener("prg:toggle-chat", onToggle);
-  }, []);
+  }, [isMobile]);
+  const [showSettings, setShowSettings] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0); // seconds remaining
@@ -66,7 +70,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   }, []);
 
   // Recent messages float over the feed while the panel is minimized (desktop).
-  const floats = useChatFloats(messages, !isOpen && !isMobile, myName);
+  // Desktop: floats ARE the transcript now, so they run always (not only while
+  // minimised) and include the player's own lines — seeing your message appear
+  // is the only confirmation it sent, now that there is no panel to scroll.
+  const floats = useChatFloats(messages, isMobile ? !isOpen : true, isMobile ? myName : null);
 
   // Panel opacity — drives the --chat-opacity custom property so one control
   // changes every translucent surface at once. Restored from localStorage on
@@ -131,42 +138,204 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
     }
   };
 
-  if (!isOpen && !isMobile) {
-    // Minimized: a Chat button plus the last few incoming messages floating
-    // just below it on the right, glassy, auto-fading. Clicking a bubble (or
-    // the button) opens the full panel — the intuitive path if you want to
-    // reply to what's floating by.
+  /* ---------------------------------------------------------------- */
+  /*  DESKTOP — Evolution shape                                          */
+  /* ---------------------------------------------------------------- */
+  //
+  // A composer pinned top-right, always ready to type, with recent lines
+  // floating beneath it and fading out. No panel, no scrollback, no header.
+  //
+  // The old 280px full-height panel occupied the entire right edge of the video
+  // permanently, for content that is glanceable and mostly ephemeral. Evolution
+  // treats chat as an overlay on the table rather than furniture beside it, and
+  // that is what players are used to. Scrollback is deliberately gone: anything
+  // older than the last few lines was never the reason to look at chat mid-hand.
+  //
+  // Opacity and display name moved into the settings popover behind the chat
+  // icon in the video's shortcut row — see VideoQuickIcons.
+  if (!isMobile) {
     return (
-      <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-2" style={{ maxWidth: 280 }}>
-        <button
-          onClick={() => setIsOpen(true)}
-          className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition cursor-pointer"
+      <div
+        className="absolute z-20 flex flex-col items-stretch gap-2"
+        style={{
+          right: 16,
+          // Clear of the shortcut icon row (top: 10, 30px tall).
+          top: 52,
+          width: 300,
+          maxWidth: "38%",
+          // The column is a layout guide only — clicks must reach the video
+          // except on the controls themselves.
+          pointerEvents: "none",
+          ["--chat-opacity" as string]: String(opacity),
+        } as CSSProperties}
+      >
+        {/* Composer */}
+        <div
+          className="flex items-center gap-2 rounded-full px-2 py-1.5"
           style={{
-            background: "rgba(30,41,57,0.8)",
-            border: "1px solid rgba(54,65,83,0.8)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            pointerEvents: "auto",
+            background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
+            border: "1px solid rgba(54,65,83,0.75)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.32)",
           }}
         >
-          {floats.length > 0 ? `${t("chat.open")} · ${floats.length}` : t("chat.open")}
-        </button>
-        {floats.map((f) => (
           <button
-            key={f.key}
-            onClick={() => setIsOpen(true)}
-            className="prg-float-msg text-left rounded-xl px-3 py-2 cursor-pointer transition"
+            onClick={() => setShowEmoji((v) => !v)}
+            disabled={!connected}
+            className="shrink-0 h-[26px] w-[26px] rounded-full flex items-center justify-center text-[16px] hover:bg-white/10 transition cursor-pointer disabled:opacity-40"
+            aria-label={t("chat.emoji")}
+            title={t("chat.emoji")}
+            type="button"
+          >
+            🙂
+          </button>
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder={connected ? t("chat.placeholder") : t("chat.connecting")}
+            disabled={!connected}
+            maxLength={MAX_CHAT_LENGTH}
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none text-white placeholder-[#6a7282] text-[12px] disabled:opacity-50"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!connected || !draft.trim() || cooldownLeft > 0}
+            className="shrink-0 h-[26px] w-[26px] rounded-full flex items-center justify-center text-white hover:brightness-110 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: "rgba(43,127,255,0.85)" }}
+            aria-label={t("chat.send")}
+            title={t("chat.send")}
+          >
+            {cooldownLeft > 0 ? (
+              <span className="tabular-nums text-[11px]">{cooldownLeft}</span>
+            ) : (
+              <svg className="w-[14px] h-[14px]" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {lastError && (
+          <div
+            className="rounded-lg px-3 py-1.5 text-[11px]"
             style={{
-              maxWidth: "100%",
-              background: "rgba(16,24,40,0.55)",
+              pointerEvents: "auto",
+              background: "rgba(251,44,54,0.16)",
+              border: "1px solid rgba(251,44,54,0.4)",
+              color: "#ffb3b8",
+            }}
+          >
+            {lastError}
+          </div>
+        )}
+
+        {showEmoji && (
+          <div
+            className="rounded-xl p-2 flex flex-wrap gap-1"
+            style={{
+              pointerEvents: "auto",
+              background: "rgba(16,24,40,0.92)",
+              border: "1px solid rgba(54,65,83,0.8)",
+            }}
+          >
+            {EMOJIS.map((e) => (
+              <button
+                key={e}
+                onClick={() => {
+                  setDraft((d) => (d + e).slice(0, MAX_CHAT_LENGTH));
+                  setShowEmoji(false);
+                  inputRef.current?.focus();
+                }}
+                className="h-[26px] w-[26px] rounded hover:bg-white/10 transition cursor-pointer text-[16px]"
+                type="button"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Settings — opened from the chat icon in the shortcut row */}
+        {showSettings && (
+          <div
+            className="rounded-xl px-3 py-2 flex flex-col gap-2"
+            style={{
+              pointerEvents: "auto",
+              background: "rgba(16,24,40,0.94)",
+              border: "1px solid rgba(54,65,83,0.8)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[#9ca3af]">{t("chat.title")}</span>
+              <span className="text-[10px] text-[#6a7282]">
+                {t(presence === 1 ? "chat.onlineOne" : "chat.onlineMany", {
+                  count: presence,
+                })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#9ca3af] whitespace-nowrap">
+                {t("chat.opacity")}
+              </span>
+              <input
+                type="range"
+                min={0.15}
+                max={0.95}
+                step={0.05}
+                value={opacity}
+                onChange={(e) => setOpacity(Number(e.target.value))}
+                aria-label={t("chat.opacity")}
+                className="flex-1"
+              />
+              <span className="text-[10px] text-[#6a7282] tabular-nums w-[26px] text-right">
+                {Math.round(opacity * 100)}
+              </span>
+            </div>
+            <button
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("prg:open-change-name"))
+              }
+              className="text-[11px] text-left rounded-lg px-2 py-1.5 hover:bg-white/5 transition cursor-pointer"
+              style={{ color: "#f0b100", border: "1px solid rgba(240,177,0,0.3)" }}
+            >
+              {t("chat.screenName")}
+            </button>
+          </div>
+        )}
+
+        {/* Recent lines, floating below the composer */}
+        {floats.map((f) => (
+          <div
+            key={f.key}
+            className="prg-float-msg rounded-xl px-3 py-2"
+            style={{
+              pointerEvents: "none",
+              background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.08))",
               border: "1px solid rgba(54,65,83,0.5)",
               backdropFilter: "blur(6px)",
               WebkitBackdropFilter: "blur(6px)",
               boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#93b8ff", marginRight: 6 }}>{f.user}</span>
-            <span style={{ fontSize: 12, color: "#e5e7eb", wordBreak: "break-word" }}>{f.text}</span>
-          </button>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: f.user === "System" ? "#f0b100" : "#93b8ff",
+                marginRight: 6,
+              }}
+            >
+              {f.user}
+            </span>
+            <span style={{ fontSize: 12, color: "#e5e7eb", wordBreak: "break-word" }}>
+              {f.text}
+            </span>
+          </div>
         ))}
       </div>
     );
