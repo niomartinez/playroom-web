@@ -145,17 +145,17 @@ export default function PlayerLayout() {
             Gated on the admin live_chat_enabled feature flag. */}
         {liveChatEnabled && <MobileChat />}
 
-        {/* Score Cards — below the fold. The bottom margin also reserves room
-            for the pinned TableInfoBar so it never covers the last row. */}
+        {/* The Player/Banker score-card panel is GONE on mobile: the pads
+            themselves now show the per-card draws and the result during the
+            deal, so this was the same information twice — and it cost a scroll
+            to reach. Desktop keeps it (its pads are unchanged).
+
+            The spacer remains to reserve room for the pinned TableInfoBar so it
+            never covers the last row of content. */}
         <div
-          style={{
-            padding: "0 19px",
-            marginTop: 16,
-            marginBottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
-          }}
-        >
-          <BaccaratTable />
-        </div>
+          style={{ height: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
+          aria-hidden
+        />
 
         <FlyingChips />
         <WinFlash />
@@ -178,8 +178,9 @@ export default function PlayerLayout() {
         // 4th row = the bottom info strip. Declared EXPLICITLY: adding a
         // fourth child to a three-row template made the grid invent an
         // implicit row and collapsed the video row into a huge gap.
-        gridTemplateRows: dealing ? "5.5vh 1fr 20vh auto" : "5.5vh 1fr 30vh auto",
-        transition: "grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1)",
+        // Desktop keeps a fixed layout: the video-expand/pad-takeover behaviour
+        // is mobile-only, where screen space is actually scarce.
+        gridTemplateRows: "5.5vh 1fr 30vh auto",
         background: "#0a0f1a",
       }}
     >

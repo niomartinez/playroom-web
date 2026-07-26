@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect, type CSSProperties, type KeyboardEvent } from "react";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useChatWs } from "@/lib/use-chat-ws";
-import { useChatFloats } from "@/lib/use-chat-floats";
+import { useChatFloats, FLOAT_FADE_MS } from "@/lib/use-chat-floats";
 import { useT } from "@/lib/i18n";
 import {
-  EMOJIS,
   clampOpacity,
   fmtTime,
   OPACITY_KEY,
@@ -37,9 +36,8 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   }, [isMobile]);
   const [showSettings, setShowSettings] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
-  const [showEmoji, setShowEmoji] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0); // seconds remaining
-  const { messages, presence, connected, send, lastError } = useChatWs();
+  const { messages, presence, connected, send, lastError, historyLoaded } = useChatWs();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cooldownUntilRef = useRef(0);
@@ -73,7 +71,12 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
   // Desktop: floats ARE the transcript now, so they run always (not only while
   // minimised) and include the player's own lines — seeing your message appear
   // is the only confirmation it sent, now that there is no panel to scroll.
-  const floats = useChatFloats(messages, isMobile ? !isOpen : true, isMobile ? myName : null);
+  const floats = useChatFloats(
+    messages,
+    isMobile ? !isOpen : true,
+    isMobile ? myName : null,
+    historyLoaded,
+  );
 
   // Panel opacity — drives the --chat-opacity custom property so one control
   // changes every translucent surface at once. Restored from localStorage on
@@ -122,7 +125,6 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
     if (!draft.trim() || cooldownLeft > 0) return;
     send(draft);
     setDraft("");
-    setShowEmoji(false);
     startCooldown();
   };
 
@@ -181,16 +183,6 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
             boxShadow: "0 6px 18px rgba(0,0,0,0.32)",
           }}
         >
-          <button
-            onClick={() => setShowEmoji((v) => !v)}
-            disabled={!connected}
-            className="shrink-0 h-[26px] w-[26px] rounded-full flex items-center justify-center text-[16px] hover:bg-white/10 transition cursor-pointer disabled:opacity-40"
-            aria-label={t("chat.emoji")}
-            title={t("chat.emoji")}
-            type="button"
-          >
-            🙂
-          </button>
           <input
             ref={inputRef}
             type="text"
@@ -231,32 +223,6 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
             }}
           >
             {lastError}
-          </div>
-        )}
-
-        {showEmoji && (
-          <div
-            className="rounded-xl p-2 flex flex-wrap gap-1"
-            style={{
-              pointerEvents: "auto",
-              background: "rgba(16,24,40,0.92)",
-              border: "1px solid rgba(54,65,83,0.8)",
-            }}
-          >
-            {EMOJIS.map((e) => (
-              <button
-                key={e}
-                onClick={() => {
-                  setDraft((d) => (d + e).slice(0, MAX_CHAT_LENGTH));
-                  setShowEmoji(false);
-                  inputRef.current?.focus();
-                }}
-                className="h-[26px] w-[26px] rounded hover:bg-white/10 transition cursor-pointer text-[16px]"
-                type="button"
-              >
-                {e}
-              </button>
-            ))}
           </div>
         )}
 
@@ -312,9 +278,14 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         {floats.map((f) => (
           <div
             key={f.key}
-            className="prg-float-msg rounded-xl px-3 py-2"
+            className="rounded-xl px-3 py-2"
             style={{
               pointerEvents: "none",
+              // Fully opaque for the hold, then fades over exactly the window
+              // the hook waits before freeing the slot — so a bubble is gone
+              // from the screen and from the queue at the same instant.
+              opacity: f.fading ? 0 : 1,
+              transition: `opacity ${FLOAT_FADE_MS}ms linear`,
               background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.08))",
               border: "1px solid rgba(54,65,83,0.5)",
               backdropFilter: "blur(6px)",
@@ -517,31 +488,6 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
       )}
 
       {/* Emoji picker popover — 8 cols on mobile (bigger tap targets), 10 on desktop */}
-      {showEmoji && (
-        <div
-          className={`px-[12px] py-[10px] grid gap-[2px] ${
-            isMobile ? "grid-cols-8 max-h-[132px] overflow-y-auto" : "grid-cols-10"
-          }`}
-          style={{
-            background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
-            borderTop: "1px solid rgba(54,65,83,0.5)",
-          }}
-        >
-          {EMOJIS.map((e) => (
-            <button
-              key={e}
-              onClick={() => insertEmoji(e)}
-              className={`leading-none rounded-[6px] hover:bg-white/10 transition cursor-pointer flex items-center justify-center ${
-                isMobile ? "text-[22px] min-h-[40px]" : "text-[18px] min-h-[26px] p-[3px]"
-              }`}
-              aria-label={e}
-              type="button"
-            >
-              {e}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Input bar */}
       <div
@@ -553,18 +499,6 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         }}
       >
         {/* Emoji toggle — 40px tap target on mobile */}
-        <button
-          onClick={() => setShowEmoji((v) => !v)}
-          disabled={!connected}
-          className={`shrink-0 rounded-[10px] flex items-center justify-center hover:bg-white/10 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            isMobile ? "h-[40px] w-[40px] text-[22px]" : "h-[32px] w-[32px] text-[18px]"
-          }`}
-          aria-label={t("chat.emoji")}
-          title={t("chat.emoji")}
-          type="button"
-        >
-          🙂
-        </button>
         <input
           ref={inputRef}
           type="text"

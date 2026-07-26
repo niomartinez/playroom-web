@@ -11,7 +11,6 @@ import {
 import { useChatWs } from "@/lib/use-chat-ws";
 import { useT, type TFunction } from "@/lib/i18n";
 import {
-  EMOJIS,
   clampOpacity,
   fmtTime,
   OPACITY_KEY,
@@ -160,7 +159,6 @@ export default function MobileChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
-  const [showEmoji, setShowEmoji] = useState(false);
   const [showOpacity, setShowOpacity] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
@@ -364,7 +362,6 @@ export default function MobileChat() {
   const closeSheet = () => {
     setIsOpen(false);
     setExpanded(false);
-    setShowEmoji(false);
     setShowOpacity(false);
     setShowSettings(false);
     inputRef.current?.blur();
@@ -374,7 +371,6 @@ export default function MobileChat() {
     if (!draft.trim() || cooldownLeft > 0) return;
     send(draft);
     setDraft("");
-    setShowEmoji(false);
     startCooldown();
   };
 
@@ -735,44 +731,6 @@ export default function MobileChat() {
         )}
 
         {/* Emoji picker */}
-        {showEmoji && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(8, 1fr)",
-              gap: 2,
-              padding: "10px 12px",
-              maxHeight: 140,
-              overflowY: "auto",
-              background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.12))",
-              borderTop: "1px solid rgba(54,65,83,0.5)",
-              flexShrink: 0,
-            }}
-          >
-            {EMOJIS.map((e) => (
-              <button
-                key={e}
-                onClick={() => insertEmoji(e)}
-                aria-label={e}
-                type="button"
-                style={{
-                  fontSize: 22,
-                  minHeight: 40,
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Input bar */}
         <div
@@ -786,30 +744,6 @@ export default function MobileChat() {
             flexShrink: 0,
           }}
         >
-          <button
-            onClick={() => setShowEmoji((v) => !v)}
-            disabled={!connected}
-            aria-label={t("chat.emoji")}
-            title={t("chat.emoji")}
-            type="button"
-            style={{
-              flexShrink: 0,
-              height: 42,
-              width: 42,
-              borderRadius: 10,
-              fontSize: 22,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              cursor: connected ? "pointer" : "not-allowed",
-              opacity: connected ? 1 : 0.4,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            🙂
-          </button>
           <input
             ref={inputRef}
             type="text"

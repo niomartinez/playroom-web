@@ -78,6 +78,8 @@ export default function MainBets() {
   const { toast } = useToast();
   const { roundStatus, balance, currency, addFlyingChip, mainBetCounts, currentRound, stackedChips } = useGame();
 
+  const isMobile = useIsMobile();
+
   /**
    * Once the cards come out, the pads stop being a betting surface and become
    * the hand.
@@ -89,8 +91,12 @@ export default function MainBets() {
    * pads over to the draw. `waiting`/`betting_open` restore the normal face,
    * which is also the reset — there is no separate teardown to get wrong.
    */
-  const showCards = roundStatus === "dealing" || roundStatus === "result";
-  const isMobile = useIsMobile();
+  // MOBILE ONLY. On a phone the pads are the biggest thing on screen and the
+  // video is small, so handing them to the hand buys a lot. Desktop already has
+  // a large video and room for both, and keeps its live bet totals — which are
+  // still useful to watch during a deal when you have money on the table.
+  const showCards =
+    isMobile && (roundStatus === "dealing" || roundStatus === "result");
   const t = useT();
   const sym = symbolFor(currency);
 
