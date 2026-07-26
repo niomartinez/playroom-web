@@ -3,6 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useGame, type BetCode, type PlacedBet } from "./game-context";
 import { beginBetMove, endBetMove } from "./bet-move";
+import { useSessionCut } from "./session-cut";
 import { formatBalance } from "./currency";
 
 export interface BetResult {
@@ -39,7 +40,11 @@ export function useBetting() {
     setConfirmedBetRoundId,
   } = useGame();
 
-  const isBettingOpen = roundStatus === "betting_open";
+  // A released seat closes betting outright. Deleting the overlay in devtools
+  // left the pads clickable; the server refused those bets, but the buttons
+  // should never have been reachable.
+  const sessionCut = useSessionCut();
+  const isBettingOpen = roundStatus === "betting_open" && !sessionCut;
   const isDemo = token === "demo";
 
   // The value a chip actually stakes: the selected denomination times the ×2

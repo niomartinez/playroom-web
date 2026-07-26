@@ -128,6 +128,29 @@ export default function SessionGuard() {
             <p style={{ fontSize: 13, lineHeight: 1.55, color: "#cbd5e1", marginBottom: 22 }}>
               {t("session.expiredBody")}
             </p>
+            {/* Rejoin = a plain page reload. On mount the player UI calls
+                /stream/rejoin, which zeroes the idle counter and clears the
+                server-side revoke — the same thing a browser refresh does. It is
+                a button here only because "press F5" is not an instruction to put
+                in front of a player. */}
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 10,
+                background: "#f0b100",
+                border: "none",
+                color: "#0b0b0b",
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: "pointer",
+                marginBottom: 10,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              {t("session.rejoin")}
+            </button>
             <button
               onClick={returnToSite}
               style={{

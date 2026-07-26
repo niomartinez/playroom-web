@@ -158,6 +158,7 @@ const en: Record<string, string> = {
   /* Session / idle */
   "session.warn1": "Place a bet this round, or your seat may be released for inactivity.",
   "session.warn2": "Final warning — place a bet now or you'll be removed for sitting out.",
+  "session.rejoin": "Rejoin table",
   "session.expiredTitle": "Seat Released — Inactive",
   "session.expiredBody": "You sat out too many rounds in a row, so your seat was released to keep the table active. To keep your seat next time, place a bet every round. Return to the lobby to rejoin a table.",
   "session.return": "Return to lobby",

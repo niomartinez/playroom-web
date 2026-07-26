@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/lib/game-context";
+import { useSessionCut } from "@/lib/session-cut";
 import { useIsMobile } from "@/lib/use-mobile";
 import { symbolFor, formatBalance, formatMoney } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
@@ -112,7 +113,8 @@ export default function BalanceBar() {
   const isMobile = useIsMobile();
   const t = useT();
   const displayBalance = useDisplayBalance(balance);
-  const isBettingOpen = roundStatus === "betting_open";
+  const sessionCut = useSessionCut();
+  const isBettingOpen = roundStatus === "betting_open" && !sessionCut;
   const hasPlacedBets = placedBets.length > 0;
 
   /**

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 /**
  * "This session's seat was released — stop the video."
  *
@@ -40,4 +42,26 @@ export function markSessionCut(): void {
 /** True once the seat has been released for this page lifetime. */
 export function isSessionCut(): boolean {
   return cut;
+}
+
+/**
+ * React view of the latch, for components that must go inert once the seat is
+ * released.
+ *
+ * Betting has to be disabled in COMPONENT STATE, not merely covered: the "Seat
+ * Released" dialog is a DOM node, and deleting it in devtools left the bet pads
+ * live and clickable. Those bets were correctly refused by the server, but a
+ * player should not be able to reach a bet button at all after losing the seat —
+ * and a stream of rejected requests is noise nobody needs.
+ */
+export function useSessionCut(): boolean {
+  const [isCut, setIsCut] = useState<boolean>(() => isSessionCut());
+  useEffect(() => {
+    // The latch may have flipped between render and effect.
+    if (isSessionCut()) setIsCut(true);
+    const onCut = () => setIsCut(true);
+    window.addEventListener(SESSION_CUT_EVENT, onCut);
+    return () => window.removeEventListener(SESSION_CUT_EVENT, onCut);
+  }, []);
+  return isCut;
 }
