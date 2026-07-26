@@ -23,20 +23,30 @@ interface BreakdownEntry {
   bet_count: number;
 }
 
-/* Date preset helpers */
+/* Date preset helpers.
+ *
+ * These format the viewer's LOCAL date. toISOString() is UTC, and Manila is
+ * UTC+8: between midnight and 08:00 local, UTC is still the previous day, so
+ * clicking "Today" before 8am showed YESTERDAY. Same drift silently shifted
+ * "Last 7 days" and "This month" by one day for the whole early shift. */
+function localISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localISO(new Date());
 }
 
 function daysAgoISO(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return localISO(d);
 }
 
 function monthStartISO(): string {
   const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return localISO(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
 /* CSV export helpers */
@@ -68,7 +78,10 @@ export default function ReportsPage() {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (dateFrom) params.set("date_from", new Date(dateFrom).toISOString());
+    // "2026-07-27" alone parses as UTC midnight = 08:00 in Manila, which
+    // silently dropped the first 8 hours of the day from every report. The
+    // explicit time makes it parse as LOCAL midnight, matching date_to below.
+    if (dateFrom) params.set("date_from", new Date(dateFrom + "T00:00:00").toISOString());
     if (dateTo) params.set("date_to", new Date(dateTo + "T23:59:59").toISOString());
     const qs = params.toString();
 

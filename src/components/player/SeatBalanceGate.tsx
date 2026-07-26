@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
@@ -41,7 +42,15 @@ export default function SeatBalanceGate() {
   //   nothing on the table -> the buy-in floor (`enter`)
   // Quoting `block` while actually refusing entry at `enter` is what made the
   // dialog say "minimum balance 100" to a player blocked by a 500 entry bar.
-  const seated = placedBets.length > 0;
+  // "Seated" must mean HAS PLAYED AT THIS TABLE, latched for the session — not
+  // "has chips down this instant". placedBets empties between rounds and again
+  // the moment settlement clears them, so keying off it re-classified an
+  // already-seated player as someone entering and held them to the buy-in bar:
+  // with enter=500 / keep=100 players were kicked at <500 instead of <100.
+  // Once you have played you keep the seat on the keep floor until you leave.
+  const hasPlayedRef = useRef(false);
+  if (placedBets.length > 0) hasPlayedRef.current = true;
+  const seated = hasPlayedRef.current;
   const required = seated ? block : enter;
 
   // Money already on the table buys the seat: a player who went all-in this
@@ -53,7 +62,9 @@ export default function SeatBalanceGate() {
   // exempt while a bet is live/settling, re-evaluate once it clears (a loss
   // clears placedBets via the settlement fly-back → the gate then applies next
   // round; a win credits the balance back above the floor first).
-  const hasLiveStake = seated;
+  // Distinct from `seated`: the all-in exemption is about money riding on THIS
+  // hand, so it deliberately stays instantaneous.
+  const hasLiveStake = placedBets.length > 0;
 
   const gated =
     token !== "demo" &&
