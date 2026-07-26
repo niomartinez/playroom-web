@@ -116,10 +116,17 @@ export default function PlayerLayout() {
           // child — which trapped the fixed chat sheet underneath the header and
           // the footer. backgroundAttachment: fixed keeps it still while the
           // page scrolls, which is what the layer was for.
+          // Dim matched to the desktop backdrop (0.4). It was 0.72 here, which
+          // is why mobile looked markedly darker than desktop for the same art.
           backgroundImage:
-            "linear-gradient(rgba(3,7,18,0.72), rgba(3,7,18,0.72)), url(/stream-bg.png)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+            "linear-gradient(rgba(3,7,18,0.4), rgba(3,7,18,0.4)), url(/stream-bg.png)",
+          // Fit the WIDTH and tile downward instead of `cover`. The art is
+          // 1672x941 (landscape); on a 430x932 phone `cover` scales it to fill
+          // the height and shows only ~26% of its width — hence the blown-up,
+          // cropped look. Width-fitting keeps it at its intended scale.
+          backgroundSize: "100% auto",
+          backgroundRepeat: "repeat-y",
+          backgroundPosition: "top center",
           backgroundAttachment: "fixed",
           backgroundColor: "#030712",
           position: "relative",
