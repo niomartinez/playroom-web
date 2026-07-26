@@ -104,41 +104,22 @@ export default function PlayerLayout() {
           minHeight: "100vh",
           overflowY: "auto",
           overflowX: "hidden",
-          background:
-            "linear-gradient(107.15deg, #030712 0%, #101828 50%, #000000 100%)",
+          // Felt on the body, under everything below the video. Painted as the
+          // container's own BACKGROUND rather than a stacked layer: an extra
+          // positioned element needed a blanket `z-index: 1` on its siblings to
+          // sit behind them, and that created a stacking context around every
+          // child — which trapped the fixed chat sheet underneath the header and
+          // the footer. backgroundAttachment: fixed keeps it still while the
+          // page scrolls, which is what the layer was for.
+          backgroundImage:
+            "linear-gradient(rgba(3,7,18,0.72), rgba(3,7,18,0.72)), url(/stream-bg.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+          backgroundColor: "#030712",
           position: "relative",
         }}
       >
-        {/* Felt backdrop for everything BELOW the video. The stream backdrop
-            already carries it up top, but the video covers almost all of that —
-            down here is where it actually shows. Same image, blur and dim as
-            VideoPlayer's backdrop so the two read as one table.
-
-            A fixed layer at z 0 rather than a background on the scroll
-            container: that keeps it still while the page scrolls, and keeps it
-            OUT of the pinned footer, which sits above it and stays opaque. */}
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: "none",
-            backgroundImage:
-              "linear-gradient(rgba(3,7,18,0.62), rgba(3,7,18,0.62)), url(/stream-bg.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            filter: "blur(2px)",
-            transform: "scale(1.04)",
-          }}
-        />
-        <style>{BET_PANEL_STYLES}</style>
-        <style>{PAD_CARD_KEYFRAMES}</style>
-        {/* Everything after the backdrop needs to sit above it. */}
-        <style>{".player-layout > *:not([aria-hidden]) { position: relative; z-index: 1; }"}</style>
-        <style>{PAD_CARD_KEYFRAMES}</style>
-
         {/* Header — sticky */}
         {/* z ABOVE the pinned TableInfoBar (60). PlayerMenu renders inside this
             header, so the header's stacking context caps it: at 50 the menu's

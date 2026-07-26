@@ -448,7 +448,11 @@ export default function MobileChat() {
     right: 0,
     bottom: vp.kb,
     height: sheetHeight,
-    zIndex: 70,
+    // Above the sticky header (70) and the pinned info bar (60): it is a modal
+    // sheet, so nothing in the page chrome should paint over its input or its
+    // close button. Still below the seat/session covers (190/200), which must
+    // win over everything.
+    zIndex: 100,
     transform: `translateY(${translateY})`,
     transition: sheetTransition,
     display: "flex",
