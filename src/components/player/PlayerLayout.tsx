@@ -164,19 +164,24 @@ export default function PlayerLayout() {
 
       <PlayerHeader />
 
-      <div className="relative min-h-0 overflow-hidden bg-black flex items-center justify-center">
-        <VideoPlayer
-          webrtcUrl={webrtcUrl}
-          hlsUrl={hlsUrl}
-          fallback={<DealVisualizer />}
-        />
-        <RoundCountdown />
-        <WinnersMarquee />
-        <LowBalanceGate />
-        {liveChatEnabled && <LiveChat />}
+      {/* The video row is ONE grid cell (gridTemplateRows above defines exactly
+          three). TableInfoBar shares that cell as a flex column instead of
+          becoming a fourth child — adding a child created an implicit row and
+          collapsed the layout into a large empty gap. */}
+      <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-black flex items-center justify-center">
+          <VideoPlayer
+            webrtcUrl={webrtcUrl}
+            hlsUrl={hlsUrl}
+            fallback={<DealVisualizer />}
+          />
+          <RoundCountdown />
+          <WinnersMarquee />
+          <LowBalanceGate />
+          {liveChatEnabled && <LiveChat />}
+        </div>
+        <TableInfoBar />
       </div>
-
-      <TableInfoBar />
 
       <div
         className="min-h-0 overflow-hidden"
