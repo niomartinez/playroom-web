@@ -79,6 +79,8 @@ export function useIdleSession(): IdleSessionState {
   const idleRoundsRef = useRef(0);
   const lastRoundIdRef = useRef<string | null>(null);
   const placedThisRoundRef = useRef(false);
+  /** The round we joined during — forgiven once, mirroring the server. */
+  const joinRoundRef = useRef<string | null>(null);
 
   // The exemption can arrive AFTER the client has already counted itself out:
   // the flag comes from the network (rejoin on mount, then every state poll), so
@@ -132,10 +134,11 @@ export function useIdleSession(): IdleSessionState {
     const newRoundId = String(currentRound.roundId);
     const prevRoundId = lastRoundIdRef.current;
 
-    // First round we observe — just record it, don't count.
+    // First round we observe — record it, and mark it as the JOIN round.
     if (!prevRoundId) {
       lastRoundIdRef.current = newRoundId;
       placedThisRoundRef.current = false;
+      joinRoundRef.current = newRoundId;
       return;
     }
 
@@ -145,6 +148,17 @@ export function useIdleSession(): IdleSessionState {
     // Round transitioned. Evaluate the prior round's bet activity.
     if (placedThisRoundRef.current) {
       idleRoundsRef.current = 0;
+      joinRoundRef.current = null;
+    } else if (prevRoundId === joinRoundRef.current) {
+      // JOIN GRACE, matching the server's.
+      //
+      // Not counting the transition INTO the join round was never enough: the
+      // round itself was still evaluated as soon as the next one opened, so a
+      // player who joined mid-round with no time to bet had it counted anyway.
+      // The server forgives that round outright, so the client did too little
+      // and ran a round AHEAD — showing the warning, and then the released-seat
+      // overlay, one round before the server actually revoked.
+      joinRoundRef.current = null;
     } else {
       idleRoundsRef.current += 1;
     }

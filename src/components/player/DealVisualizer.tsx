@@ -350,7 +350,14 @@ export default function DealVisualizer() {
       )}
 
       {/* Winner overlay */}
-      {roundStatus === "result" && winner && (
+      {/* Gated on `winner` alone, NOT on roundStatus === "result".
+          Settlement moves the round out of `result` in about a second, so the
+          outcome banner flashed and was gone before anyone could read it. The
+          winner is only populated once the round resolves and is wiped by the
+          next RoundStarted, so this is both spoiler-safe and self-clearing —
+          it now holds for the whole lull between hands. Same defect and same
+          fix as the cards, the WIN badge, the pad glow and the result panel. */}
+      {winner && (
         <div
           style={{
             marginTop: isMobile ? 10 : 20,

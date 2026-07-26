@@ -290,8 +290,11 @@ export default function BaccaratTable() {
         </div>
       </div>
 
-      {/* Winner overlay */}
-      {roundStatus === "result" && winner && (
+      {/* Winner overlay — THIS is the "Banker Wins" banner on desktop, and it
+          was gated on roundStatus === "result", which settlement leaves within
+          about a second. Gating on `winner` alone holds it for the whole lull
+          and clears it on the next RoundStarted, which wipes the round object. */}
+      {winner && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
           <div
             className="font-bold text-white text-center px-4 py-2 rounded-xl"
