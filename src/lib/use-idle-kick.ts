@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useGame } from "./game-context";
-import { getIdleExempt } from "./idle-exempt";
+import { getIdleExempt, IDLE_EXEMPT_EVENT } from "./idle-exempt";
 import { resolveIdlePolicy, type IdlePolicy } from "./idle-policy";
 
 /**
@@ -59,6 +59,23 @@ export function useIdleSession(): IdleSessionState {
   const idleRoundsRef = useRef(0);
   const lastRoundIdRef = useRef<string | null>(null);
   const placedThisRoundRef = useRef(false);
+
+  // The exemption can arrive AFTER the client has already counted itself out:
+  // the flag comes from the network (rejoin on mount, then every state poll), so
+  // a slow or failed first call leaves the overlay up over a feed the server is
+  // still happily serving. When the exemption turns on, retract the overlay and
+  // reset the counter so the session behaves as the server actually treats it.
+  useEffect(() => {
+    const onExempt = (e: Event) => {
+      const exempt = (e as CustomEvent<boolean>).detail;
+      if (!exempt) return;
+      idleRoundsRef.current = 0;
+      setExpired(false);
+      setWarnLevel(0);
+    };
+    window.addEventListener(IDLE_EXEMPT_EVENT, onExempt);
+    return () => window.removeEventListener(IDLE_EXEMPT_EVENT, onExempt);
+  }, []);
 
   // Clear an active warning the instant a chip goes down — responsive, and
   // harmless if the bet is later rejected (the warning just returns next

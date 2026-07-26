@@ -30,18 +30,19 @@ interface TocItem {
 }
 
 const TOC: TocItem[] = [
-  { id: "setup", num: 1, title: "Setup (Per Shift)", keywords: ["login", "chrome", "shoe", "serial", "connect", "dealer name", "settings", "start of day", "per shift"] },
-  { id: "streaming-setup", num: 2, title: "Streaming Setup (OBS)", keywords: ["obs", "whip", "rtmp", "bearer", "token", "stream key", "bitrate", "keyframe", "b-frames", "bframes", "credentials", "password", "audio", "camera", "publish"] },
-  { id: "dealing", num: 3, title: "Dealing a Round", keywords: ["new round", "deal", "cards", "no more bets", "countdown", "confirm", "settle", "verification", "misread", "third card"] },
-  { id: "table-controls", num: 4, title: "Table Controls", keywords: ["pause", "resume", "close table", "break", "shift"] },
-  { id: "betting-window", num: 5, title: "Betting Window", keywords: ["betting time", "countdown", "duration", "10", "16", "20", "25", "30", "seconds"] },
-  { id: "video-delay", num: 6, title: "Video Delay (Card Sync)", keywords: ["sync", "delay", "latency", "calibration", "1100", "cards early", "cards late", "video"] },
-  { id: "manual-input", num: 7, title: "Manual Input (Fallback)", keywords: ["manual", "fallback", "shoe broken", "card picker", "override"] },
-  { id: "emulator", num: 8, title: "Testing with Emulator", keywords: ["emulator", "test", "no hardware", "demo", "fake cards"] },
-  { id: "accuracy-testing", num: 9, title: "Accuracy Testing", keywords: ["test", "testing", "accuracy", "qa", "verify", "scenario", "demo", "play money", "payout", "settlement", "commission", "checklist", "sign off", "go live", "TEST table"] },
-  { id: "shift-change", num: 10, title: "Shift Change & Accounts", keywords: ["shift", "handover", "dealer change", "logout", "log out", "pause", "password", "change password", "reset password", "account", "forgot"] },
-  { id: "troubleshooting", num: 11, title: "Troubleshooting", keywords: ["black video", "disconnected", "wrong card", "browser not supported", "lag", "frozen", "not working", "broken", "issue", "problem"] },
-  { id: "emergency", num: 12, title: "Emergency Procedures", keywords: ["power outage", "internet down", "disconnect", "failure", "emergency", "outage"] },
+  { id: "which-site", num: 1, title: "Which Site Am I On?", keywords: ["staging", "production", "prod", "live", "url", "link", "wrong site", "test", "real", "which", "address", "app", "staging-app"] },
+  { id: "setup", num: 2, title: "Setup (Per Shift)", keywords: ["login", "chrome", "shoe", "serial", "connect", "dealer name", "settings", "start of day", "per shift"] },
+  { id: "streaming-setup", num: 3, title: "Streaming Setup (OBS)", keywords: ["obs", "whip", "rtmp", "bearer", "token", "stream key", "bitrate", "keyframe", "b-frames", "bframes", "credentials", "password", "audio", "camera", "publish"] },
+  { id: "dealing", num: 4, title: "Dealing a Round", keywords: ["new round", "deal", "cards", "no more bets", "countdown", "confirm", "settle", "verification", "misread", "third card"] },
+  { id: "table-controls", num: 5, title: "Table Controls", keywords: ["pause", "resume", "close table", "break", "shift"] },
+  { id: "betting-window", num: 6, title: "Betting Window", keywords: ["betting time", "countdown", "duration", "10", "16", "20", "25", "30", "seconds"] },
+  { id: "video-delay", num: 7, title: "Video Delay (Card Sync)", keywords: ["sync", "delay", "latency", "calibration", "1100", "cards early", "cards late", "video"] },
+  { id: "manual-input", num: 8, title: "Manual Input (Fallback)", keywords: ["manual", "fallback", "shoe broken", "card picker", "override"] },
+  { id: "emulator", num: 9, title: "Testing with Emulator", keywords: ["emulator", "test", "no hardware", "demo", "fake cards"] },
+  { id: "accuracy-testing", num: 10, title: "Accuracy Testing", keywords: ["test", "testing", "accuracy", "qa", "verify", "scenario", "demo", "play money", "payout", "settlement", "commission", "checklist", "sign off", "go live", "TEST table"] },
+  { id: "shift-change", num: 11, title: "Shift Change & Accounts", keywords: ["shift", "handover", "dealer change", "logout", "log out", "pause", "password", "change password", "reset password", "account", "forgot"] },
+  { id: "troubleshooting", num: 12, title: "Troubleshooting", keywords: ["black video", "disconnected", "wrong card", "browser not supported", "lag", "frozen", "not working", "broken", "issue", "problem"] },
+  { id: "emergency", num: 13, title: "Emergency Procedures", keywords: ["power outage", "internet down", "disconnect", "failure", "emergency", "outage"] },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -119,6 +120,48 @@ function AppLink({ path, children }: { path: string; children: React.ReactNode }
     <a href={path} target="_blank" rel="noopener noreferrer" style={{ color: GOLD }}>
       {children}
     </a>
+  );
+}
+
+/** Live "which site is this?" indicator.
+ *
+ *  Go-live day was lost to this exact ambiguity: the studio was dealing on the
+ *  staging site while the operator was watching production and seeing nothing.
+ *  Both sites look identical, so the only reliable tell is the address bar —
+ *  this reads it for the dealer instead of asking them to notice a prefix. */
+function EnvBanner() {
+  const [env, setEnv] = useState<"prod" | "staging" | "unknown">("unknown");
+  const [host, setHost] = useState("");
+  useEffect(() => {
+    try {
+      const h = window.location.host;
+      setHost(h);
+      setEnv(h.startsWith("staging-") ? "staging" : h.startsWith("app.") ? "prod" : "unknown");
+    } catch {
+      /* keep unknown */
+    }
+  }, []);
+
+  const isProd = env === "prod";
+  const isStaging = env === "staging";
+  const bg = isProd ? "rgba(0,201,81,0.10)" : isStaging ? "rgba(240,177,0,0.10)" : "rgba(153,161,175,0.10)";
+  const bd = isProd ? "rgba(0,201,81,0.45)" : isStaging ? "rgba(240,177,0,0.5)" : "rgba(153,161,175,0.4)";
+  const fg = isProd ? "#7bf1a8" : isStaging ? "#f0b100" : "#99a1af";
+
+  return (
+    <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 12, padding: "14px 16px", margin: "8px 0 20px" }}>
+      <div style={{ fontSize: 13, color: "#99a1af", marginBottom: 4 }}>You are currently on:</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: fg }}>
+        {isProd ? "PRODUCTION — real players" : isStaging ? "STAGING — practice only" : "Unrecognised site"}
+      </div>
+      <div style={{ fontSize: 12, color: "#6a7282", marginTop: 4, fontFamily: "ui-monospace, monospace" }}>{host || "…"}</div>
+      {isStaging && (
+        <div style={{ fontSize: 13, color: "#f0b100", marginTop: 10 }}>
+          Nothing you deal here reaches real players. For a live shift, remove
+          <strong> staging- </strong> from the address.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -498,7 +541,7 @@ function CredentialsPanel() {
           {tables.map((t) => (
             <div key={t.path} className="rounded-lg p-3" style={{ backgroundColor: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="text-xs font-bold mb-2 uppercase tracking-wider" style={{ color: GOLD }}>
-                {t.path === "studio1" ? "Baccarat Table 1" : "Baccarat Table 2"} — {t.path}
+                {t.path === "studio1" ? "Table 1" : "Table 2"} (<code>{t.path === "studio1" ? "BAC-TABLE-01" : "BAC-TABLE-02"}</code>) — {t.path}
               </div>
               {[
                 { label: "WHIP Server (preferred — carries audio)", value: t.whip_url },
@@ -677,21 +720,41 @@ export default function GuideContent() {
           `}</style>
 
           <Section item={TOC[0]}>
-            <div className="step"><span className="step-num">1</span><span className="step-text">Open <strong>Chrome</strong> on the Studio PC</span></div>
+            <p>There are two identical-looking sites. Everything else in this guide assumes you already know which one you are on, so check this first, every shift.</p>
+
+            <EnvBanner />
+
+            <div className="step"><span className="step-num">1</span><span className="step-text"><strong>PRODUCTION</strong> — <code>app.playroomgaming.ph</code>. Real players, real money. This is what you use for a live shift.</span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text"><strong>STAGING</strong> — <code>staging-app.playroomgaming.ph</code>. Practice and testing only. <strong>No player ever sees this.</strong> If the address starts with <code>staging-</code>, you are NOT live.</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">The rule: <strong>if the address contains the word &ldquo;staging&rdquo;, it is not live.</strong> Delete <code>staging-</code> from the front of the address to reach production.</span></div>
+
+            <div className="warn"><strong>The most common go-live mistake.</strong> Dealing on staging while the operator watches production: the studio looks perfectly normal, players see an empty table, and nobody gets an error message. Check the banner above before your first round.</div>
+
+            <p style={{ marginTop: 18 }}><strong>Which table do I pick?</strong></p>
+            <div className="step"><span className="step-num">1</span><span className="step-text">Live shift on production → pick the real table for your pit. It is named <strong>&ldquo;XXX Baccarat Table 1&rdquo;</strong> / <strong>&ldquo;XXX Baccarat Table 2&rdquo;</strong> (game id <code>BAC-TABLE-01</code> / <code>BAC-TABLE-02</code>).</span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text">Practising → pick a table whose name starts with <strong>TEST</strong>. Never deal a real round on a TEST table and never practise on a real one.</span></div>
+            <div className="info"><strong>Go by the game id, not the label.</strong> Display names get rebranded — <code>BAC-TABLE-01</code> and <code>BAC-TABLE-02</code> are the real tables whatever they are currently called, and anything starting with <code>TEST-</code> is not live.</div>
+
+            <p style={{ marginTop: 18 }}><strong>&ldquo;Forbidden&rdquo; or a blank page when opening /studio?</strong></p>
+            <div className="info">The studio is restricted to approved IP addresses, so a new PC or a changed internet connection is refused. Open <a href="https://whatismyipaddress.com/" target="_blank" rel="noopener noreferrer" style={{ color: GOLD }}>whatismyipaddress.com</a>, copy the address it shows, and send it to your admin to be added. One address per device/connection — it changes if you switch to a different network or router.</div>
+          </Section>
+
+          <Section item={TOC[1]}>
+            <div className="step"><span className="step-num">1</span><span className="step-text">Open <strong>Chrome</strong> on the Studio PC — check the <strong>Section 1</strong> banner shows PRODUCTION before a live shift</span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text">Navigate to the Studio URL and <strong>log in</strong> with your dealer credentials</span></div>
             <div className="step"><span className="step-num">3</span><span className="step-text">Open <strong>Settings</strong> (gear icon, top-right) — set your <strong>dealer name</strong> and select the <strong>table</strong></span></div>
             <div className="step"><span className="step-num">4</span><span className="step-text">In Settings, scroll to <strong>Angel Eye Shoe</strong> — click <strong>&quot;Connect Shoe&quot;</strong> and select the serial port</span></div>
             <div className="step"><span className="step-num">5</span><span className="step-text">Click <strong>Save</strong> — your name will appear in the player UI</span></div>
-            <div className="step"><span className="step-num">6</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream — see <strong>Section 2</strong> for exact settings</span></div>
+            <div className="step"><span className="step-num">6</span><span className="step-text">Open <strong>OBS Studio</strong> and start the camera stream — see <strong>Section 3</strong> for exact settings</span></div>
             <div className="info">You only need to grant serial port permission once per session. If Chrome asks &quot;Allow this site to access a serial port?&quot; — click Allow. Chrome or Edge only (Web Serial is not in Safari/Firefox).</div>
           </Section>
 
-          <Section item={TOC[1]}>
+          <Section item={TOC[2]}>
             <p>OBS pushes the table camera to our streaming server. Use <strong>WHIP</strong> — it carries your microphone audio to players. RTMP is the fallback if your network blocks WHIP (players then get video only).</p>
 
             <div className="step"><span className="step-num">1</span><span className="step-text">OBS → Settings → Stream → Service: <strong>WHIP</strong></span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text">Server + Bearer Token: copy from the <strong>Publish Credentials</strong> panel below (Table 1 = studio1, Table 2 = studio2)</span></div>
-            <div className="step"><span className="step-num">3</span><span className="step-text">Settings → Output (Advanced): Rate Control <strong>CBR</strong>, Bitrate <strong>2500 Kbps</strong>, Keyframe Interval <strong>1s</strong>, <strong>B Frames: 0</strong> (x264: add <code>bframes=0</code> in the options field). Only go above 2500 if your upload tests clean (Section 10).</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">Settings → Output (Advanced): Rate Control <strong>CBR</strong>, Bitrate <strong>2500 Kbps</strong>, Keyframe Interval <strong>1s</strong>, <strong>B Frames: 0</strong> (x264: add <code>bframes=0</code> in the options field). Only go above 2500 if your upload tests clean (see <a href="#troubleshooting" style={{ color: GOLD }}>Troubleshooting</a>).</span></div>
             <div className="step"><span className="step-num">4</span><span className="step-text">Settings → Video: <strong>1280×720</strong>, 30 FPS (720p is plenty for baccarat and far more loss-resilient than 1080p)</span></div>
             <div className="step"><span className="step-num">5</span><span className="step-text">Click <strong>Start Streaming</strong> — the indicator turns green within ~3s</span></div>
             <div className="step"><span className="step-num">6</span><span className="step-text">Verify on a player page — video appears within ~5 seconds</span></div>
@@ -707,7 +770,7 @@ export default function GuideContent() {
             <div className="info">RTMP runs over TCP, so it survives packet loss — video stays clean (just slightly delayed) where WHIP breaks up. Trade-off: <strong>no dealer audio</strong> on RTMP. Flag it to your admin so the network gets fixed too.</div>
           </Section>
 
-          <Section item={TOC[2]}>
+          <Section item={TOC[3]}>
             <div className="step"><span className="step-num">1</span><span className="step-text">Click <strong>&quot;NEW ROUND&quot;</strong> — betting opens, players see countdown timer</span></div>
             <div className="step"><span className="step-num">2</span><span className="step-text"><strong>Wait for countdown</strong> — DO NOT deal cards yet. Players are placing bets.</span></div>
             <div className="step"><span className="step-num">3</span><span className="step-text">Countdown hits 0 — <strong>&quot;NO MORE BETS&quot;</strong> appears. Bets are locked, and the <strong>card verification screen</strong> opens automatically.</span></div>
@@ -717,7 +780,7 @@ export default function GuideContent() {
             <div className="step"><span className="step-num">7</span><span className="step-text">Click <strong>&quot;NEW ROUND&quot;</strong> again for the next round</span></div>
           </Section>
 
-          <Section item={TOC[3]}>
+          <Section item={TOC[4]}>
             <table>
               <thead><tr><th>Button</th><th>When to Use</th><th>What Happens</th></tr></thead>
               <tbody>
@@ -729,11 +792,11 @@ export default function GuideContent() {
             </table>
           </Section>
 
-          <Section item={TOC[4]}>
+          <Section item={TOC[5]}>
             <p>The betting window duration is configurable (10s, 16s, 20s, 25s, 30s — default 16s). Use the buttons at the bottom of the Round Controls panel. Takes effect on the next round.</p>
           </Section>
 
-          <Section item={TOC[5]}>
+          <Section item={TOC[6]}>
             <p>Cards and results are delayed by the table&apos;s <strong>Video Delay</strong> so they appear on player screens at the same moment the action shows on the video stream (the video takes ~1–2 seconds to reach viewers; card data would otherwise arrive first).</p>
             <ol>
               <li>Settings (gear icon, top-right) → <strong>Video Delay (ms)</strong>, directly under the Dealer Name field — preset to <strong>1100</strong>, usually close. Select a table first or the field is disabled.</li>
@@ -742,7 +805,7 @@ export default function GuideContent() {
             </ol>
           </Section>
 
-          <Section item={TOC[6]}>
+          <Section item={TOC[7]}>
             <p>If the Angel Eye shoe malfunctions or a card isn&apos;t read correctly:</p>
             <ol>
               <li>Click the <strong>&quot;Manual Input&quot;</strong> button (bottom-right)</li>
@@ -753,7 +816,7 @@ export default function GuideContent() {
             <div className="warn">Manual input should only be used when the shoe fails. Normal dealing should always go through the shoe.</div>
           </Section>
 
-          <Section item={TOC[7]}>
+          <Section item={TOC[8]}>
             <p>When no physical shoe is available, use the Emulator page:</p>
             <ol>
               <li>Open <code>/emulator</code> in a separate tab</li>
@@ -764,10 +827,16 @@ export default function GuideContent() {
             </ol>
           </Section>
 
-          <Section item={TOC[8]}>
+          <Section item={TOC[9]}>
             <p>A structured plan for the studio team to verify <strong>operations accuracy</strong> — dealing, scoring, settlement, and stream sync — by running real rounds and checking every outcome against what the rules say should happen. Run it before going live and after any change to a table, the shoe, or the stream. It uses play money on a TEST table, so nothing here can reach a real player or real funds.</p>
 
-            <div className="info"><strong>Where to run it.</strong> Studio: open <AppLink path="/studio"><code>/studio</code></AppLink> and select a <strong>TEST-</strong> table (never a live one). Players: open <AppLink path="/play/demo"><code>/play/demo</code></AppLink> in another tab — it only ever lists TEST- tables, starts with a <strong>10,000</strong> play-money balance, and connects read-only, so a demo bet can never reach a real table. These links follow whichever site you opened this guide on (staging or production). No TEST table yet? Create one in Studio Settings, or use the <AppLink path="/emulator">Emulator</AppLink> as a software shoe. Keep the browser console open (F12) on both tabs — you are watching for red errors all session.</div>
+            <div className="info"><strong>Where to run it.</strong> Studio: open <AppLink path="/studio"><code>/studio</code></AppLink> and select a <strong>TEST-</strong> table (never a live one). Players: use <strong>Preview Live</strong> — see below. No TEST table yet? Create one in Studio Settings, or use the <AppLink path="/emulator">Emulator</AppLink> as a software shoe. Keep the browser console open (F12) on both tabs — you are watching for red errors all session.</div>
+
+            <p style={{ marginTop: 18 }}><strong>Preview Live — see your table exactly as a player does</strong></p>
+            <div className="step"><span className="step-num">1</span><span className="step-text">In the studio header, click the <strong>eye icon</strong> (next to the gear). It opens a new tab.</span></div>
+            <div className="step"><span className="step-num">2</span><span className="step-text">That tab is the real player screen for <strong>your currently selected table</strong> — same video, same countdown, same cards, and you can place bets to check payouts.</span></div>
+            <div className="step"><span className="step-num">3</span><span className="step-text">The money is <strong>play money</strong>. These rounds never appear in operator reports or revenue figures, on any site.</span></div>
+            <div className="info"><strong>Use this instead of asking anyone for a link.</strong> It works on production, needs no token from an admin, and always points at the table you are actually dealing — which is also the fastest way to confirm your stream is really reaching players. The link is short-lived and tied to your studio login, so don&rsquo;t bother forwarding it; generate a fresh one instead. <strong>Demo mode is switched off on production</strong> for security, so Preview Live is the way to see the player view on a live site.</div>
 
             <h3>Pre-flight (5 min)</h3>
             <div className="step"><span className="step-num">1</span><span className="step-text">API health is green — open <ApiLink path="/health"><code>/health</code></ApiLink>, expect <code>{`{"status":"ok"}`}</code>.</span></div>
@@ -847,7 +916,7 @@ export default function GuideContent() {
             <div className="warn">A settlement looks wrong? Open <strong>Admin → Rounds → that round</strong> and compare cards, scores, <code>betPosition</code>, <code>actualBetAmt</code>, <code>validBetAmt</code>, <code>winAmt</code> against what you expected. Capture a screenshot + the round id for the dev/admin team.</div>
           </Section>
 
-          <Section item={TOC[9]}>
+          <Section item={TOC[10]}>
             <ol>
               <li>Current dealer: Click <strong>PAUSE TABLE</strong> (wait for current round to finish)</li>
               <li>Current dealer: <strong>Log out</strong> (door icon, top-right of the studio header)</li>
@@ -858,15 +927,19 @@ export default function GuideContent() {
             <p><strong>Passwords:</strong> change your own under Settings → <strong>Account</strong> (needs your current password). Forgot it? The supervisor logs in as <code>SuperAdmin</code> and resets it from the same Account section.</p>
           </Section>
 
-          <Section item={TOC[10]}>
+          <Section item={TOC[11]}>
             <table>
               <thead><tr><th>Issue</th><th>Solution</th></tr></thead>
               <tbody>
+                <tr><td><strong>&quot;Forbidden&quot; / 403 / blank page</strong> opening /studio</td><td>Your IP address is not on the studio allowlist — a new PC, or a changed internet connection/router. Get the address from <a href="https://whatismyipaddress.com/" target="_blank" rel="noopener noreferrer" style={{ color: GOLD }}>whatismyipaddress.com</a> and send it to your admin. Nothing is wrong with the studio itself.</td></tr>
+                <tr><td><strong>Players see nothing</strong> but the studio looks normal</td><td>You are almost certainly on the wrong site. Check <a href="#which-site" style={{ color: GOLD }}>Section 1</a> — if the address starts with <code>staging-</code>, no real player can see you. Also confirm you selected the real table (<code>BAC-TABLE-01</code> / <code>BAC-TABLE-02</code>), not a <code>TEST-</code> one.</td></tr>
+                <tr><td><strong>The table I was told to pick isn&apos;t in the list</strong></td><td>Table display names get rebranded; the game id does not. Pick by id — <code>BAC-TABLE-01</code> / <code>BAC-TABLE-02</code> are the live tables regardless of the label shown. If you only see <code>TEST-</code> tables, you are on staging.</td></tr>
+                <tr><td><strong>I need a player link to test</strong></td><td>Don&apos;t wait for one — click the <strong>eye icon</strong> (Preview Live) in the studio header. See <a href="#accuracy-testing" style={{ color: GOLD }}>Section 10</a>.</td></tr>
                 <tr><td>Shoe shows &quot;Disconnected&quot;</td><td>Check USB cable. Click &quot;Connect Shoe&quot; and re-select port. Try different USB port.</td></tr>
                 <tr><td>Wrong card read</td><td>Re-slide card. If persistent, tap the slot on the verification screen to correct it, or use Manual Input for that round.</td></tr>
                 <tr><td>&quot;Browser Not Supported&quot;</td><td>Use Chrome or Edge (not Safari/Firefox). Must be HTTPS.</td></tr>
-                <tr><td>Players report BLACK video</td><td>OBS B-frames must be 0 — see <a href="#streaming-setup" style={{ color: GOLD }}>Section 2</a>. Apply, Stop Streaming, Start Streaming.</td></tr>
-                <tr><td>Cards on player screens out of sync with video</td><td>Settings → Video Delay (ms) — see <a href="#video-delay" style={{ color: GOLD }}>Section 6</a>.</td></tr>
+                <tr><td>Players report BLACK video</td><td>OBS B-frames must be 0 — see <a href="#streaming-setup" style={{ color: GOLD }}>Section 3</a>. Apply, Stop Streaming, Start Streaming.</td></tr>
+                <tr><td>Cards on player screens out of sync with video</td><td>Settings → Video Delay (ms) — see <a href="#video-delay" style={{ color: GOLD }}>Section 7</a>.</td></tr>
                 <tr><td>Video looks corrupted / blocky / pixelated (OBS still shows connected)</td><td>Packet loss on your upload. Lower OBS bitrate (2500 → 2000 Kbps), set Keyframe <strong>1s</strong>, use <strong>wired ethernet</strong> (not Wi-Fi). If it persists, switch Service to <strong>RTMP</strong> (Custom) — TCP survives loss: clean video, no audio. Flag it to your admin.</td></tr>
                 <tr><td>Video stream lag</td><td>Check upload bandwidth (need a clean 2–3× your bitrate). Lower bitrate in OBS (try 2500 Kbps at 720p).</td></tr>
                 <tr><td>Page frozen</td><td>Refresh (F5). Reconnect shoe. In-progress round is preserved on server.</td></tr>
@@ -874,7 +947,7 @@ export default function GuideContent() {
             </table>
           </Section>
 
-          <Section item={TOC[11]}>
+          <Section item={TOC[12]}>
             <p><strong>Power outage:</strong> All bets preserved in database. Log back in, reconnect shoe, resume table.</p>
             <p><strong>Internet disconnection:</strong> Players auto-reconnect. Video resumes. No bets lost.</p>
             <p><strong>Angel Eye failure:</strong> Switch to Manual Input for remaining rounds. Contact hardware support.</p>

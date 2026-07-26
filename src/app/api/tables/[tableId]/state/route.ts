@@ -12,10 +12,15 @@ const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
  * Adds the service key so it never reaches the client.
  */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ tableId: string }> },
 ) {
   const { tableId } = await params;
+  // Forward the player's session so the backend can answer per-session questions
+  // (currently idle_exempt). Read from the HttpOnly prg_session cookie rather
+  // than a query param — same reason /api/me/active-bets does: a token in the
+  // URL leaks into logs and history.
+  const playerSession = req.cookies.get("prg_session")?.value;
   try {
     const res = await fetch(
       `${API_URL}/internal/tables/${encodeURIComponent(tableId)}/state`,
@@ -24,6 +29,7 @@ export async function GET(
         headers: {
           "Content-Type": "application/json",
           "X-Service-Key": SERVICE_KEY,
+          ...(playerSession ? { "X-Session-Token": playerSession } : {}),
         },
         // Always go to the network — this is live round state, never cache.
         cache: "no-store",

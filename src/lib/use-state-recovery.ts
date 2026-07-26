@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useGame, type BetCode, type MainBetCounts } from "./game-context";
+import { setIdleExempt } from "./idle-exempt";
 
 /* ------------------------------------------------------------------ */
 /*  Backend payload shapes                                             */
@@ -38,6 +39,7 @@ interface TableStatePayload {
   fight: BackendFight | null;
   betting_remaining_seconds: number | null;
   idle_policy?: { expire: number; warn1: number | null; warn2: number | null } | null;
+  idle_exempt?: boolean | null;
   min_seat_balance?: { block: number; warn: number } | null;
   /** Server-owned bet-limit model. See config_cache.get_bet_limits. */
   bet_limits?: {
@@ -155,6 +157,17 @@ export function useStateRecovery() {
         setMaxBet(payload.table?.max_bet_effective ?? payload.table?.max_bet ?? null);
         // Server-owned idle thresholds — the client never invents these.
         if (payload.idle_policy) setIdlePolicy(payload.idle_policy);
+        // Server waived the idle cut for THIS session — the client must not run
+        // its own idle countdown either, or it shows "Seat Released" over a feed
+        // that is still playing (observed on production).
+        //
+        // Re-asserted on EVERY state poll, not just once at mount like the
+        // /stream/rejoin response: if that single call was slow or failed, the
+        // client counted rounds anyway and expired itself despite the server
+        // never intending to cut it. Polling makes the flag self-healing.
+        if (typeof payload.idle_exempt === "boolean") {
+          setIdleExempt(payload.idle_exempt);
+        }
         // Server-owned seat-balance thresholds (block/warn).
         if (payload.min_seat_balance) setMinSeatBalance(payload.min_seat_balance);
         // Server-owned bet-limit model — the UI gates the ×2 chip, the per-hand
