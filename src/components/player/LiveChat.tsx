@@ -160,9 +160,10 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
       <div
         className="absolute z-20 flex flex-col items-stretch gap-2"
         style={{
-          right: 16,
-          // Clear of the shortcut icon row (top: 10, 30px tall).
-          top: 52,
+          // Left side: the winners marquee moved to the right, and the left is
+          // clear of the shortcut icons, so chat can start higher.
+          left: 16,
+          top: 12,
           width: 300,
           maxWidth: "38%",
           // The column is a layout guide only — clicks must reach the video
@@ -278,19 +279,19 @@ export default function LiveChat({ mobile }: { mobile?: boolean }) {
         {floats.map((f) => (
           <div
             key={f.key}
-            className="rounded-xl px-3 py-2"
             style={{
               pointerEvents: "none",
+              // No box: bare text over the feed. A bubble per line stacked ten
+              // deep read as clutter sitting on the table; a text shadow alone
+              // keeps it legible over both bright felt and a dark studio.
+              padding: "1px 2px",
+              textShadow:
+                "0 1px 3px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.75)",
               // Fully opaque for the hold, then fades over exactly the window
               // the hook waits before freeing the slot — so a bubble is gone
               // from the screen and from the queue at the same instant.
               opacity: f.fading ? 0 : 1,
               transition: `opacity ${FLOAT_FADE_MS}ms linear`,
-              background: "rgba(16,24,40, calc(var(--chat-opacity) + 0.08))",
-              border: "1px solid rgba(54,65,83,0.5)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
             }}
           >
             <span

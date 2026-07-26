@@ -27,7 +27,7 @@ const STYLES = `
 
 /**
  * #6 — post-settlement winners list, a low-key vertical marquee over the top-
- * left of the live feed (screen name + net win). Fed by the system-wide
+ * RIGHT of the live feed (screen name + net win). Fed by the system-wide
  * `RoundWinners` broadcast. Non-interactive; auto-hides after a few seconds.
  */
 export default function WinnersMarquee() {
@@ -58,8 +58,10 @@ export default function WinnersMarquee() {
       aria-hidden
       style={{
         position: "absolute",
-        top: 12,
-        left: 12,
+        // Right side now — chat took the left. Dropped below the shortcut icon
+        // row (top 10, 30px tall) so the two never overlap.
+        top: 52,
+        right: 12,
         zIndex: 16,
         width: "min(46vw, 220px)",
         display: "flex",
