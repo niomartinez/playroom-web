@@ -7,6 +7,43 @@ import { useStudio } from "@/lib/studio-context";
 export default function StudioHeader() {
   const studio = useStudio();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  /**
+   * Open Preview Live for the current table.
+   *
+   * The window is opened SYNCHRONOUSLY inside the click and its location is set
+   * once the signed URL arrives: popup blockers reject a window.open() that
+   * happens after an await, so opening first and navigating later is what makes
+   * this work without the browser swallowing it. On failure the placeholder is
+   * closed again so no blank tab is left behind.
+   */
+  async function openPreview() {
+    if (!studio.tableId || previewLoading) return;
+    setPreviewLoading(true);
+    const tab = window.open("", "_blank");
+    try {
+      const res = await fetch("/api/studio/preview-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: studio.tableId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      const url = json?.data?.url;
+      if (res.ok && url) {
+        if (tab) tab.location.href = url;
+        else window.location.href = url; // popup blocked — navigate in place
+      } else {
+        tab?.close();
+        alert(json?.message || "Could not start the preview session.");
+      }
+    } catch {
+      tab?.close();
+      alert("Could not start the preview session.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
 
   return (
     <>
@@ -117,6 +154,39 @@ export default function StudioHeader() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </a>
+
+          {/* Preview Live — opens the real player UI for THIS table on a signed,
+              short-lived link, so studio staff never need an OCMS launch link on
+              production to see what players see. */}
+          <button
+            onClick={openPreview}
+            disabled={previewLoading || !studio.tableId}
+            className="flex items-center justify-center hover:opacity-80 transition-opacity disabled:opacity-40"
+            style={{ width: 24, height: 24 }}
+            aria-label="Preview Live"
+            title={
+              studio.tableId
+                ? "Preview Live — see this table as a player does"
+                : "Preview Live (no table selected)"
+            }
+          >
+            {previewLoading ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#99a1af" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="9" strokeOpacity="0.25" />
+                <path d="M21 12a9 9 0 0 0-9-9" strokeLinecap="round">
+                  <animateTransform
+                    attributeName="transform" type="rotate"
+                    from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite"
+                  />
+                </path>
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#99a1af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            )}
+          </button>
 
           {/* Settings gear */}
           <button

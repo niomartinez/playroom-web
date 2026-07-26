@@ -36,12 +36,27 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
 
   /* Filters */
   const [filterAction, setFilterAction] = useState("");
   const [filterEntity, setFilterEntity] = useState("");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  /* Debounce the free-text box so typing doesn't fire a request per keystroke. */
+  const [searchInput, setSearchInput] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const fetchAudit = useCallback(async () => {
     setLoading(true);
@@ -51,8 +66,15 @@ export default function AuditPage() {
       params.set("page_size", String(pageSize));
       if (filterAction) params.set("action", filterAction);
       if (filterEntity) params.set("entity_type", filterEntity);
+      if (search.trim()) params.set("q", search.trim());
+      // <input type="date"> gives a bare YYYY-MM-DD; widen it to cover the whole
+      // local day so "to = today" doesn't exclude everything logged today.
+      if (dateFrom) params.set("date_from", new Date(`${dateFrom}T00:00:00`).toISOString());
+      if (dateTo) params.set("date_to", new Date(`${dateTo}T23:59:59.999`).toISOString());
+      params.set("sort_by", sortBy);
+      params.set("sort_dir", sortDir);
 
-      const res = await fetch(`/api/admin/audit?${params.toString()}`);
+      const res = await fetch(`/api/admin/audit?${params.toString()}`, { cache: "no-store" });
       if (res.ok) {
         const json = await res.json();
         const data = json.data ?? json;
@@ -64,7 +86,7 @@ export default function AuditPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterAction, filterEntity]);
+  }, [page, pageSize, filterAction, filterEntity, search, dateFrom, dateTo, sortBy, sortDir]);
 
   useEffect(() => {
     fetchAudit();
@@ -87,6 +109,17 @@ export default function AuditPage() {
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div className="flex flex-wrap gap-3 items-end">
+          <div className="grow min-w-[220px]">
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Search</label>
+            <input
+              type="text"
+              placeholder="Action, entity, entity id or IP..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Action</label>
             <input
@@ -114,8 +147,79 @@ export default function AuditPage() {
               <option value="system_config">Config</option>
               <option value="admin_user">Admin User</option>
               <option value="system">System</option>
+              <option value="ip_allowlist">IP Allowlist</option>
             </select>
           </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Sort by</label>
+            <select
+              value={`${sortBy}:${sortDir}`}
+              onChange={(e) => {
+                const [col, dir] = e.target.value.split(":");
+                setSortBy(col);
+                setSortDir(dir === "asc" ? "asc" : "desc");
+                setPage(1);
+              }}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            >
+              <option value="created_at:desc">Newest first</option>
+              <option value="created_at:asc">Oldest first</option>
+              <option value="action:asc">Action A-Z</option>
+              <option value="action:desc">Action Z-A</option>
+              <option value="entity_type:asc">Entity A-Z</option>
+              <option value="entity_type:desc">Entity Z-A</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Per page</label>
+            <select
+              value={String(pageSize)}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              style={inputStyle}
+            >
+              {[20, 50, 100].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          {(searchInput || filterAction || filterEntity || dateFrom || dateTo) && (
+            <button
+              onClick={() => {
+                setSearchInput("");
+                setFilterAction("");
+                setFilterEntity("");
+                setDateFrom("");
+                setDateTo("");
+                setPage(1);
+              }}
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{ backgroundColor: "#262626", color: "#d1d5db" }}
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 

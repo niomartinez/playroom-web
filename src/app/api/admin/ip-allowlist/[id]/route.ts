@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireEnv } from "@/lib/server-env";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://staging-api.playroomgaming.ph";
+const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
+
+function adminHeaders(req: NextRequest): Record<string, string> {
+  const backendToken = req.cookies.get("admin_backend_token")?.value || "";
+  const h: Record<string, string> = { "Content-Type": "application/json", "X-Service-Key": SERVICE_KEY };
+  if (backendToken) h["X-Admin-Token"] = backendToken;
+  return h;
+}
+
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const body = await req.text();
+  const res = await fetch(`${API_URL}/internal/admin/ip-allowlist/${id}`, {
+    method: "PUT",
+    headers: adminHeaders(req),
+    body,
+  });
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const res = await fetch(`${API_URL}/internal/admin/ip-allowlist/${id}`, {
+    method: "DELETE",
+    headers: adminHeaders(req),
+  });
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}

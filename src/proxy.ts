@@ -67,6 +67,68 @@ const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116"
 const ADMIN_IP_ALLOWLIST = new Set([...PANEL_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
 const STUDIO_IP_ALLOWLIST = new Set([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
 
+// ── Managed allowlist (DB-backed, edited in /admin) ─────────────────────────
+//
+// Entries live in the `ip_allowlist` table so they carry an owner label and the
+// surfaces they may reach, and can be CRUD'd without a redeploy. They are
+// UNIONED with the env vars above — never a replacement — for two reasons:
+//
+//   * a DB outage must degrade to the env allowlist, not lock out the office;
+//   * the env vars stay the break-glass mechanism when the panel itself is the
+//     thing you cannot reach.
+//
+// Cached in module scope with a short TTL. The edge runs many isolates, so this
+// is a per-isolate cache: worst case each cold isolate does one fetch, and an
+// allowlist change takes up to TTL to be visible everywhere. Failures are
+// swallowed and the previous snapshot is kept (stale-if-error) — a backend blip
+// must never turn into a 403 storm on the back office.
+const MANAGED_TTL_MS = 60_000;
+type ManagedLists = { admin: Set<string>; studio: Set<string> };
+let managedCache: ManagedLists | null = null;
+let managedFetchedAt = 0;
+let managedInFlight: Promise<ManagedLists | null> | null = null;
+
+async function fetchManagedLists(): Promise<ManagedLists | null> {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const serviceKey = process.env.API_SERVICE_KEY;
+  if (!apiUrl || !serviceKey) return null;
+  try {
+    const res = await fetch(`${apiUrl}/internal/ip-allowlist/effective`, {
+      headers: { "X-Service-Key": serviceKey },
+      cache: "no-store",
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const data = json?.data ?? json ?? {};
+    return {
+      admin: new Set<string>(Array.isArray(data.admin) ? data.admin : []),
+      studio: new Set<string>(Array.isArray(data.studio) ? data.studio : []),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function getManagedLists(): Promise<ManagedLists | null> {
+  const now = Date.now();
+  if (managedCache && now - managedFetchedAt < MANAGED_TTL_MS) return managedCache;
+  // De-dupe concurrent refreshes so a burst of requests on a cold isolate makes
+  // one backend call rather than one per request.
+  if (!managedInFlight) {
+    managedInFlight = fetchManagedLists().finally(() => {
+      managedInFlight = null;
+    });
+  }
+  const fresh = await managedInFlight;
+  if (fresh) {
+    managedCache = fresh;
+    managedFetchedAt = now;
+  }
+  // stale-if-error: on failure keep serving the last good snapshot.
+  return managedCache;
+}
+
 const ADMIN_GATE_ACTIVE = PANEL_ALLOWED_IPS.length > 0;
 const STUDIO_GATE_ACTIVE = STUDIO_ALLOWED_IPS.length > 0;
 
@@ -155,10 +217,17 @@ export async function proxy(req: NextRequest) {
     const gateActive =
       ipSurface === "admin" ? ADMIN_GATE_ACTIVE : STUDIO_GATE_ACTIVE;
     if (gateActive) {
-      const allowlist =
+      const envList =
         ipSurface === "admin" ? ADMIN_IP_ALLOWLIST : STUDIO_IP_ALLOWLIST;
       const clientIp = resolveClientIp(req);
-      if (!clientIp || !allowlist.has(clientIp)) {
+      let allowed = Boolean(clientIp) && envList.has(clientIp);
+      if (!allowed && clientIp) {
+        // Only consult the managed list when the env list already said no, so
+        // the common allowed case costs nothing.
+        const managed = await getManagedLists();
+        allowed = Boolean(managed?.[ipSurface].has(clientIp));
+      }
+      if (!allowed) {
         return new NextResponse("Forbidden", { status: 403 });
       }
     }
