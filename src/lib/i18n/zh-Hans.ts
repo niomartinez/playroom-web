@@ -36,6 +36,7 @@ const zhHans: Record<string, string> = {
   "status.live": "直播",
 
   /* Header */
+  "header.dealer": "荷官：{name}",
   "header.liveBaccarat": "真人百家乐",
   "header.noRound": "暂无局",
   "header.round": "第 {n} 局",
@@ -157,8 +158,8 @@ const zhHans: Record<string, string> = {
   "gate.addFunds": "充值",
 
   /* Session / idle */
-  "session.warn1": "本局请下注，否则可能因长时间未下注而被移出座位。",
-  "session.warn2": "最后提醒——请立即下注，否则将因未参与而被移出座位。",
+  "session.warn1": "请下注，否则座位可能被释放。",
+  "session.warn2": "最后提醒——立即下注，否则将失去座位。",
   "session.rejoin": "重新加入牌桌",
   "session.expiredTitle": "座位已释放——长时间未下注",
   "session.expiredBody": "您连续多局未下注，座位已被释放以保持牌桌活跃。下次请每局下注以保留座位。返回大厅可重新加入牌桌。",

@@ -53,26 +53,39 @@ export default function SessionGuard() {
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 110,
-            maxWidth: "min(92vw, 460px)",
+            // ONE LINE, always. At 460px wide and 13px this wrapped to three
+            // lines on a phone and sat as a slab across the middle of the feed.
+            // Nearly full width + smaller type + nowrap keeps it to a single
+            // strip; ellipsis is the backstop rather than letting it grow again.
+            width: "min(96vw, 760px)",
+            maxWidth: "96vw",
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            padding: "10px 16px",
-            borderRadius: 12,
-            background: warnLevel === 2 ? "rgba(251,44,54,0.92)" : "rgba(240,177,0,0.94)",
+            justifyContent: "center",
+            gap: 7,
+            padding: "5px 12px",
+            borderRadius: 999,
+            // Lower opacity: it is a nudge over live video, not a blocker.
+            background: warnLevel === 2 ? "rgba(251,44,54,0.72)" : "rgba(240,177,0,0.72)",
             color: warnLevel === 2 ? "#fff" : "#1a1206",
-            fontSize: 13,
+            fontSize: "clamp(10px, 2.6vw, 12px)",
             fontWeight: 700,
+            lineHeight: 1.25,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
             textAlign: "center",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            backdropFilter: "blur(2px)",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)",
           }}
           role="status"
         >
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ flexShrink: 0 }}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} style={{ flexShrink: 0 }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
-          <span>{warnLevel === 2 ? t("session.warn2") : t("session.warn1")}</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+            {warnLevel === 2 ? t("session.warn2") : t("session.warn1")}
+          </span>
         </div>
       )}
 

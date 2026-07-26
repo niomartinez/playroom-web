@@ -240,12 +240,16 @@ export default function BalanceBar() {
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              {/* Undo arrow, not a bin: this takes your chips back, it does not
-                  destroy anything, and a trash can reads as something harsher
-                  than it is. */}
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 7v6h6" />
-                <path d="M3.5 13a9 9 0 1 0 2.1-9.4L3 7" />
+              {/* Broom — sweeping the chips off the table. A bin read as
+                  destructive and the undo arrow was illegible at this size (a
+                  tiny circular arrow turns to mush at 16px); a broom keeps a
+                  distinct silhouette when small. */}
+              <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 5l-7 7" />
+                <path d="M14 8.5l3.5 3.5" />
+                <path d="M12.5 10.5 6 17l3 3 6.5-6.5z" />
+                <path d="M7.5 15.5 10 18" />
+                <path d="M5 21l1-1" />
               </svg>
               <span style={{ fontSize: 6.5, fontWeight: 800, letterSpacing: 0.3 }}>
                 {t("balance.clear")}

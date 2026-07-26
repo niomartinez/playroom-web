@@ -91,11 +91,36 @@ export default function PlayerHeader() {
           <img src="/logo.png" alt="Playroom Gaming" style={{ height: 22, objectFit: "contain" }} />
         </button>
 
-        {/* Centre intentionally empty: the LIVE pulse and "Live Baccarat"
-            label were removed — they competed with the video for attention and
-            said nothing a player needs mid-hand. The table name and round now
-            live in TableInfoBar at the bottom, Evolution-style. */}
-        <div style={{ flex: 1, minWidth: 0 }} />
+        {/* The LIVE pulse and "Live Baccarat" label are gone (they competed with
+            the video and said nothing useful mid-hand); the dealer's name does
+            belong here — players refer to them by name in chat. Table name and
+            round live in TableInfoBar at the bottom. */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 8px",
+          }}
+        >
+          {dealerName && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "#99A1AF",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+              }}
+            >
+              {t("header.dealer", { name: dealerName })}
+            </span>
+          )}
+        </div>
 
         {/* Right: menu + language switcher. Round number moved to TableInfoBar. */}
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
@@ -120,7 +145,9 @@ export default function PlayerHeader() {
         </button>
         <span className="text-[1.1vh] text-white font-semibold">{tableName}</span>
         <span className="text-[1vh] text-[#6a7282]">•</span>
-        <span className="text-[1.1vh] text-[#99a1af]">{dealerName}</span>
+        <span className="text-[1.1vh] text-[#99a1af]">
+          {dealerName ? t("header.dealer", { name: dealerName }) : ""}
+        </span>
       </div>
       <div className="flex items-center gap-[0.6vw]">
         {/* Round status pill */}

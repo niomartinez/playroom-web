@@ -78,8 +78,34 @@ export default function PlayerLayout() {
           position: "relative",
         }}
       >
+        {/* Felt backdrop for everything BELOW the video. The stream backdrop
+            already carries it up top, but the video covers almost all of that —
+            down here is where it actually shows. Same image, blur and dim as
+            VideoPlayer's backdrop so the two read as one table.
+
+            A fixed layer at z 0 rather than a background on the scroll
+            container: that keeps it still while the page scrolls, and keeps it
+            OUT of the pinned footer, which sits above it and stays opaque. */}
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+            backgroundImage:
+              "linear-gradient(rgba(3,7,18,0.62), rgba(3,7,18,0.62)), url(/stream-bg.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            filter: "blur(2px)",
+            transform: "scale(1.04)",
+          }}
+        />
         <style>{BET_PANEL_STYLES}</style>
-      <style>{PAD_CARD_KEYFRAMES}</style>
+        <style>{PAD_CARD_KEYFRAMES}</style>
+        {/* Everything after the backdrop needs to sit above it. */}
+        <style>{".player-layout > *:not([aria-hidden]) { position: relative; z-index: 1; }"}</style>
         <style>{PAD_CARD_KEYFRAMES}</style>
 
         {/* Header — sticky */}
@@ -145,7 +171,6 @@ export default function PlayerLayout() {
 
         {/* Live Chat — EVO-style floating button + translucent bottom sheet.
             Gated on the admin live_chat_enabled feature flag. */}
-        {liveChatEnabled && <MobileChat />}
 
         {/* The Player/Banker score-card panel is GONE on mobile: the pads
             themselves now show the per-card draws and the result during the
@@ -154,10 +179,21 @@ export default function PlayerLayout() {
 
             The spacer remains to reserve room for the pinned TableInfoBar so it
             never covers the last row of content. */}
-        {/* The space the score-card panel used to take: winners animate through
-            here instead, small and unboxed like the floating chat. Off the video
-            entirely, so nothing covers the table. */}
-        <div style={{ padding: "8px 19px 0" }}>
+        {/* The space the score-card panel used to take, split in two: chat on
+            the LEFT (where sent messages now actually appear — previously they
+            went nowhere visible once the sheet was closed) and winners on the
+            RIGHT. Both unboxed, both off the video. */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+            padding: "8px 19px 0",
+            alignItems: "start",
+            minHeight: 96,
+          }}
+        >
+          {liveChatEnabled ? <MobileChat /> : <div />}
           <WinnersMarquee inline />
         </div>
 

@@ -476,18 +476,18 @@ export default function MobileChat() {
           where every other secondary action already lives. The sheet itself is
           unchanged — see the `prg:open-chat` listener above. */}
 
-      {/* #7 — floating recent messages over the feed while the sheet is closed */}
+      {/* Recent lines, rendered INLINE where this component is mounted — the
+          left half of the strip under the table. They used to float over the
+          feed, which meant a message you had just sent appeared on top of the
+          video for a few seconds and then vanished with nowhere to look for it.
+          Unboxed, matching the desktop treatment. */}
       {!isOpen && floating.length > 0 && (
         <div
           style={{
-            position: "fixed",
-            left: "calc(env(safe-area-inset-left, 0px) + 12px)",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-            zIndex: 59,
             display: "flex",
             flexDirection: "column",
-            gap: 6,
-            maxWidth: "66vw",
+            gap: 3,
+            width: "100%",
             pointerEvents: "none",
           }}
         >
@@ -495,18 +495,10 @@ export default function MobileChat() {
             <div
               key={f.key}
               className="prg-float-msg"
-              style={{
-                background: "rgba(16,24,40,0.55)",
-                border: "1px solid rgba(54,65,83,0.5)",
-                borderRadius: 12,
-                padding: "6px 10px",
-                backdropFilter: "blur(5px)",
-                WebkitBackdropFilter: "blur(5px)",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.3)",
-              }}
+              style={{ padding: "1px 0", textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}
             >
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#93b8ff", marginRight: 6 }}>{f.user}</span>
-              <span style={{ fontSize: 12, color: "#f3f4f6", wordBreak: "break-word" }}>{f.text}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#93b8ff", marginRight: 5 }}>{f.user}</span>
+              <span style={{ fontSize: 11, color: "#f3f4f6", wordBreak: "break-word" }}>{f.text}</span>
             </div>
           ))}
         </div>

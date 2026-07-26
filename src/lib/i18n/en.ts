@@ -36,6 +36,7 @@ const en: Record<string, string> = {
   "status.live": "LIVE",
 
   /* Header */
+  "header.dealer": "Dealer: {name}",
   "header.liveBaccarat": "Live Baccarat",
   "header.noRound": "No round",
   "header.round": "Round #{n}",
@@ -157,8 +158,8 @@ const en: Record<string, string> = {
   "gate.addFunds": "Add funds",
 
   /* Session / idle */
-  "session.warn1": "Place a bet this round, or your seat may be released for inactivity.",
-  "session.warn2": "Final warning — place a bet now or you'll be removed for sitting out.",
+  "session.warn1": "Place a bet or your seat may be released.",
+  "session.warn2": "Final warning — bet now or lose your seat.",
   "session.rejoin": "Rejoin table",
   "session.expiredTitle": "Seat Released — Inactive",
   "session.expiredBody": "You sat out too many rounds in a row, so your seat was released to keep the table active. To keep your seat next time, place a bet every round. Return to the lobby to rejoin a table.",
