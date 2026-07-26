@@ -57,6 +57,17 @@ export const PAD_CARD_KEYFRAMES = `
 @keyframes prg-pad-card-in {
   from { opacity: 0; transform: translateY(-6px) scale(0.86); }
   to   { opacity: 1; transform: none; }
+}
+/* Winning pad: a slow, low-amplitude breath. Deliberately subtle — it marks the
+   result without turning the table into a slot machine, and it runs for the
+   whole post-settlement lull, so a glance a few seconds late still finds it. */
+@keyframes prg-pad-win {
+  0%, 100% { box-shadow: 0 0 0 1.6px rgba(240,177,0,0.55), 0 0 10px 1px rgba(240,177,0,0.28); }
+  50%      { box-shadow: 0 0 0 2.2px rgba(240,177,0,0.95), 0 0 22px 4px rgba(240,177,0,0.55); }
+}
+@keyframes prg-pad-tie {
+  0%, 100% { box-shadow: 0 0 0 1.6px rgba(0,201,80,0.55), 0 0 10px 1px rgba(0,201,80,0.28); }
+  50%      { box-shadow: 0 0 0 2.2px rgba(0,201,80,0.95), 0 0 22px 4px rgba(0,201,80,0.55); }
 }`;
 
 export default function PadCards({
@@ -66,16 +77,20 @@ export default function PadCards({
   side: "player" | "banker";
   compact?: boolean;
 }) {
-  const { currentRound, roundStatus } = useGame();
+  const { currentRound } = useGame();
 
   const cards =
     (side === "player" ? currentRound?.playerCards : currentRound?.bankerCards) ?? [];
   const score =
     (side === "player" ? currentRound?.playerScore : currentRound?.bankerScore) ?? 0;
 
-  // Only call a winner once the round actually resolves — showing it during
-  // dealing would spoil the third card.
-  const winner = roundStatus === "result" ? currentRound?.winner : undefined;
+  // `currentRound.winner` is only populated once the round resolves, so reading
+  // it directly is already spoiler-safe — and unlike gating on
+  // `roundStatus === "result"` it does not evaporate the moment settlement moves
+  // the round on. That gate is why the WIN tag flashed and vanished while the
+  // cards correctly stayed: the cards are held by the latched draw phase, the
+  // badge was still keyed to a status that passes in about a second.
+  const winner = currentRound?.winner;
   const isWinner =
     (side === "player" && winner === "P") || (side === "banker" && winner === "B");
   const isTie = winner === "T";

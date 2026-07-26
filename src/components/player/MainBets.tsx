@@ -429,6 +429,22 @@ export default function MainBets() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                // Winning side breathes gently for the whole result lull, so a
+                // glance a few seconds after settlement still shows who won —
+                // the badge alone was too easy to miss.
+                ...(showCards && currentRound?.winner
+                  ? (() => {
+                      const w = currentRound.winner;
+                      const isWin =
+                        (w === "P" && bet.betCode === "BAC_Player") ||
+                        (w === "B" && bet.betCode === "BAC_Banker");
+                      const isTie = w === "T" && bet.betCode === "BAC_Tie";
+                      if (!isWin && !isTie) return null;
+                      return {
+                        animation: `${isTie ? "prg-pad-tie" : "prg-pad-win"} 1.9s ease-in-out infinite`,
+                      };
+                    })()
+                  : null),
                 // Tie is collapsed away during the draw; fade it with the track
                 // so it doesn't clip visibly as the column closes.
                 ...(showCards && bet.betCode === "BAC_Tie"

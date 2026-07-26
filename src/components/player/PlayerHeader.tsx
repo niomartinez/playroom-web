@@ -87,24 +87,10 @@ export default function PlayerHeader() {
         }}
       >
         {/* Left: Logo */}
-        <button onClick={handleBack} style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
-          <img src="/logo.png" alt="Playroom Gaming" style={{ height: 22, objectFit: "contain" }} />
-        </button>
-
-        {/* The LIVE pulse and "Live Baccarat" label are gone (they competed with
-            the video and said nothing useful mid-hand); the dealer's name does
-            belong here — players refer to them by name in chat. Table name and
-            round live in TableInfoBar at the bottom. */}
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 8px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flexShrink: 1 }}>
+          <button onClick={handleBack} style={{ flexShrink: 0, cursor: "pointer", background: "none", border: "none", padding: 0 }}>
+            <img src="/logo.png" alt="Playroom Gaming" style={{ height: 22, objectFit: "contain" }} />
+          </button>
           {dealerName && (
             <span
               style={{
@@ -121,6 +107,12 @@ export default function PlayerHeader() {
             </span>
           )}
         </div>
+
+        {/* Centre slot removed: a flex:1 spacer between the logo and the
+            controls pushed the dealer name to the middle of the bar, which read
+            as arbitrary. It now sits directly beside the logo, where it belongs
+            as a caption to the table. */}
+        <div style={{ flex: 1, minWidth: 0 }} />
 
         {/* Right: menu + language switcher. Round number moved to TableInfoBar. */}
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
