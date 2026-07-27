@@ -382,8 +382,11 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
                 <li>Balance syncs with the operator&apos;s wallet in real-time</li>
               </ul>
 
-              <h3>Demo Mode</h3>
-              <p>Access <code>/play/demo</code> to test the player UI without authentication. Uses a mock wallet with a demo balance.</p>
+              {/* Demo mode was decommissioned on 2026-07-22 — /play/demo 404s on
+                  every environment. Documenting it here sent staff looking for a
+                  route that no longer exists, and described a player-facing demo
+                  we are not permitted to offer. Use a minted test token on
+                  staging, or the studio's Preview Live, instead. */}
 
               {/* Section 14: Emulator */}
               <h2 id="manual-emulator">14. Emulator</h2>

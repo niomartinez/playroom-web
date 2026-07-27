@@ -240,13 +240,17 @@ export default function GameWrapper({
   if (token && cookieless) installSessionTokenHeader(token);
 
   if (!token) {
+    // Deliberately says nothing. A player who lands here without a session is
+    // either mid-launch or somewhere they should not be, and neither case is
+    // improved by describing our integration to them: the old copy named the
+    // operator-lobby hand-off, and an earlier version offered a "Try Demo Mode"
+    // button — we are not permitted to advertise demo play to players at all.
+    // Anyone who needs the real reason has the server logs.
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: "#0a0f1a" }}>
         <div className="text-center px-6">
-          <div className="text-2xl font-bold text-white mb-2">Session Required</div>
-          <div className="text-[#6a7282]">
-            No session token provided. Please launch the game from your operator lobby.
-          </div>
+          <div className="text-2xl font-bold text-white mb-2">Unavailable</div>
+          <div className="text-[#6a7282]">This game session could not be loaded.</div>
         </div>
       </div>
     );
