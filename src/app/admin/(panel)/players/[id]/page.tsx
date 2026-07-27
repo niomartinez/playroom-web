@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
@@ -45,62 +47,33 @@ export default function PlayerDetailPage() {
   const { toast } = useToast();
   const id = params.id as string;
 
-  const [player, setPlayer] = useState<PlayerDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [txLoading, setTxLoading] = useState(true);
-  const [txTotal, setTxTotal] = useState(0);
-  const [txPage, setTxPage] = useState(1);
   const txPageSize = 15;
+  const [txPage, setTxPage] = useState(1);
 
   const [showKick, setShowKick] = useState(false);
   const [kickResult, setKickResult] = useState<string | null>(null);
 
-  const fetchPlayer = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/players/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        setPlayer(json.data ?? json);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  /* Two cache keys: the player, and the page of transactions. Paging back and
+     forth through history now re-renders from cache, and coming back to a
+     player you were just looking at is instant. */
+  const {
+    data: playerData,
+    loading,
+    refreshing,
+    refetch: fetchPlayer,
+  } = useAdminQuery<PlayerDetail>(`/api/admin/players/${id}`);
+  const player = playerData ?? null;
 
-  const fetchTransactions = useCallback(async () => {
-    setTxLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(txPage));
-      params.set("page_size", String(txPageSize));
-
-      const res = await fetch(
-        `/api/admin/players/${id}/transactions?${params.toString()}`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setTransactions(data.transactions ?? []);
-        setTxTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setTxLoading(false);
-    }
-  }, [id, txPage]);
-
-  useEffect(() => {
-    fetchPlayer();
-  }, [fetchPlayer]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+  const txQuery = new URLSearchParams({
+    page: String(txPage),
+    page_size: String(txPageSize),
+  });
+  const { data: txData, loading: txLoading } = useAdminQuery<{
+    transactions: Transaction[];
+    total: number;
+  }>(`/api/admin/players/${id}/transactions?${txQuery.toString()}`);
+  const transactions = txData?.transactions ?? [];
+  const txTotal = txData?.total ?? 0;
 
   async function handleKick() {
     try {
@@ -109,6 +82,10 @@ export default function PlayerDetailPage() {
       });
       if (res.ok) {
         setKickResult("Player kicked — all tokens revoked.");
+        // A kick changes this player's row on the LIST too (tokens revoked,
+        // possibly inactive), so drop the whole prefix rather than just
+        // refetching the detail we happen to be looking at.
+        invalidateAdminQuery("/api/admin/players");
         fetchPlayer();
         toast({ type: "success", message: "Player kicked" });
       } else {
@@ -164,6 +141,7 @@ export default function PlayerDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{player.username}</h1>
+        <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={player.is_active ? "active" : "inactive"} />
       </div>
 

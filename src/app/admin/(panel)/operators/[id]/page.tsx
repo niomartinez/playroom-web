@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
@@ -25,8 +27,6 @@ export default function OperatorDetailPage() {
   const { toast } = useToast();
   const id = params.id as string;
 
-  const [operator, setOperator] = useState<OperatorDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   /* Editable fields */
@@ -49,48 +49,53 @@ export default function OperatorDetailPage() {
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOperator = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/operators/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        /* Backend wraps operator in BaseResponse.data; fall back to json itself
-           for legacy flat responses. */
-        const data: OperatorDetail = (json?.data ?? json) as OperatorDetail;
-        setOperator(data);
-        setName(data.name || "");
-        setWalletUrl(data.wallet_url || "");
-        setWalletMode(data.wallet_mode || "seamless");
-        setIsActive(data.is_active ?? true);
-        setAllowedIps(
-          Array.isArray(data.allowed_ips)
-            ? data.allowed_ips.join(", ")
-            : data.allowed_ips || ""
-        );
-        const ip = data.idle_policy as
-          | { expire?: number; warn1?: number | null; warn2?: number | null }
-          | null
-          | undefined;
-        if (ip && typeof ip === "object") {
-          setIdleOverride(true);
-          if (ip.expire != null) setIdleExpire(String(ip.expire));
-          setIdleWarn1(ip.warn1 != null ? String(ip.warn1) : "");
-          setIdleWarn2(ip.warn2 != null ? String(ip.warn2) : "");
-        } else {
-          setIdleOverride(false);
-        }
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const {
+    data: operatorData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<OperatorDetail>(`/api/admin/operators/${id}`);
+  const operator = operatorData ?? null;
 
+  /* Seed the form ONCE per operator, not on every data change.
+   *
+   * The page is cached and revalidates in the background; re-seeding on each
+   * render would wipe out half-typed wallet URLs and IP lists the moment a
+   * refresh landed. Keyed on the record id, so switching operators re-seeds
+   * but a background refresh of THIS one does not. */
+  const seededFor = useRef<string | null>(null);
   useEffect(() => {
-    fetchOperator();
-  }, [fetchOperator]);
+    const data = operatorData;
+    if (!data || seededFor.current === id) return;
+    seededFor.current = id;
+    setName(data.name || "");
+    setWalletUrl(data.wallet_url || "");
+    setWalletMode(data.wallet_mode || "seamless");
+    setIsActive(data.is_active ?? true);
+    setAllowedIps(
+      Array.isArray(data.allowed_ips)
+        ? data.allowed_ips.join(", ")
+        : data.allowed_ips || "",
+    );
+    const ip = data.idle_policy as
+      | { expire?: number; warn1?: number | null; warn2?: number | null }
+      | null
+      | undefined;
+    if (ip && typeof ip === "object") {
+      setIdleOverride(true);
+      if (ip.expire != null) setIdleExpire(String(ip.expire));
+      setIdleWarn1(ip.warn1 != null ? String(ip.warn1) : "");
+      setIdleWarn2(ip.warn2 != null ? String(ip.warn2) : "");
+    } else {
+      setIdleOverride(false);
+    }
+  }, [operatorData, id]);
+
+  /* A save/regenerate/deactivate changes the list row too. */
+  const fetchOperator = () => {
+    invalidateAdminQuery("/api/admin/operators");
+    refetch();
+  };
 
   async function handleSave() {
     setSaving(true);
@@ -208,6 +213,7 @@ export default function OperatorDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{operator.name}</h1>
+        <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={operator.is_active ? "active" : "inactive"} />
       </div>
 

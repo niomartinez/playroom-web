@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
@@ -55,29 +57,17 @@ export default function RoundDetailPage() {
   const { toast } = useToast();
   const id = params.id as string;
 
-  const [round, setRound] = useState<RoundDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showVoid, setShowVoid] = useState(false);
   const [voidResult, setVoidResult] = useState<string | null>(null);
 
-  const fetchRound = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/rounds/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        setRound(json.data ?? json);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchRound();
-  }, [fetchRound]);
+  /* Cached, so stepping through rounds from the list and back is instant. */
+  const {
+    data: roundData,
+    loading,
+    refreshing,
+    refetch: fetchRound,
+  } = useAdminQuery<RoundDetail>(`/api/admin/rounds/${id}`);
+  const round = roundData ?? null;
 
   async function handleVoid() {
     try {
@@ -89,6 +79,9 @@ export default function RoundDetailPage() {
         const data = json.data ?? json;
         const msg = `Round voided. ${data.voided_bets ?? 0} bet(s) voided.`;
         setVoidResult(msg);
+        // Voiding changes this round's status on the LIST as well, and the list
+        // is very likely already cached from the page they clicked through.
+        invalidateAdminQuery("/api/admin/rounds");
         fetchRound();
         toast({ type: "success", message: msg });
       } else {
@@ -140,6 +133,7 @@ export default function RoundDetailPage() {
           status={statusToBadge(round.status)}
           label={round.status.replace(/_/g, " ")}
         />
+        <RefreshingHint show={refreshing && !loading} />
       </div>
 
       {/* Void success message */}

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
@@ -32,8 +34,6 @@ export default function TableDetailPage() {
   const { toast } = useToast();
   const id = params.id as string;
 
-  const [table, setTable] = useState<TableDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   /* Editable fields */
@@ -50,33 +50,41 @@ export default function TableDetailPage() {
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTable = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/tables/${id}`);
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setTable(data);
-        setName(data.name || "");
-        setTableType(data.table_type || "standard");
-        setMinBet(String(data.min_bet ?? "10"));
-        setMaxBet(String(data.max_bet ?? "10000"));
-        setDealerName(data.dealer_name || "");
-        setStreamUrl(data.stream_url || "");
-        setStreamKey(data.stream_key || "");
-        setBettingTime(String(data.default_betting_time ?? "15"));
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const {
+    data: tableData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<TableDetail>(`/api/admin/tables/${id}`);
+  const table = tableData ?? null;
 
+  /* Seed the form ONCE per record, not on every data change.
+   *
+   * This page is cached and revalidates in the background, so re-seeding on
+   * each render would overwrite whatever the admin is currently typing the
+   * moment a refresh landed. The ref tracks which record has been seeded, so a
+   * background refresh updates the displayed table facts while leaving the
+   * edit fields exactly as the person left them. Navigating to a DIFFERENT
+   * table re-seeds, because the id changes. */
+  const seededFor = useRef<string | null>(null);
   useEffect(() => {
-    fetchTable();
-  }, [fetchTable]);
+    if (!tableData || seededFor.current === id) return;
+    seededFor.current = id;
+    setName(tableData.name || "");
+    setTableType(tableData.table_type || "standard");
+    setMinBet(String(tableData.min_bet ?? "10"));
+    setMaxBet(String(tableData.max_bet ?? "10000"));
+    setDealerName(tableData.dealer_name || "");
+    setStreamUrl(tableData.stream_url || "");
+    setStreamKey(tableData.stream_key || "");
+    setBettingTime(String(tableData.default_betting_time ?? "15"));
+  }, [tableData, id]);
+
+  /* A save/toggle changes this table on the list too. */
+  const fetchTable = () => {
+    invalidateAdminQuery("/api/admin/tables");
+    refetch();
+  };
 
   async function handleSave() {
     setSaving(true);
@@ -184,6 +192,7 @@ export default function TableDetailPage() {
 
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{table.name}</h1>
+        <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={table.is_active ? "active" : "inactive"} />
       </div>
 
