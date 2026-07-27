@@ -7,6 +7,54 @@ const API_URL =
 const SERVICE_KEY = requireEnv("API_SERVICE_KEY", "dev-service-key");
 
 /**
+ * Retry a step of the round chain through transient backend failures.
+ *
+ * The four calls below (active -> deal -> result -> settle) are separate HTTP
+ * requests with no transaction around them, so a single blip between any two
+ * strands the round: the studio aborts, and a round parked in `result` is not
+ * reported by /internal/fights/active, so the dealer cannot even retry it. On
+ * 2026-07-27 one transient 500 on `result` stopped the live table for 31
+ * minutes.
+ *
+ * Only 5xx and network errors are retried. A 4xx is the backend saying no —
+ * repeating it just wastes the dealer's time.
+ *
+ * Every step here is idempotent, which is what makes retrying safe: `deal`
+ * writes the same cards, `result` writes the same outcome, and `settle` only
+ * looks at ACCEPTED bets, of which a settled round has none. That matters
+ * because a request can fail AFTER its write landed — the 2026-07-27 round was
+ * marked `result` by the very call that returned 500.
+ */
+const RETRIES = 3;
+const RETRY_DELAY_MS = 400;
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  label: string,
+): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status < 500) return res; // includes every success and every 4xx
+      lastErr = new Error(`${label}: HTTP ${res.status}`);
+      if (attempt === RETRIES) return res;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === RETRIES) throw e;
+    }
+    console.warn(
+      `[studio/manual-deal] ${label} attempt ${attempt}/${RETRIES} failed, retrying:`,
+      lastErr,
+    );
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+  }
+  // Unreachable — the loop either returns or throws on its last attempt.
+  throw lastErr ?? new Error(`${label}: exhausted retries`);
+}
+
+/**
  * Studio manual card input — deals cards into the active round,
  * sets the result, and triggers settlement.
  *
@@ -33,9 +81,11 @@ export async function POST(req: NextRequest) {
   };
 
   // Step 1: Find the active round on this table
-  const activeRes = await fetch(`${API_URL}/internal/fights/active/${game_id}`, {
-    headers,
-  });
+  const activeRes = await fetchWithRetry(
+    `${API_URL}/internal/fights/active/${game_id}`,
+    { headers },
+    "active",
+  );
   if (!activeRes.ok) {
     return NextResponse.json(
       { error: "No active round found. Click 'NEW ROUND' first." },
@@ -52,11 +102,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Step 2: Deal cards into the round
-  const dealRes = await fetch(`${API_URL}/internal/round/${fightId}/deal`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ player_cards, banker_cards, player_score, banker_score }),
-  });
+  const dealRes = await fetchWithRetry(
+    `${API_URL}/internal/round/${fightId}/deal`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ player_cards, banker_cards, player_score, banker_score }),
+    },
+    "deal",
+  );
   if (!dealRes.ok) {
     const err = await dealRes.json().catch(() => ({}));
     return NextResponse.json(
@@ -66,14 +120,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Step 3: Set result
-  const resultRes = await fetch(`${API_URL}/internal/round/${fightId}/result`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      outcome,
-      round_details: { source: "manual", player_pair, banker_pair },
-    }),
-  });
+  const resultRes = await fetchWithRetry(
+    `${API_URL}/internal/round/${fightId}/result`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        outcome,
+        round_details: { source: "manual", player_pair, banker_pair },
+      }),
+    },
+    "result",
+  );
   if (!resultRes.ok) {
     const err = await resultRes.json().catch(() => ({}));
     return NextResponse.json(
@@ -83,10 +141,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Step 4: Settle
-  const settleRes = await fetch(`${API_URL}/internal/round/${fightId}/settle`, {
-    method: "POST",
-    headers,
-  });
+  const settleRes = await fetchWithRetry(
+    `${API_URL}/internal/round/${fightId}/settle`,
+    { method: "POST", headers },
+    "settle",
+  );
 
   const settleData = await settleRes.json().catch(() => ({}));
 
