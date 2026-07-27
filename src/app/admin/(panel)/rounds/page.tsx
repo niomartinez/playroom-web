@@ -6,6 +6,8 @@ import StatusBadge from "@/components/admin/ui/StatusBadge";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
+import Pagination from "@/components/admin/ui/Pagination";
+import SortHeader, { type SortDir } from "@/components/admin/ui/SortHeader";
 import { useUrlFilters } from "@/lib/use-url-filters";
 
 interface Round {
@@ -56,23 +58,36 @@ function statusToBadge(status: string): "active" | "inactive" | "pending" | "err
 
 function RoundsPageInner() {
   const router = useRouter();
-  const pageSize = 20;
-
   /* Filters in the URL: Back restores the exact view, and a filter used a
      minute ago rebuilds a request URL that is already the cache key — so it
      repaints with no request and no spinner. */
   const { values, setValues, setFilter } = useUrlFilters({
     page: "1",
+    page_size: "20",
     game_id: "",
     status: "",
     date_from: "",
     date_to: "",
+    sort_by: "created_at",
+    sort_dir: "desc",
   });
   const page = Math.max(1, Number(values.page) || 1);
+  const pageSize = Number(values.page_size) || 20;
+  const sortDir: SortDir = values.sort_dir === "asc" ? "asc" : "desc";
+
+  const sortProps = (key: string, defaultDir: SortDir = "desc") => ({
+    sortKey: key,
+    activeKey: values.sort_by,
+    activeDir: sortDir,
+    defaultDir,
+    onSort: setFilter,
+  });
 
   const params = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
+    sort_by: values.sort_by,
+    sort_dir: sortDir,
   });
   if (values.game_id) params.set("game_id", values.game_id);
   if (values.status) params.set("status", values.status);
@@ -104,6 +119,9 @@ function RoundsPageInner() {
     setValues({ page: "1", game_id: "", status: "", date_from: "", date_to: "" });
   }
 
+  const hasFilters =
+    !!values.game_id || !!values.status || !!values.date_from || !!values.date_to;
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const inputStyle = {
@@ -115,6 +133,7 @@ function RoundsPageInner() {
     {
       key: "external_fight_id",
       label: "Round ID",
+      header: <SortHeader label="Round ID" {...sortProps("external_fight_id", "asc")} />,
       render: (row) => (
         <span className="font-mono text-xs">{row.external_fight_id}</span>
       ),
@@ -129,6 +148,7 @@ function RoundsPageInner() {
     {
       key: "status",
       label: "Status",
+      header: <SortHeader label="Status" {...sortProps("status", "asc")} />,
       render: (row) => (
         <StatusBadge
           status={statusToBadge(row.status)}
@@ -139,6 +159,7 @@ function RoundsPageInner() {
     {
       key: "result",
       label: "Result",
+      header: <SortHeader label="Result" {...sortProps("result", "asc")} />,
       render: (row) => {
         if (!row.result) return <span style={{ color: "#6a7282" }}>{"\u2014"}</span>;
         const color =
@@ -153,7 +174,7 @@ function RoundsPageInner() {
     {
       key: "started_at",
       label: "Started",
-      sortable: true,
+      header: <SortHeader label="Started" {...sortProps("started_at")} />,
       render: (row) =>
         row.started_at
           ? new Date(row.started_at).toLocaleString()
@@ -237,13 +258,15 @@ function RoundsPageInner() {
           {/* No "Filter" button: every control above applies on change and
               writes straight to the URL, so a separate apply step would only be
               a second way to do what already happened. */}
-          <button
-            onClick={handleClear}
-            className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
-            style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
-          >
-            Clear
-          </button>
+          {hasFilters && (
+            <button
+              onClick={handleClear}
+              className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
+              style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -261,32 +284,16 @@ function RoundsPageInner() {
         disablePagination
       />
 
-      {/* Server-side pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs" style={{ color: "#6a7282" }}>
-          <span>
-            Page {page} of {totalPages} ({total} rounds)
-          </span>
-          <div className="flex gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => setValues({ page: String(page - 1) })}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
-              style={{ color: "#99a1af" }}
-            >
-              Prev
-            </button>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setValues({ page: String(page + 1) })}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
-              style={{ color: "#99a1af" }}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        label="rounds"
+        pageSize={pageSize}
+        onPage={(p) => setValues({ page: String(p) })}
+        onPageSize={(n) => setFilter({ page_size: String(n) })}
+      />
+
     </div>
   );
 }

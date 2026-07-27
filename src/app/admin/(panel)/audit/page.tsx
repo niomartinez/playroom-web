@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
+import Pagination from "@/components/admin/ui/Pagination";
 import { useUrlFilters } from "@/lib/use-url-filters";
 import { useDebounce } from "@/lib/use-debounce";
 
@@ -191,19 +192,9 @@ function AuditPageInner() {
               <option value="entity_type:desc">Entity Z-A</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Per page</label>
-            <select
-              value={String(pageSize)}
-              onChange={(e) => setFilter({ page_size: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={inputStyle}
-            >
-              {[20, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
+          {/* "Per page" now lives with the pagination controls at the foot of
+              the table, where the count it governs is. Two of them, in two
+              places, was one too many. */}
           {(searchInput || values.action || values.entity_type || values.date_from || values.date_to) && (
             <button
               onClick={() => {
@@ -302,18 +293,20 @@ function AuditPageInner() {
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div
-            className="flex items-center justify-between px-4 py-3 text-xs"
-            style={{ borderTop: "1px solid rgba(208,135,0,0.1)", color: "#6a7282" }}
-          >
-            <span>Page {page} of {totalPages} ({total} entries)</span>
-            <div className="flex gap-2">
-              <button disabled={page <= 1} onClick={() => setValues({ page: String(page - 1) })} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Prev</button>
-              <button disabled={page >= totalPages} onClick={() => setValues({ page: String(page + 1) })} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Next</button>
-            </div>
-          </div>
-        )}
+        <div
+          className="px-4 py-3"
+          style={{ borderTop: "1px solid rgba(208,135,0,0.1)" }}
+        >
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="entries"
+            pageSize={pageSize}
+            onPage={(p) => setValues({ page: String(p) })}
+            onPageSize={(n) => setFilter({ page_size: String(n) })}
+          />
+        </div>
       </div>
     </div>
   );

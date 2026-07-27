@@ -5,7 +5,17 @@ import { useState, useMemo } from "react";
 export interface Column<T> {
   key: string;
   label: string;
+  /**
+   * Client-side sort of the rows THIS TABLE WAS GIVEN.
+   *
+   * Correct on a fully client-paginated table. On a server-paginated one it
+   * reorders only the current page, so "sort by balance" quietly means "among
+   * these twenty" — use `header` with a SortHeader instead, which sorts in the
+   * database.
+   */
   sortable?: boolean;
+  /** Custom header node — used to drive server-side sorting. Wins over label. */
+  header?: React.ReactNode;
   render?: (row: T) => React.ReactNode;
 }
 
@@ -103,18 +113,22 @@ export default function DataTable<T extends Record<string, unknown>>({
                   className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider"
                   style={{
                     color: "#d08700",
-                    cursor: col.sortable ? "pointer" : "default",
+                    cursor: col.sortable && !col.header ? "pointer" : "default",
                   }}
-                  onClick={() => col.sortable && handleSort(col.key)}
+                  onClick={() =>
+                    col.sortable && !col.header && handleSort(col.key)
+                  }
                 >
-                  <span className="flex items-center gap-1">
-                    {col.label}
-                    {col.sortable && sortKey === col.key && (
-                      <span className="text-[10px]">
-                        {sortDir === "asc" ? "\u25B2" : "\u25BC"}
-                      </span>
-                    )}
-                  </span>
+                  {col.header ?? (
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {col.sortable && sortKey === col.key && (
+                        <span className="text-[10px]">
+                          {sortDir === "asc" ? "\u25B2" : "\u25BC"}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
