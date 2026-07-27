@@ -381,15 +381,28 @@ export default function PlayerLayout() {
   // Desktop layout
   return (
     <div
-      className="h-screen overflow-hidden"
+      className="overflow-hidden"
       style={{
         display: "grid",
+        // NOT `h-screen`. `100vh` inside an iframe is the FRAME's height, and an
+        // operator that stacks their nav above a 100vh frame pushes our bottom
+        // off the screen — taking the info strip with it, and making their page
+        // scroll. Desktop ignored the visible-height measurement that mobile
+        // already had, so it lost the footer in exactly that embed. Falls back
+        // to 100dvh until the measurement lands, and for a top-level launch the
+        // two are the same number.
+        height: visibleH ? `${visibleH}px` : "100dvh",
         // 4th row = the bottom info strip. Declared EXPLICITLY: adding a
         // fourth child to a three-row template made the grid invent an
         // implicit row and collapsed the video row into a huge gap.
         // Desktop keeps a fixed layout: the video-expand/pad-takeover behaviour
         // is mobile-only, where screen space is actually scarce.
-        gridTemplateRows: "5.5vh 1fr 30vh auto",
+        //
+        // Rows are PERCENTAGES, not vh, for the same reason as the height: they
+        // must track the box we actually got, not the frame. Identical maths
+        // whenever the two agree (5.5vh == 5.5% of a 100vh container), and
+        // correct when they don't.
+        gridTemplateRows: "5.5% 1fr 30% auto",
         background: "#0a0f1a",
       }}
     >
