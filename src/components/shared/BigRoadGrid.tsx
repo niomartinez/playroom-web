@@ -7,8 +7,6 @@
  * overlays (slash + count badge) on the most recent non-Tie cell.
  */
 
-import { useEffect, useRef, useState } from "react";
-
 import type {
   BigRoadColumn,
   LeadingTie,
@@ -32,15 +30,19 @@ interface BigRoadGridProps {
   /** Gap between cells (pixels). */
   gap?: number;
   /**
-   * Size the grid to fit its box in BOTH directions rather than only across.
+   * Explicit cell size in px, instead of `1fr` tracks.
    *
-   * The default `1fr` columns derive cell size from width alone, so the grid's
-   * height is whatever 6 rows of that width come to — fine when it can have all
-   * the height it wants. Under a height budget it just overflowed and the
-   * bottom rows were clipped. In `fit` mode the cell is the smaller of what
-   * width and height allow, so the road shrinks whole and stays round.
+   * `1fr` derives the cell from width alone, so the grid's height is whatever
+   * `rows` of that width comes to — fine when it can have all the height it
+   * wants, but under a height budget it overflowed and clipped the bottom rows.
+   *
+   * The caller computes this from the height it can actually spare, and then
+   * picks `cols` to match, so the grid stays exactly as tall as its box AND
+   * spans the full width. Sizing cells down without adding columns is what left
+   * a shrunken road stranded in the middle of the panel with a dead band down
+   * each side.
    */
-  fit?: boolean;
+  cellPx?: number | null;
 }
 
 export function BigRoadGrid({
@@ -51,45 +53,21 @@ export function BigRoadGrid({
   emptyBorderColor = "rgba(255,255,255,0.08)",
   background = "transparent",
   gap = 1,
-  fit = false,
+  cellPx = null,
 }: BigRoadGridProps) {
-  const boxRef = useRef<HTMLDivElement | null>(null);
-  const [cell, setCell] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!fit) return;
-    const el = boxRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-
-    const measure = () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width <= 0 || height <= 0) return;
-      const byWidth = (width - gap * (cols - 1)) / cols;
-      const byHeight = (height - gap * (rows - 1)) / rows;
-      const next = Math.max(0, Math.floor(Math.min(byWidth, byHeight) * 100) / 100);
-      setCell((prev) => (prev !== null && Math.abs(prev - next) < 0.5 ? prev : next));
-    };
-
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    measure();
-    return () => ro.disconnect();
-  }, [fit, cols, rows, gap]);
-
-  const track = fit && cell !== null ? `${cell}px` : "1fr";
+  const track = cellPx && cellPx > 0 ? `${cellPx}px` : "1fr";
 
   return (
     <div
-      ref={boxRef}
-      className={fit ? "flex-1 min-h-0 grid" : "grid flex-1 min-h-0"}
+      className="grid flex-1 min-h-0"
       style={{
         gridTemplateColumns: `repeat(${cols}, ${track})`,
         gridTemplateRows: `repeat(${rows}, ${track})`,
         gap: `${gap}px`,
         background,
-        // Fixed px tracks leave slack in the wider direction; centre it so the
-        // road doesn't sit against one edge as it shrinks.
-        ...(fit ? { justifyContent: "center", alignContent: "center" } : null),
+        // With px tracks the column count is chosen to fill the width, so any
+        // leftover is sub-cell; centre it rather than piling it on one side.
+        ...(cellPx ? { justifyContent: "center", alignContent: "start" } : null),
       }}
     >
       {Array.from({ length: cols }).map((_, colIdx) =>

@@ -134,7 +134,7 @@ export default function SideBets() {
                 justifyContent: "center",
                 textAlign: "center",
                 width: "100%",
-                minHeight: 68,
+                minHeight: `calc(68px * var(--prg-scale, 1))`,
                 borderRadius: 14,
                 border: hasBet
                   ? "2px solid rgba(255,255,255,0.8)"
@@ -143,7 +143,7 @@ export default function SideBets() {
                 cursor: disabled ? "not-allowed" : "pointer",
                 opacity: disabled ? 0.5 : 1,
                 overflow: "hidden",
-                padding: "8px 6px",
+                padding: `calc(8px * var(--prg-scale, 1)) calc(6px * var(--prg-scale, 1))`,
                 WebkitTapHighlightColor: "transparent",
                 boxSizing: "border-box",
               }}
@@ -177,7 +177,7 @@ export default function SideBets() {
               >
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: `calc(13px * var(--prg-scale, 1))`,
                     fontWeight: 700,
                     color: "#fff",
                     lineHeight: 1.15,
@@ -188,7 +188,7 @@ export default function SideBets() {
                 </div>
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: `calc(11px * var(--prg-scale, 1))`,
                     fontWeight: 600,
                     color: "rgba(255,255,255,0.85)",
                     lineHeight: 1.1,

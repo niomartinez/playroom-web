@@ -83,6 +83,21 @@ export const visibleOverlayInset = {
   right: 0,
 } as const;
 
+/**
+ * The proportional shrink applied to everything on the mobile layout when the
+ * visible band is smaller than the design's natural height.
+ *
+ * Published as `--prg-scale` (see PlayerLayout) and multiplied into pad
+ * heights, chip sizes, paddings and font sizes. Flex-shrinking the CONTAINERS
+ * was not enough on its own: the bet pads are laid out in hard pixels, so a
+ * shorter panel just clipped them. Everything the player looks at has to get
+ * smaller together, or the space comes out of whichever block has no floor.
+ */
+export const SCALE_VAR = "--prg-scale";
+
+/** Never shrink past this — below it the pads stop being reliably tappable. */
+export const MIN_SCALE = 0.62;
+
 export function useVisibleHeight(): number | null {
   const [height, setHeight] = useState<number | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -116,6 +131,8 @@ export function useVisibleHeight(): number | null {
       const usable = visibleSlice !== null && visibleSlice >= MIN_SANE_HEIGHT;
       const next = usable ? Math.min(own, visibleSlice!) : own;
       const top = usable ? Math.min(visibleTop, Math.max(0, own - next)) : 0;
+      // NOTE: `visibleSlice` only ever shrinks within a baseline (see the
+      // observer below), so this value is the WORST case, not the current one.
 
       const root = document.documentElement;
       root.style.setProperty(CSS_VAR_HEIGHT, `${next}px`);
@@ -132,7 +149,17 @@ export function useVisibleHeight(): number | null {
           if (!entry) return;
           const slice = Math.round(entry.intersectionRect.height);
           // 0 means we're fully scrolled out of view, not that we have no room.
-          if (slice > 0) {
+          if (slice <= 0) return;
+
+          // Keep the SMALLEST slice seen since the last baseline, never the
+          // latest. The operator's page can scroll, and scrolling reveals more
+          // of our frame — so the current intersection climbs toward the full
+          // frame height the moment the player drags. Sizing to that is what
+          // let the layout report FITS while the info bar sat 35px below the
+          // screen: we had measured a scrolled-down moment, not the resting
+          // position the player actually starts from. The worst case is the
+          // only one worth fitting.
+          if (visibleSlice === null || slice < visibleSlice) {
             visibleSlice = slice;
             // The sentinel is pinned at the frame's top, so the gap between the
             // two rects IS how much of us is hidden above the fold — non-zero
@@ -141,8 +168,8 @@ export function useVisibleHeight(): number | null {
               0,
               Math.round(entry.intersectionRect.top - entry.boundingClientRect.top),
             );
+            publish();
           }
-          publish();
         },
         // A fine threshold list makes the observer re-report as the clipped
         // fraction changes, instead of only at fully-in/fully-out.
@@ -157,8 +184,16 @@ export function useVisibleHeight(): number | null {
 
     // Re-measure at rest. `visualViewport` resize fires for the URL bar
     // collapsing; `orientationchange` needs a tick for the new metrics to land.
-    const onResize = () => publish();
-    const onOrientation = () => window.setTimeout(publish, 250);
+    // Both RE-BASELINE: the geometry genuinely changed, so the old worst case
+    // is stale and holding onto it would leave us sized for a screen that no
+    // longer exists (e.g. permanently portrait-sized after a rotate).
+    const rebaseline = () => {
+      visibleSlice = null;
+      visibleTop = 0;
+      publish();
+    };
+    const onResize = () => rebaseline();
+    const onOrientation = () => window.setTimeout(rebaseline, 250);
     window.visualViewport?.addEventListener("resize", onResize);
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onOrientation);
@@ -179,3 +214,59 @@ export function useVisibleHeight(): number | null {
 }
 
 export default useVisibleHeight;
+
+/**
+ * The element's own width, measured.
+ *
+ * Uses a CALLBACK ref, not a `useRef` object. `useIsMobile` starts false, so
+ * PlayerLayout renders its desktop branch on the very first pass and the mobile
+ * container — the thing we want to measure — does not exist yet. An effect with
+ * an empty dep array runs once against `ref.current === null`, bails, and never
+ * fires again: the width stayed null forever, the scale pinned at 1, and
+ * nothing shrank. A callback ref re-runs the moment the node actually mounts.
+ */
+export function useElementWidth<T extends HTMLElement>() {
+  const [node, setNode] = useState<T | null>(null);
+  const [width, setWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const w = Math.round(node.getBoundingClientRect().width);
+      if (w > 0) {
+        setWidth((prev) => (prev !== null && Math.abs(prev - w) < 2 ? prev : w));
+      }
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    measure();
+    return () => ro.disconnect();
+  }, [node]);
+
+  return { width, ref: setNode };
+}
+
+/** Both dimensions of an element. Callback ref, for the reason above. */
+export function useElementSize<T extends HTMLElement>() {
+  const [node, setNode] = useState<T | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      const r = node.getBoundingClientRect();
+      const w = Math.round(r.width);
+      const h = Math.round(r.height);
+      if (w <= 0 || h <= 0) return;
+      setSize((prev) =>
+        prev && Math.abs(prev.w - w) < 2 && Math.abs(prev.h - h) < 2 ? prev : { w, h },
+      );
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    measure();
+    return () => ro.disconnect();
+  }, [node]);
+
+  return { size, ref: setNode };
+}

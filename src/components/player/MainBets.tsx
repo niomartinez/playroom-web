@@ -528,7 +528,10 @@ export default function MainBets() {
               disabled={disabled}
               style={{
                 position: "relative",
-                height: 96,
+                // Scales with the page — see PlayerLayout's --prg-scale.
+                // A hard 96 is why the pads stayed full size while the video
+                // and road shrank around them, and then got clipped.
+                height: `calc(96px * var(--prg-scale, 1))`,
                 borderRadius: 14,
                 border: `1.6px solid ${drag?.over === bet.betCode ? "#ffffff" : bet.mobileBorder}`,
                 boxShadow: drag?.over === bet.betCode ? "0 0 0 2px rgba(255,255,255,0.9), 0 0 16px rgba(255,255,255,0.45)" : undefined,
@@ -662,7 +665,7 @@ export default function MainBets() {
                     still fits a narrow phone without wrapping. */}
                 <span
                   style={{
-                    fontSize: "clamp(11px, 3.4vw, 17px)",
+                    fontSize: `calc(clamp(11px, 3.4vw, 17px) * var(--prg-scale, 1))`,
                     fontWeight: 800,
                     color: "#fff",
                     lineHeight: 1,

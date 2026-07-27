@@ -86,7 +86,7 @@ export default function BalanceBar() {
           backgroundColor: "#101828",
           border: "0.8px solid #364153",
           borderRadius: 14,
-          padding: 10,
+          padding: `calc(10px * var(--prg-scale, 1))`,
           width: "100%",
           boxSizing: "border-box",
         }}
@@ -130,8 +130,8 @@ export default function BalanceBar() {
               aria-label={t("balance.clearBets")}
               title={t("balance.clearBets")}
               style={{
-                width: 42,
-                height: 42,
+                width: `calc(42px * var(--prg-scale, 1))`,
+                height: `calc(42px * var(--prg-scale, 1))`,
                 flexShrink: 0,
                 borderRadius: 14,
                 border: `1.6px solid ${hasPlacedBets ? "rgba(251,44,54,0.85)" : "rgba(255,255,255,0.18)"}`,
@@ -172,8 +172,8 @@ export default function BalanceBar() {
                 }}
                 disabled={isDisabled}
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: `calc(36px * var(--prg-scale, 1))`,
+                  height: `calc(36px * var(--prg-scale, 1))`,
                   borderRadius: "50%",
                   backgroundColor: "transparent",
                   border: "none",
@@ -200,8 +200,8 @@ export default function BalanceBar() {
                   src={chip.src}
                   alt={`${chip.value} chip`}
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: `calc(36px * var(--prg-scale, 1))`,
+                    height: `calc(36px * var(--prg-scale, 1))`,
                     display: "block",
                     borderRadius: "50%",
                     pointerEvents: "none",
@@ -219,8 +219,8 @@ export default function BalanceBar() {
             aria-pressed={x2On}
             aria-label="Double the selected chip"
             style={{
-              width: 42,
-              height: 42,
+              width: `calc(42px * var(--prg-scale, 1))`,
+              height: `calc(42px * var(--prg-scale, 1))`,
               flexShrink: 0,
               borderRadius: 14,
               border: x2On ? "1.6px solid #f0b100" : "1.6px solid rgba(255,255,255,0.18)",
@@ -228,7 +228,7 @@ export default function BalanceBar() {
                 ? "linear-gradient(160deg, #ffd24d 0%, #d08700 100%)"
                 : "rgba(255,255,255,0.04)",
               color: x2On ? "#3a2600" : "rgba(255,255,255,0.72)",
-              fontSize: 16,
+              fontSize: `calc(16px * var(--prg-scale, 1))`,
               fontWeight: 900,
               letterSpacing: 0.2,
               display: "flex",

@@ -1,7 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useIsMobile } from "@/lib/use-mobile";
-import { useVisibleHeight } from "@/lib/use-visible-height";
+import {
+  MIN_SCALE,
+  SCALE_VAR,
+  useElementWidth,
+  useVisibleHeight,
+} from "@/lib/use-visible-height";
 import { useGame } from "@/lib/game-context";
 import { useIdleSession } from "@/lib/use-idle-kick";
 import { useCountdown } from "@/lib/use-countdown";
@@ -72,30 +79,27 @@ const BET_PANEL_STYLES = `
 `;
 
 /**
- * Mobile height budget. These are the parts that must never be squeezed: the
- * header (one row of controls) and the pinned info strip at the foot. What's
- * left is shared out between the video, the road and the chat/winners row —
- * in that order of how much each may give up.
- */
-const MOBILE_INFOBAR_H = 72;
-/** Below this the video stops being a video. */
-const MOBILE_VIDEO_MIN_H = 132;
-/**
- * Below this the road stops being readable. The panel spends ~70px on its
- * title and the Next/standings line, so this leaves the grid roughly 70px —
- * six rows of ~11px cells, which is small but still a road.
- */
-const MOBILE_ROAD_MIN_H = 140;
-/**
- * The road's preferred height, stated rather than derived.
+ * The mobile layout's NATURAL heights — what each block wants on a screen with
+ * room to spare. Everything below is derived from these by one shared scale
+ * factor, so the page shrinks as a whole instead of one block absorbing the
+ * entire shortfall.
  *
- * It has to be a definite flex-basis: the grid now sizes its cells FROM the
- * height it is given, so leaving the basis as `auto` would ask the box how tall
- * it wants to be while the answer depends on how tall it ends up. This is the
- * height 6 rows came to at the old width-driven sizing, so nothing moves on a
- * screen that already had the room.
+ * Flex-shrinking the containers alone was not enough. The bet pads are laid out
+ * in hard pixels (96px mains, 68px sides, 42px chips), so a shorter panel just
+ * clipped them — which is why the pads never got smaller no matter how much the
+ * video and road gave up. Now every one of those is `x * var(--prg-scale)`.
  */
-const MOBILE_ROAD_PREF_H = 208;
+const MOBILE_HEADER_H = 48;
+/** Fallback only — TableInfoBar publishes its real height (~39px). */
+const MOBILE_INFOBAR_H = 44;
+/** Natural height of the road panel: 6 rows of ~25px plus title and standings. */
+const MOBILE_ROAD_NAT_H = 208;
+/** Natural height of the bet panel: chips 63 + sides 68 + mains 96 + chrome. */
+const MOBILE_PANEL_NAT_H = 266;
+/** The chat/winners strip. Ambient — it is allowed to vanish entirely. */
+const MOBILE_CHAT_NAT_H = 96;
+/** Breathing room so a 1px rounding error never creates a scrollbar. */
+const MOBILE_SLACK = 6;
 
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
@@ -103,6 +107,37 @@ export default function PlayerLayout() {
   // our viewport runs off the bottom of the phone, under their navigation and
   // the browser's own bars. See lib/use-visible-height.
   const visibleH = useVisibleHeight();
+  const { width: layoutW, ref: layoutRef } = useElementWidth<HTMLDivElement>();
+
+  /**
+   * One scale for the whole mobile page.
+   *
+   * Derived from FIXED natural constants, never from measured content: sizing
+   * the content from a measurement that the sizing itself changes is a loop
+   * that either oscillates or settles somewhere arbitrary.
+   *
+   * The video is the 16:9 height at the current width, so on a narrow phone the
+   * natural stack is genuinely shorter and the scale correspondingly gentler.
+   */
+  const scale = (() => {
+    if (!visibleH || !layoutW) return 1;
+    const videoNat = (layoutW * 9) / 16;
+    const natural =
+      videoNat + MOBILE_ROAD_NAT_H + MOBILE_PANEL_NAT_H + MOBILE_CHAT_NAT_H;
+    const available = visibleH - MOBILE_HEADER_H - MOBILE_INFOBAR_H - MOBILE_SLACK;
+    if (available <= 0) return MIN_SCALE;
+    return Math.max(MIN_SCALE, Math.min(1, available / natural));
+  })();
+
+  // Publish it for the components laid out in hard pixels (pads, chips, fonts).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty(SCALE_VAR, String(scale));
+  }, [scale]);
+
+  const videoH = layoutW ? Math.round(((layoutW * 9) / 16) * scale) : null;
+  const roadH = Math.round(MOBILE_ROAD_NAT_H * scale);
+
   const { roundStatus, webrtcUrl, hlsUrl } = useGame();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
   // While the hand is being dealt, give the video more room: betting is closed,
@@ -134,6 +169,7 @@ export default function PlayerLayout() {
     return (
       <div
         className="player-layout"
+        ref={layoutRef}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -141,13 +177,13 @@ export default function PlayerLayout() {
           // (first paint, SSR) fall back to `100dvh` — still better than
           // `100vh`, which ignores the phone's collapsing URL bar.
           height: visibleH ? `${visibleH}px` : "100dvh",
-          // The video and the road absorb the shortfall (they carry
-          // `flexShrink`), so the column fits rather than spilling. `auto`
-          // rather than `hidden` is the safety net: on a screen too short for
-          // even the minimums, a scroll is bad but unreachable bet pads are
-          // worse — and that is exactly what a hard clip would produce.
-          overflowY: "auto",
-          overflowX: "hidden",
+          // NOT scrollable. Every block is sized from one scale factor computed
+          // to fit this exact height, so there is nothing below the fold to
+          // reach — and a scrollable player is how the pinned footer ended up
+          // needing to be sticky in the first place. `hidden` also stops iOS
+          // rubber-banding, which was revealing the chat sheet and a slab of
+          // empty felt when the player dragged up and held.
+          overflow: "hidden",
           // Felt on the body, under everything below the video. Painted as the
           // container's own BACKGROUND rather than a stacked layer: an extra
           // positioned element needed a blanket `z-index: 1` on its siblings to
@@ -192,23 +228,21 @@ export default function PlayerLayout() {
             shoved the page around for no gain, so the feed stays put and the
             pads alone carry the hand.
 
-            It SHRINKS now — 16:9 is the ceiling, not a contract — but it is
-            the most RELUCTANT block on the page (flexShrink 1, against 2 for
-            the road and 3 for the chat row). The feed is `object-contain` by
-            deliberate choice, so a shorter box does not crop it, it shrinks the
-            whole frame: squeeze the box hard and the dealer pillarboxes down to
-            a third of the width. Letting the road give ground first keeps the
-            feed watchable, which on a live-dealer table is the product. */}
+            Height is now EXPLICIT — the 16:9 height times the page scale — not
+            a flex-shrink negotiation. Flex gave the browser latitude to settle
+            wherever the other blocks' floors happened to leave it, which is how
+            the video stayed tall while the pads got clipped. Same scale as
+            everything else, so the page shrinks as one thing. */}
         <div
           style={{
             position: "relative",
             width: "100%",
-            aspectRatio: "16 / 9",
+            ...(videoH
+              ? { height: videoH }
+              : { aspectRatio: "16 / 9" as const }),
             background: "#000",
             overflow: "hidden",
-            flexGrow: 0,
-            flexShrink: 1,
-            minHeight: MOBILE_VIDEO_MIN_H,
+            flexShrink: 0,
           }}
         >
           <VideoPlayer
@@ -226,16 +260,13 @@ export default function PlayerLayout() {
             betting; previously they had to scroll past the bet buttons. */}
         <div
           style={{
-            padding: "8px 19px 0 19px",
-            // Gives ground BEFORE the video does (shrink 2 vs 1), down to a
-            // floor that keeps the grid legible. The road degrades gracefully —
-            // smaller circles, same information — where the video degrades into
-            // a postage stamp. RoadmapPanel fills whatever it gets and scales
-            // the road's cells to match.
-            flexGrow: 0,
-            flexShrink: 2,
-            flexBasis: MOBILE_ROAD_PREF_H,
-            minHeight: MOBILE_ROAD_MIN_H,
+            padding: `calc(8px * var(${SCALE_VAR}, 1)) 19px 0 19px`,
+            // Explicit scaled height, same as the video. RoadmapPanel fills it
+            // and sizes the road's cells to match — and when the cells shrink it
+            // adds COLUMNS so the grid still spans the full width instead of
+            // leaving a band of empty panel down each side.
+            height: roadH,
+            flexShrink: 0,
             display: "flex",
           }}
         >
@@ -246,17 +277,20 @@ export default function PlayerLayout() {
         <div
           className={panelClass}
           style={{
-            margin: "10px 19px 12px 19px",
-            padding: 10,
+            // Margins, padding and the internal gap all ride the scale. On a
+            // short screen these three alone were ~40px of pure chrome around
+            // the only controls on the page.
+            margin: `calc(10px * var(${SCALE_VAR}, 1)) 19px calc(12px * var(${SCALE_VAR}, 1)) 19px`,
+            padding: `calc(10px * var(${SCALE_VAR}, 1))`,
             borderRadius: 16,
             border: "1.5px solid rgba(54, 65, 83, 0.6)",
             display: "flex",
             flexDirection: "column",
-            gap: 8,
+            gap: `calc(8px * var(${SCALE_VAR}, 1))`,
             transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-            // NEVER shrinks. This is the only part of the page the player acts
-            // on; the reported bug was the bet pads clipped off the bottom of
-            // the screen. Everything above gives way before this does.
+            // Its CONTENTS scale now (pads, chips, type), so it no longer needs
+            // to be the immovable block that forced every shortfall onto the
+            // video and the road.
             flexShrink: 0,
           }}
         >

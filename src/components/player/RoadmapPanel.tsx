@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
+
+import { useElementSize } from "@/lib/use-visible-height";
 import { useGame } from "@/lib/game-context";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useT } from "@/lib/i18n";
@@ -9,11 +11,28 @@ import { BigRoadGrid } from "@/components/shared/BigRoadGrid";
 
 // Player big road density. 36 columns made cells ~15px wide (too small);
 // 22 columns gives readable circles and still wraps reasonably (cycle ~21
-// new outcomes between wraps). Mobile keeps 14 columns to balance density
-// vs. screen width.
+// new outcomes between wraps).
 const COLS = 22;
-const MOBILE_COLS = 14;
 const ROWS = 6;
+const MOBILE_GAP = 1;
+
+/**
+ * Mobile column count when nothing has been measured yet (first paint, SSR).
+ * The real figure is derived from the box — see `mobileCols` below.
+ */
+const MOBILE_COLS_FALLBACK = 14;
+
+/**
+ * Mobile cells are sized from the HEIGHT the layout can spare, then the column
+ * count is chosen to fill the width at that size.
+ *
+ * Fixing the count at 14 and shrinking the cells left the road as a small
+ * huddle of circles in the middle of a wide panel, with a dead band down each
+ * side — visibly broken. More, smaller columns is both better looking and
+ * strictly more information: a longer stretch of the shoe stays on screen.
+ */
+const MOBILE_MIN_COLS = 14;
+const MOBILE_MAX_COLS = 40;
 
 export default function RoadmapPanel() {
   const { roads } = useGame();
@@ -32,14 +51,31 @@ export default function RoadmapPanel() {
       ),
     [roads.bigRoad],
   );
+  /* Mobile grid geometry, measured. Cell comes from the height we were given
+     (rows are fixed at 6 — that is what a big road IS), and the column count
+     then follows from the width so the grid spans it. */
+  const { size: gridBox, ref: gridBoxRef } = useElementSize<HTMLDivElement>();
+  const mobileCell = gridBox
+    ? Math.max(6, (gridBox.h - MOBILE_GAP * (ROWS - 1)) / ROWS)
+    : null;
+  const mobileCols = mobileCell
+    ? Math.min(
+        MOBILE_MAX_COLS,
+        Math.max(
+          MOBILE_MIN_COLS,
+          Math.floor((gridBox!.w + MOBILE_GAP) / (mobileCell + MOBILE_GAP)),
+        ),
+      )
+    : MOBILE_COLS_FALLBACK;
+
   const bigRoadMobile = useMemo(
     () =>
       buildBigRoadColumns(
         roads.bigRoad.map((e) => e.result),
-        MOBILE_COLS,
+        mobileCols,
         ROWS,
       ),
-    [roads.bigRoad],
+    [roads.bigRoad, mobileCols],
   );
 
   /* Prediction percentages — shared between both layouts */
@@ -63,10 +99,10 @@ export default function RoadmapPanel() {
           backgroundColor: "#101828",
           border: "0.8px solid #364153",
           borderRadius: 14,
-          padding: 8,
+          padding: `calc(8px * var(--prg-scale, 1))`,
           display: "flex",
           flexDirection: "column",
-          gap: 6,
+          gap: `calc(6px * var(--prg-scale, 1))`,
           overflow: "hidden",
         }}
       >
@@ -74,24 +110,27 @@ export default function RoadmapPanel() {
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
           <div
             style={{
-              fontSize: 11,
+              fontSize: `calc(11px * var(--prg-scale, 1))`,
               fontWeight: 600,
               color: "#d1d5dc",
-              marginBottom: 4,
+              marginBottom: `calc(4px * var(--prg-scale, 1))`,
               flexShrink: 0,
             }}
           >
             {t("roadmap.bigRoad")}
           </div>
-          <div style={{ width: "100%", flex: 1, minHeight: 0, display: "flex" }}>
+          <div
+            ref={gridBoxRef}
+            style={{ width: "100%", flex: 1, minHeight: 0, display: "flex" }}
+          >
             <BigRoadGrid
               columns={bigRoadMobile.columns}
               leadingTie={bigRoadMobile.leadingTie}
-              cols={MOBILE_COLS}
+              cols={mobileCols}
               rows={ROWS}
               emptyBorderColor="rgba(54,65,83,0.6)"
-              gap={1}
-              fit
+              gap={MOBILE_GAP}
+              cellPx={mobileCell}
             />
           </div>
         </div>
