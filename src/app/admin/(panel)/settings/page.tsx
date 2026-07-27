@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
 import { useToast } from "@/lib/toast-context";
 
@@ -31,8 +33,6 @@ const BET_CODE_LABELS: Record<string, string> = {
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [config, setConfig] = useState<ConfigEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
   /* Editable state */
@@ -65,15 +65,34 @@ export default function SettingsPage() {
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
-  const fetchConfig = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/config");
-      if (res.ok) {
-        const json = await res.json();
-        const entries: ConfigEntry[] = json.data ?? json ?? [];
-        setConfig(entries);
+  const {
+    data: configData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<ConfigEntry[]>("/api/admin/config");
+  const config = configData ?? [];
 
+  const fetchConfig = () => {
+    invalidateAdminQuery("/api/admin/config");
+    refetch();
+  };
+
+  /* Seed the form ONCE.
+   *
+   * Settings is cached and revalidates in the background, and every field here
+   * is an input someone may be part-way through changing. Re-running the
+   * seeding on each data change would discard those edits the moment a refresh
+   * landed — on the page that sets bet limits and maintenance mode. Guarded by
+   * a ref rather than a dependency list because that is the actual rule: seed
+   * from the first payload, never again. */
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!configData || seeded.current) return;
+    seeded.current = true;
+    {
+      {
+        const entries: ConfigEntry[] = configData;
         for (const entry of entries) {
           const val = typeof entry.value === "string"
             ? tryParse(entry.value)
@@ -131,16 +150,8 @@ export default function SettingsPage() {
           }
         }
       }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+  }, [configData]);
 
   function tryParse(s: string): unknown {
     try { return JSON.parse(s); } catch { return s; }
@@ -226,6 +237,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold text-white">Settings</h1>
+      <RefreshingHint show={refreshing && !loading} />
 
       {actionResult && (
         <div

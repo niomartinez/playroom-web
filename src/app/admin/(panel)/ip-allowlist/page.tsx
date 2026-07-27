@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
@@ -27,8 +29,6 @@ interface IPEntry extends Record<string, unknown> {
 
 export default function IPAllowlistPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<IPEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -41,22 +41,22 @@ export default function IPAllowlistPage() {
   const [surfaces, setSurfaces] = useState<string[]>(["admin"]);
   const [isActive, setIsActive] = useState(true);
 
-  const fetchEntries = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/ip-allowlist", { cache: "no-store" });
-      const json = await res.json();
-      setEntries(Array.isArray(json.data) ? json.data : json.data?.entries ?? []);
-    } catch {
-      toast({ type: "error", message: "Could not load the allowlist" });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const {
+    data: entriesData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<IPEntry[] | { entries: IPEntry[] }>("/api/admin/ip-allowlist");
+  // The route has returned both shapes over its life; accept either rather than
+  // let a gate that controls panel access fail closed on a payload detail.
+  const entries: IPEntry[] = Array.isArray(entriesData)
+    ? entriesData
+    : entriesData?.entries ?? [];
 
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+  const fetchEntries = () => {
+    invalidateAdminQuery("/api/admin/ip-allowlist");
+    refetch();
+  };
 
   function resetForm() {
     setIp("");
@@ -309,6 +309,7 @@ export default function IPAllowlistPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">IP Allowlist</h1>
+      <RefreshingHint show={refreshing && !loading} />
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
             Restricts who can reach the internal surfaces, enforced at the edge
             where the real browser IP is visible. Player traffic and the OCMS

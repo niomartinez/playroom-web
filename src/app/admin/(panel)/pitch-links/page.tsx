@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
 
 const inputStyle = {
@@ -39,21 +41,16 @@ export default function PitchLinksPage() {
   const [customHours, setCustomHours] = useState(""); // non-empty → overrides the day preset
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ url: string; operator: string; expiresLabel: string } | null>(null);
-  const [history, setHistory] = useState<PitchLinkRow[]>([]);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/pitch-links");
-      const d = await res.json();
-      setHistory(d?.data?.links || []);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
+  const { data: linksData, refreshing, refetch } = useAdminQuery<{ links: PitchLinkRow[] }>(
+    "/api/admin/pitch-links",
+  );
+  const history = linksData?.links ?? [];
 
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+  const loadHistory = () => {
+    invalidateAdminQuery("/api/admin/pitch-links");
+    refetch();
+  };
 
   async function generate() {
     if (!operator.trim()) {
@@ -102,6 +99,7 @@ export default function PitchLinksPage() {
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-white">Pitch links</h1>
+      <RefreshingHint show={refreshing} />
           <p className="text-sm mt-1" style={{ color: "#99a1af" }}>
             Generate a private, expiring link to the operator pitch deck. The
             operator name becomes the watermark and cannot be edited by the

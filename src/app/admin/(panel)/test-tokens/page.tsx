@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
 import { isProdEnv } from "@/lib/server-env";
 
@@ -71,19 +73,19 @@ export default function TestTokensPage() {
   const [busy, setBusy] = useState(false);
   const [tokens, setTokens] = useState<GeneratedToken[]>([]);
   const [meta, setMeta] = useState<{ operator?: string; operator_scoped?: boolean } | null>(null);
-  const [history, setHistory] = useState<HistoryRow[]>([]);
-  const [audit, setAudit] = useState<AuditRow[]>([]);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const res = await fetch("/api/admin/test-token");
-      const d = await res.json();
-      setHistory(d?.data?.tokens || []);
-      setAudit(d?.data?.audit || []);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
+  const { data: tokenData, refreshing, refetch } = useAdminQuery<{
+    tokens: HistoryRow[];
+    audit: AuditRow[];
+  }>("/api/admin/test-token");
+  const history = tokenData?.tokens ?? [];
+  const audit = tokenData?.audit ?? [];
+
+  /* Generating, expiring or funding a token all change this list. */
+  const loadHistory = () => {
+    invalidateAdminQuery("/api/admin/test-token");
+    refetch();
+  };
 
   // Allowed tables depend on the environment (must match the backend):
   //   prod    -> only the 2 real tables (test money on the live tables)
@@ -224,6 +226,7 @@ export default function TestTokensPage() {
       <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Test tokens</h1>
+      <RefreshingHint show={refreshing} />
         <p className="text-sm mt-1" style={{ color: "#99a1af" }}>
           Generate a funded session with test money and copy the{" "}
           <code>/play</code> link to hand a tester. Settles play money (transfer
