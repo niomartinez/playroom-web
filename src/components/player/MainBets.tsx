@@ -97,7 +97,7 @@ function PadMyBet({
   compact?: boolean;
 }) {
   if (!stake || stake.amount <= 0) return null;
-  const chipSize = compact ? 11 : 14;
+  const chipSize = compact ? 10 : 12;
   // Denoms can legitimately be empty — bets restored by state recovery after a
   // refresh come back without their chip markers. The amount alone still reads.
   const denoms = stake.denoms.slice(0, compact ? 1 : 2);
@@ -107,17 +107,23 @@ function PadMyBet({
       aria-hidden="true"
       style={{
         position: "absolute",
-        left: "50%",
-        bottom: 5,
-        transform: "translateX(-50%)",
+        // BOTTOM-LEFT, not centred. Centred put it straight through the score
+        // the cards had just produced — an "8" with a chip badge across it —
+        // and the two most important numbers on the pad fought each other. The
+        // corner is empty space, and the chips may now overhang the pad edge
+        // rather than being squeezed to fit inside it.
+        left: 4,
+        bottom: 4,
         display: "flex",
         alignItems: "center",
         gap: 3,
-        padding: compact ? "1px 4px 1px 3px" : "1px 6px 1px 4px",
+        padding: compact ? "1px 4px 1px 3px" : "1px 5px 1px 3px",
         borderRadius: 999,
-        background: "rgba(0,0,0,0.45)",
+        background: "rgba(0,0,0,0.55)",
         border: "1px solid rgba(255,255,255,0.18)",
-        maxWidth: "94%",
+        // Room to overhang: the badge is allowed past the pad's own width
+        // rather than wrapping or clipping the amount.
+        maxWidth: "none",
         zIndex: 4,
         pointerEvents: "none",
       }}
@@ -137,7 +143,10 @@ function PadMyBet({
       ))}
       <span
         style={{
-          fontSize: compact ? 9 : 11,
+          // Smaller: this is a reminder of what you already staked, not a
+          // headline. At 11px next to the score it read as the bigger number
+          // of the two, which is backwards.
+          fontSize: compact ? 8 : 9.5,
           fontWeight: 800,
           color: "#fff",
           lineHeight: 1,
@@ -627,9 +636,12 @@ export default function MainBets() {
                   >
                     <span
                       style={{
+                        // Matches the PLAYER/BANKER caption while it is just
+                        // the narrow middle column; only grows when the hand
+                        // actually ties and the pad becomes the result.
                         fontSize: tieWon
                           ? "clamp(12px, 3.6vw, 18px)"
-                          : "clamp(9px, 2.6vw, 13px)",
+                          : "clamp(7.5px, 2.1vw, 10px)",
                         fontWeight: 800,
                         color: "#fff",
                         letterSpacing: 0.3,
@@ -759,10 +771,13 @@ export default function MainBets() {
                     left: 0,
                     right: 0,
                     textAlign: "center",
-                    fontSize: 9,
+                    // Smaller and dimmer: it is a caption telling you which
+                    // side you are looking at, and it was competing with the
+                    // cards and the score it sits above.
+                    fontSize: 7.5,
                     fontWeight: 800,
                     letterSpacing: 0.7,
-                    color: "rgba(255,255,255,0.8)",
+                    color: "rgba(255,255,255,0.65)",
                     textShadow: "0 1px 3px rgba(0,0,0,0.5)",
                     zIndex: 4,
                     pointerEvents: "none",
