@@ -4,6 +4,8 @@ import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { useSeatGate } from "@/lib/use-seat-gate";
 import { sendToParent } from "@/lib/iframe-bridge";
+import { isEmbedded, returnToLobby } from "@/lib/return-to-lobby";
+import { visibleOverlayInset } from "@/lib/use-visible-height";
 import { formatMoney } from "@/lib/currency";
 
 /**
@@ -53,16 +55,15 @@ export default function SeatBalanceGate() {
   const { state, required, seated } = useSeatGate();
   const gated = state === "blocked";
 
-  // Return the player to wherever they launched from — same priority ladder as
-  // SessionGuard.returnToSite(): lobbyUrl → href; embedded → closeGame; else
-  // reload rather than leave a dead button.
-  const embedded =
-    typeof window !== "undefined" && window.self !== window.top;
+  // Return the player to the operator's site — see lib/return-to-lobby, shared
+  // with SessionGuard so both blocking modals exit the same way. `closeGame` is
+  // the last resort only: the operator answers it with window.close(), and the
+  // game runs in a tab of its own, so it ended the session instead of returning
+  // anyone to a lobby.
   const returnToSite = () => {
     if (typeof window === "undefined") return;
-    if (lobbyUrl) {
-      window.location.href = lobbyUrl;
-    } else if (embedded) {
+    if (returnToLobby(lobbyUrl)) return;
+    if (isEmbedded()) {
       sendToParent("closeGame", { reason: "min_seat_balance" });
     } else {
       window.location.reload();
@@ -77,7 +78,10 @@ export default function SeatBalanceGate() {
       aria-modal="true"
       style={{
         position: "fixed",
-        inset: 0,
+        // The visible band, not the whole frame — see SessionGuard. This is the
+        // modal the player is most likely to meet on an operator's page, so its
+        // one button must land somewhere they can reach.
+        ...visibleOverlayInset,
         zIndex: 190,
         display: "flex",
         alignItems: "center",

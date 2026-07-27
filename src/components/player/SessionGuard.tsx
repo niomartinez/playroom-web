@@ -5,6 +5,8 @@ import { useT } from "@/lib/i18n";
 import { useIdleSession } from "@/lib/use-idle-kick";
 import { useSeatGate } from "@/lib/use-seat-gate";
 import { sendToParent } from "@/lib/iframe-bridge";
+import { isEmbedded, returnToLobby } from "@/lib/return-to-lobby";
+import { visibleOverlayInset } from "@/lib/use-visible-height";
 
 /**
  * #5 — Idle-session UI. Renders escalating "place a bet" warnings while a
@@ -47,22 +49,18 @@ export default function SessionGuard() {
   const showWarn =
     !seatGated && !expired && warnLevel > 0 && roundStatus === "betting_open";
 
-  // Return the player to wherever they launched from. Priority:
-  //   1. lobbyUrl — the operator's return URL, passed on launch
-  //      (?lobbyUrl=…). For OCMS / Time2bet this is the callback we send them
-  //      back to; navigating there hands them to their own lobby.
-  //   2. Embedded with no lobbyUrl — post `closeGame` to the operator frame
-  //      so their wrapper performs the return (also fires `gameError`
-  //      SESSION_EXPIRED so the operator can log it).
-  //   3. Neither (direct / QA launch) — reload to re-establish the session
-  //      rather than leave a dead button.
-  const embedded = typeof window !== "undefined" && window.self !== window.top;
+  // Return the player to the operator's site — see lib/return-to-lobby.
+  //
+  // `closeGame` is no longer the fallback. The operator answers it with
+  // window.close(), and because the game is launched into a NEW tab there is no
+  // lobby waiting underneath: the player's tab just disappeared. It is sent
+  // only when we genuinely cannot work out where they came from, and even then
+  // the informational gameError goes first so the operator can log the kick.
   const returnToSite = () => {
     if (typeof window === "undefined") return;
-    if (lobbyUrl) {
-      window.location.href = lobbyUrl;
-    } else if (embedded) {
-      sendToParent("gameError", { code: "SESSION_EXPIRED", reason: "idle" });
+    sendToParent("gameError", { code: "SESSION_EXPIRED", reason: "idle" });
+    if (returnToLobby(lobbyUrl)) return;
+    if (isEmbedded()) {
       sendToParent("closeGame", { reason: "idle_expired" });
     } else {
       window.location.reload();
@@ -121,7 +119,12 @@ export default function SessionGuard() {
           aria-modal="true"
           style={{
             position: "fixed",
-            inset: 0,
+            // Covers the part of our frame that is ON SCREEN, not the whole
+            // frame. Inside an operator's page the frame hangs off the bottom
+            // of the phone, so `inset: 0` centred this dialog on a box the
+            // player is only seeing the top of — the buttons drifted low and
+            // could sit under the browser toolbar entirely.
+            ...visibleOverlayInset,
             zIndex: 200,
             display: "flex",
             alignItems: "center",

@@ -51,9 +51,15 @@ export default function RoadmapPanel() {
   /* ── Mobile layout ── */
   if (isMobile) {
     return (
+      // Fills the height its parent allots instead of deciding one for itself.
+      // The mobile layout now hands out a height budget so the page fits inside
+      // whatever the operator's page and the phone's chrome leave us, and the
+      // road is one of the two blocks that gives ground (see PlayerLayout).
       <div
         style={{
           width: "100%",
+          height: "100%",
+          minHeight: 0,
           backgroundColor: "#101828",
           border: "0.8px solid #364153",
           borderRadius: 14,
@@ -61,21 +67,23 @@ export default function RoadmapPanel() {
           display: "flex",
           flexDirection: "column",
           gap: 6,
+          overflow: "hidden",
         }}
       >
         {/* Big Road Grid */}
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
           <div
             style={{
               fontSize: 11,
               fontWeight: 600,
               color: "#d1d5dc",
               marginBottom: 4,
+              flexShrink: 0,
             }}
           >
             {t("roadmap.bigRoad")}
           </div>
-          <div style={{ width: "100%" }}>
+          <div style={{ width: "100%", flex: 1, minHeight: 0, display: "flex" }}>
             <BigRoadGrid
               columns={bigRoadMobile.columns}
               leadingTie={bigRoadMobile.leadingTie}
@@ -83,17 +91,21 @@ export default function RoadmapPanel() {
               rows={ROWS}
               emptyBorderColor="rgba(54,65,83,0.6)"
               gap={1}
+              fit
             />
           </div>
         </div>
 
-        {/* Single row: Next Prediction (left) + Standings (right). */}
+        {/* Single row: Next Prediction (left) + Standings (right). Never
+            shrinks — it's one short line, and squeezing it buys nothing while
+            the grid above can give up real height. */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
+            flexShrink: 0,
           }}
         >
           {/* Left: Next Prediction */}

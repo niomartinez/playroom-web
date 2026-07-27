@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { formatMoney, symbolFor } from "@/lib/currency";
 import { useDisplayBalance } from "@/lib/use-display-balance";
+import { VISIBLE_BOTTOM_INSET } from "@/lib/use-visible-height";
 import SeatWarnBubble from "./SeatWarnBubble";
 
 /**
@@ -41,6 +44,27 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
   } = useGame();
   const t = useT();
 
+  // Publish the strip's real height so the layout can reserve exactly that much
+  // and no more. It used to reserve a hardcoded 72px for a bar that measures
+  // ~38 — 34px of dead space on the one screen with none to spare, taken
+  // straight out of the video and the road.
+  const barRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!fixed) return;
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      if (h > 0) root.style.setProperty("--prg-infobar-h", `${h}px`);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--prg-infobar-h");
+    };
+  }, [fixed]);
+
   // The round's staked total — the sum of what is actually on the table now.
   // Recomputed from placedBets rather than tracked separately so it can never
   // drift from the chips the player can see.
@@ -72,6 +96,7 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
 
   return (
     <div
+      ref={barRef}
       style={{
         display: "flex",
         alignItems: "center",
@@ -87,7 +112,13 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
               position: "fixed",
               left: 0,
               right: 0,
-              bottom: 0,
+              // NOT `bottom: 0`. Fixed positioning resolves against our own
+              // frame's viewport, and inside an operator's page that viewport
+              // runs off the bottom of the phone — so `0` pinned this strip
+              // below the fold, where the player could never see the round
+              // reference or the table limits. Offsets by however much of us is
+              // hidden; resolves to 0 when nothing is.
+              bottom: VISIBLE_BOTTOM_INSET,
               zIndex: 60,
               // Clear the iOS home indicator.
               paddingBottom: "calc(4px + env(safe-area-inset-bottom, 0px))",

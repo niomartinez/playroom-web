@@ -1,6 +1,7 @@
 "use client";
 
 import { useIsMobile } from "@/lib/use-mobile";
+import { useVisibleHeight } from "@/lib/use-visible-height";
 import { useGame } from "@/lib/game-context";
 import { useIdleSession } from "@/lib/use-idle-kick";
 import { useCountdown } from "@/lib/use-countdown";
@@ -70,8 +71,38 @@ const BET_PANEL_STYLES = `
 }
 `;
 
+/**
+ * Mobile height budget. These are the parts that must never be squeezed: the
+ * header (one row of controls) and the pinned info strip at the foot. What's
+ * left is shared out between the video, the road and the chat/winners row —
+ * in that order of how much each may give up.
+ */
+const MOBILE_INFOBAR_H = 72;
+/** Below this the video stops being a video. */
+const MOBILE_VIDEO_MIN_H = 132;
+/**
+ * Below this the road stops being readable. The panel spends ~70px on its
+ * title and the Next/standings line, so this leaves the grid roughly 70px —
+ * six rows of ~11px cells, which is small but still a road.
+ */
+const MOBILE_ROAD_MIN_H = 140;
+/**
+ * The road's preferred height, stated rather than derived.
+ *
+ * It has to be a definite flex-basis: the grid now sizes its cells FROM the
+ * height it is given, so leaving the basis as `auto` would ask the box how tall
+ * it wants to be while the answer depends on how tall it ends up. This is the
+ * height 6 rows came to at the old width-driven sizing, so nothing moves on a
+ * screen that already had the room.
+ */
+const MOBILE_ROAD_PREF_H = 208;
+
 export default function PlayerLayout() {
   const isMobile = useIsMobile();
+  // The height actually on screen — NOT `100vh`. Inside an operator's iframe
+  // our viewport runs off the bottom of the phone, under their navigation and
+  // the browser's own bars. See lib/use-visible-height.
+  const visibleH = useVisibleHeight();
   const { roundStatus, webrtcUrl, hlsUrl } = useGame();
   const { live_chat_enabled: liveChatEnabled } = useFeatures();
   // While the hand is being dealt, give the video more room: betting is closed,
@@ -106,7 +137,15 @@ export default function PlayerLayout() {
         style={{
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          // Fit the space we can actually see. Before the measurement lands
+          // (first paint, SSR) fall back to `100dvh` — still better than
+          // `100vh`, which ignores the phone's collapsing URL bar.
+          height: visibleH ? `${visibleH}px` : "100dvh",
+          // The video and the road absorb the shortfall (they carry
+          // `flexShrink`), so the column fits rather than spilling. `auto`
+          // rather than `hidden` is the safety net: on a screen too short for
+          // even the minimums, a scroll is bad but unreachable bet pads are
+          // worse — and that is exactly what a hard clip would produce.
           overflowY: "auto",
           overflowX: "hidden",
           // Felt on the body, under everything below the video. Painted as the
@@ -144,13 +183,22 @@ export default function PlayerLayout() {
             header, so the header's stacking context caps it: at 50 the menu's
             own z-120 was still trapped below the info bar and the footer painted
             over the open menu. */}
-        <div style={{ position: "sticky", top: 0, zIndex: 70 }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 70, flexShrink: 0 }}>
           <PlayerHeader />
         </div>
 
-        {/* Video / Deal area — fixed 16:9. It briefly widened to 4:3 during the
-            deal; that just cropped the table and shoved the page around for no
-            gain, so the feed stays put and the pads alone carry the hand. */}
+        {/* Video / Deal area — 16:9 when there's room for it. It briefly
+            widened to 4:3 during the deal; that just cropped the table and
+            shoved the page around for no gain, so the feed stays put and the
+            pads alone carry the hand.
+
+            It SHRINKS now — 16:9 is the ceiling, not a contract — but it is
+            the most RELUCTANT block on the page (flexShrink 1, against 2 for
+            the road and 3 for the chat row). The feed is `object-contain` by
+            deliberate choice, so a shorter box does not crop it, it shrinks the
+            whole frame: squeeze the box hard and the dealer pillarboxes down to
+            a third of the width. Letting the road give ground first keeps the
+            feed watchable, which on a live-dealer table is the product. */}
         <div
           style={{
             position: "relative",
@@ -158,7 +206,9 @@ export default function PlayerLayout() {
             aspectRatio: "16 / 9",
             background: "#000",
             overflow: "hidden",
-            flexShrink: 0,
+            flexGrow: 0,
+            flexShrink: 1,
+            minHeight: MOBILE_VIDEO_MIN_H,
           }}
         >
           <VideoPlayer
@@ -174,7 +224,21 @@ export default function PlayerLayout() {
             thing the player sees after the video stream. Players asked for
             this hierarchy because the road is what they consult before
             betting; previously they had to scroll past the bet buttons. */}
-        <div style={{ padding: "8px 19px 0 19px" }}>
+        <div
+          style={{
+            padding: "8px 19px 0 19px",
+            // Gives ground BEFORE the video does (shrink 2 vs 1), down to a
+            // floor that keeps the grid legible. The road degrades gracefully —
+            // smaller circles, same information — where the video degrades into
+            // a postage stamp. RoadmapPanel fills whatever it gets and scales
+            // the road's cells to match.
+            flexGrow: 0,
+            flexShrink: 2,
+            flexBasis: MOBILE_ROAD_PREF_H,
+            minHeight: MOBILE_ROAD_MIN_H,
+            display: "flex",
+          }}
+        >
           <RoadmapPanel />
         </div>
 
@@ -190,6 +254,10 @@ export default function PlayerLayout() {
             flexDirection: "column",
             gap: 8,
             transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+            // NEVER shrinks. This is the only part of the page the player acts
+            // on; the reported bug was the bet pads clipped off the bottom of
+            // the screen. Everything above gives way before this does.
+            flexShrink: 0,
           }}
         >
           {/* BalanceBar renders the balance + CLEAR BETS (right, above chips)
@@ -221,7 +289,15 @@ export default function PlayerLayout() {
             gap: 10,
             padding: "8px 19px 0",
             alignItems: "start",
-            minHeight: 96,
+            // Was a hard `minHeight: 96` of reserved space. Both halves are
+            // ambient (recent chat, recent winners) and neither is worth a bet
+            // pad, so this collapses to nothing before the video or the road
+            // are asked to shrink at all.
+            flexGrow: 1,
+            flexShrink: 3,
+            flexBasis: 96,
+            minHeight: 0,
+            overflow: "hidden",
           }}
         >
           {/* Each side gets its OWN wrapper with an explicit column.
@@ -239,9 +315,20 @@ export default function PlayerLayout() {
           </div>
         </div>
 
-        {/* Reserves room for the pinned TableInfoBar so it never covers content. */}
+        {/* Reserves room for the pinned TableInfoBar so it never covers
+            content. Fixed: the strip is a real, opaque thing at the foot of the
+            screen, so shrinking its reservation just puts it back on top of the
+            bet pads. */}
         <div
-          style={{ height: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
+          style={{
+            // The strip's OWN measured height (it publishes it), not a guess.
+            // The guess was 72px for a ~38px bar and the difference came out of
+            // the video and the road, which are the two things short on room.
+            // The safe-area term is already inside the measurement — the bar
+            // pads itself for the home indicator — so it is not added twice.
+            height: `var(--prg-infobar-h, calc(${MOBILE_INFOBAR_H}px + env(safe-area-inset-bottom, 0px)))`,
+            flexShrink: 0,
+          }}
           aria-hidden
         />
 

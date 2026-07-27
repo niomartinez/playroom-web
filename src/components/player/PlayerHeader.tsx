@@ -2,6 +2,7 @@
 
 import { useGame } from "@/lib/game-context";
 import { sendToParent } from "@/lib/iframe-bridge";
+import { isEmbedded, returnToLobby } from "@/lib/return-to-lobby";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useCountdown } from "@/lib/use-countdown";
 import { useT, normalizeLang } from "@/lib/i18n";
@@ -64,12 +65,12 @@ export default function PlayerHeader() {
     result: t("status.result"),
   };
 
+  // Same exit as the blocking modals — see lib/return-to-lobby. `closeGame`
+  // only when we can't work out where the player came from; on its own it shuts
+  // the tab, which is not a "back".
   const handleBack = () => {
-    if (lobbyUrl) {
-      window.location.href = lobbyUrl;
-    } else {
-      sendToParent("closeGame");
-    }
+    if (returnToLobby(lobbyUrl)) return;
+    if (isEmbedded()) sendToParent("closeGame");
   };
 
   if (isMobile) {

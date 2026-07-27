@@ -7,6 +7,8 @@
  * overlays (slash + count badge) on the most recent non-Tie cell.
  */
 
+import { useEffect, useRef, useState } from "react";
+
 import type {
   BigRoadColumn,
   LeadingTie,
@@ -29,6 +31,16 @@ interface BigRoadGridProps {
   background?: string;
   /** Gap between cells (pixels). */
   gap?: number;
+  /**
+   * Size the grid to fit its box in BOTH directions rather than only across.
+   *
+   * The default `1fr` columns derive cell size from width alone, so the grid's
+   * height is whatever 6 rows of that width come to — fine when it can have all
+   * the height it wants. Under a height budget it just overflowed and the
+   * bottom rows were clipped. In `fit` mode the cell is the smaller of what
+   * width and height allow, so the road shrinks whole and stays round.
+   */
+  fit?: boolean;
 }
 
 export function BigRoadGrid({
@@ -39,15 +51,45 @@ export function BigRoadGrid({
   emptyBorderColor = "rgba(255,255,255,0.08)",
   background = "transparent",
   gap = 1,
+  fit = false,
 }: BigRoadGridProps) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const [cell, setCell] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!fit) return;
+    const el = boxRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      const byWidth = (width - gap * (cols - 1)) / cols;
+      const byHeight = (height - gap * (rows - 1)) / rows;
+      const next = Math.max(0, Math.floor(Math.min(byWidth, byHeight) * 100) / 100);
+      setCell((prev) => (prev !== null && Math.abs(prev - next) < 0.5 ? prev : next));
+    };
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => ro.disconnect();
+  }, [fit, cols, rows, gap]);
+
+  const track = fit && cell !== null ? `${cell}px` : "1fr";
+
   return (
     <div
-      className="grid flex-1 min-h-0"
+      ref={boxRef}
+      className={fit ? "flex-1 min-h-0 grid" : "grid flex-1 min-h-0"}
       style={{
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
+        gridTemplateColumns: `repeat(${cols}, ${track})`,
+        gridTemplateRows: `repeat(${rows}, ${track})`,
         gap: `${gap}px`,
         background,
+        // Fixed px tracks leave slack in the wider direction; centre it so the
+        // road doesn't sit against one edge as it shrinks.
+        ...(fit ? { justifyContent: "center", alignContent: "center" } : null),
       }}
     >
       {Array.from({ length: cols }).map((_, colIdx) =>
