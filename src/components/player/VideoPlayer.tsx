@@ -13,6 +13,7 @@ import {
 } from "@/lib/media-prefs";
 import { useStreamToken, withStreamToken } from "@/lib/use-stream-token";
 import { SESSION_CUT_EVENT, isSessionCut, markSessionCut } from "@/lib/session-cut";
+import { isSeatGated } from "@/lib/use-seat-gate";
 
 /**
  * Live video player for a baccarat table.
@@ -308,7 +309,13 @@ export default function VideoPlayer({ webrtcUrl, hlsUrl, fallback }: VideoPlayer
       }
       setState("error");
       setErrorMsg(t("video.sessionEnded"));
-      if (typeof window !== "undefined") {
+      // ...but do NOT report a MONEY cut as a session end. The edge answers a
+      // bare 401 for both the idle cut and the seat-balance cut, and this event
+      // is what raises the terminal "Session Expired — inactivity" dialog. A
+      // player below the seat floor has their own modal already; telling them
+      // they were removed for inactivity is simply wrong, and that dialog
+      // (zIndex 200) used to bury the one that explains the real reason.
+      if (typeof window !== "undefined" && !isSeatGated()) {
         window.dispatchEvent(new CustomEvent("playroom:session-ended"));
       }
     };

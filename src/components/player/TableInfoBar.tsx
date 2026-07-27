@@ -4,6 +4,7 @@ import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { formatMoney, symbolFor } from "@/lib/currency";
 import { useDisplayBalance } from "@/lib/use-display-balance";
+import SeatWarnBubble from "./SeatWarnBubble";
 
 /**
  * The strip under the table, modelled on Evolution's.
@@ -95,12 +96,23 @@ export default function TableInfoBar({ fixed = false }: { fixed?: boolean }) {
             } as const)
           : null),
         // Reference text, never a tap target — must not intercept a mis-aimed
-        // chip placement near the bottom of the screen.
+        // chip placement near the bottom of the screen. The one exception is
+        // SeatWarnBubble's dismiss ×, which re-enables pointer events on itself
+        // alone (a nudge the player can't close is not a nudge).
         pointerEvents: "none",
         userSelect: "none",
         flexShrink: 0,
       }}
     >
+      {/* The low-balance nudge, floated above the strip. Gated on `fixed` for
+          the same reason the balance line below is: desktop already shows the
+          balance and its warning in BalanceBar, so a bubble there would be the
+          same message twice. When `fixed` this root is position:fixed, which
+          makes it the bubble's containing block — nothing else is needed, and
+          being absolutely positioned it is out of flow and cannot disturb the
+          two in-flow columns. */}
+      {fixed && <SeatWarnBubble />}
+
       {/* Left: the player's own money */}
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
         <span style={{ whiteSpace: "nowrap" }}>

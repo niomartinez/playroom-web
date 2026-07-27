@@ -5,6 +5,7 @@ import { useGame } from "./game-context";
 import { getIdleExempt, IDLE_EXEMPT_EVENT } from "./idle-exempt";
 import { markSessionCut } from "./session-cut";
 import { resolveIdlePolicy, type IdlePolicy } from "./idle-policy";
+import { useSeatGate } from "./use-seat-gate";
 
 /**
  * Idle-session policy for real-wallet players. Counts consecutive rounds with
@@ -32,6 +33,15 @@ export interface IdleSessionState {
 
 export function useIdleSession(): IdleSessionState {
   const { token, roundStatus, currentRound, placedBets, confirmedBetRoundId, idlePolicy } = useGame();
+
+  // Below the seat floor the player CANNOT bet — the server refuses on money.
+  // Counting those rounds as inactivity charges them for the server's own rule,
+  // and the resulting overlay tells them the wrong thing. Both the local counter
+  // and the session-ended listener below defer to this. Read through a ref so
+  // the round-transition effect doesn't need it in its dep list.
+  const seatGated = useSeatGate().state === "blocked";
+  const seatGatedRef = useRef(seatGated);
+  seatGatedRef.current = seatGated;
 
   // The server value (idlePolicy) arrives from table-state recovery a moment
   // AFTER mount, so it's null on the first render. Resolving once on that
@@ -70,8 +80,17 @@ export function useIdleSession(): IdleSessionState {
   // (idle stream-cut = full session end). Freeze immediately — the local
   // round counter may disagree (e.g. after a mid-idle client refresh that
   // didn't clear the server state in time).
+  //
+  // EXCEPT while seat-gated. The edge answers a bare 401 for BOTH cuts — idle
+  // and seat-balance — and VideoPlayer turns any 401 into this event, so a
+  // player below the floor was shown "Session Expired — inactivity" instantly,
+  // with zero idle rounds elapsed. That is the fastest path to the reported
+  // symptom and it is purely client-side.
   useEffect(() => {
-    const onEnded = () => setExpired(true);
+    const onEnded = () => {
+      if (seatGatedRef.current) return;
+      setExpired(true);
+    };
     window.addEventListener("playroom:session-ended", onEnded);
     return () => window.removeEventListener("playroom:session-ended", onEnded);
   }, []);
@@ -133,6 +152,18 @@ export function useIdleSession(): IdleSessionState {
 
     const newRoundId = String(currentRound.roundId);
     const prevRoundId = lastRoundIdRef.current;
+
+    // Seat-gated: FREEZE the counter and re-arm the join grace, mirroring the
+    // server's own skip branch (stream_session_service.evaluate_idle_for_fight).
+    // Hiding the overlay without this only defers the kick — the moment the
+    // player tops up, every round they were locked out for lands at once and
+    // they are expired on the spot.
+    if (seatGatedRef.current) {
+      lastRoundIdRef.current = newRoundId;
+      placedThisRoundRef.current = false;
+      joinRoundRef.current = newRoundId;
+      return;
+    }
 
     // First round we observe — record it, and mark it as the JOIN round.
     if (!prevRoundId) {

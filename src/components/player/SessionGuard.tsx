@@ -3,6 +3,7 @@
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
 import { useIdleSession } from "@/lib/use-idle-kick";
+import { useSeatGate } from "@/lib/use-seat-gate";
 import { sendToParent } from "@/lib/iframe-bridge";
 
 /**
@@ -30,7 +31,21 @@ export default function SessionGuard() {
 
   const { warnLevel, expired } = useIdleSession();
 
-  const showWarn = !expired && warnLevel > 0 && roundStatus === "betting_open";
+  /**
+   * While the player is below the seat floor, the min-balance modal is the ONLY
+   * thing they should see. They physically cannot bet — the server refuses on
+   * money — so warning them to "place a bet to keep your seat", and then
+   * removing them for inactivity, names a reason that is not theirs and hides
+   * the one that is.
+   *
+   * Suppression is at RENDER level on purpose: `expired` stays true internally,
+   * so a player who is genuinely idle-expired AND broke gets the honest session
+   * state back the moment the seat condition lifts.
+   */
+  const seatGated = useSeatGate().state === "blocked";
+
+  const showWarn =
+    !seatGated && !expired && warnLevel > 0 && roundStatus === "betting_open";
 
   // Return the player to wherever they launched from. Priority:
   //   1. lobbyUrl — the operator's return URL, passed on launch
@@ -100,7 +115,7 @@ export default function SessionGuard() {
         </div>
       )}
 
-      {expired && (
+      {expired && !seatGated && (
         <div
           role="alertdialog"
           aria-modal="true"

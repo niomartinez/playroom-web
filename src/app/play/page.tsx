@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import PlayerLayout from "@/components/player/PlayerLayout";
 import GameWrapper from "./GameWrapper";
 import { PLAYER_SESSION_COOKIE } from "@/lib/player-session";
+import { fetchSeatBootstrap } from "@/lib/seat-server";
 
 /**
  * F-10: the player session token is not kept in the URL after first load.
@@ -41,6 +42,15 @@ import { PLAYER_SESSION_COOKIE } from "@/lib/player-session";
  * string out of cross-origin Referer headers.
  *
  * Demo mode (`/play/demo`) doesn't go through this path.
+ *
+ * The SEAT DECISION is fetched here, in the two branches that actually render
+ * (never in the two that `redirect()` — that would be a wasted round trip on
+ * the critical launch path). It works identically on both: hop 2's cookieless
+ * branch passes the URL token, steady state passes the cookie token, and the
+ * backend only ever sees an `X-Session-Token` header either way. Without it the
+ * browser had to learn the seat thresholds and its own balance over two
+ * independent transports before it could gate anyone — and when either failed,
+ * a player under the floor was seated with no modal and no video.
  */
 export default async function PlayPage({
   searchParams,
@@ -93,6 +103,8 @@ export default async function PlayPage({
     if (cookieToken === urlToken) {
       redirect(cleanPath);
     }
+    // Cookieless: the token we hand the backend is the one on the URL, since
+    // that is the only one this browser will keep.
     return (
       <GameWrapper
         token={urlToken}
@@ -101,6 +113,7 @@ export default async function PlayPage({
         lang={lang}
         lobbyUrl={lobbyUrl}
         cashierUrl={cashierUrl}
+        seat={await fetchSeatBootstrap({ token: urlToken, gameId })}
       >
         <PlayerLayout />
       </GameWrapper>
@@ -115,6 +128,7 @@ export default async function PlayPage({
       lang={lang}
       lobbyUrl={lobbyUrl}
       cashierUrl={cashierUrl}
+      seat={await fetchSeatBootstrap({ token: cookieToken, gameId })}
     >
       <PlayerLayout />
     </GameWrapper>

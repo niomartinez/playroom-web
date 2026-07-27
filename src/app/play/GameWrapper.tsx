@@ -9,10 +9,13 @@ import { sendToParent, onParentMessage } from "@/lib/iframe-bridge";
 import UsernameModal from "@/components/player/UsernameModal";
 import SessionGuard from "@/components/player/SessionGuard";
 import SeatBalanceGate from "@/components/player/SeatBalanceGate";
+import SeatCheckOverlay from "@/components/player/SeatCheckOverlay";
 import BetToasts from "@/components/player/BetToasts";
 import ButtonSfxProvider from "@/lib/use-button-sfx";
 import { ToastProvider } from "@/lib/toast-context";
 import { installSessionTokenHeader } from "@/lib/session-token-fetch";
+import { useSeatStatus } from "@/lib/use-seat-status";
+import { SEAT_BOOTSTRAP_SKIPPED, type SeatBootstrap } from "@/lib/seat-status";
 
 /* ------------------------------------------------------------------ */
 /*  Username gate                                                      */
@@ -160,6 +163,9 @@ function GameConnections({ children }: { children: ReactNode }) {
   // One-shot fetch on mount: rehydrates round state + this player's
   // placed bets if they refresh during a live round.
   useStateRecovery();
+  // Backstop for the server seat decision: retries a bootstrap that timed out,
+  // and re-syncs `seated` after the player's first bet.
+  useSeatStatus();
 
   /* Send gameReady on mount, listen for parent commands */
   useEffect(() => {
@@ -183,9 +189,15 @@ function GameConnections({ children }: { children: ReactNode }) {
       </ButtonSfxProvider>
       {/* #5 — idle warnings + frozen "Session Expired" overlay. */}
       <SessionGuard />
-      {/* Reactive minimum-seat-balance gate (lifts on top-up). Sits above
-          LowBalanceGate (zIndex 200 vs 17). */}
+      {/* Reactive minimum-seat-balance gate (lifts on top-up). zIndex 190 —
+          above LowBalanceGate (17), and SessionGuard's expired overlay (200) is
+          now SUPPRESSED while seat-gated rather than stacked over it. */}
       <SeatBalanceGate />
+      {/* The seat decision is not in yet. NON-BLOCKING status pill (zIndex 189)
+          — the server refuses bets and cuts video off its own answer, so
+          covering the table here would only rob funded players during a backend
+          blip. Never a money figure we did not receive. */}
+      <SeatCheckOverlay />
       {/* Speaks when a bet action is refused — a drag that the server won't
           take used to snap back silently. */}
       <BetToasts />
@@ -206,6 +218,8 @@ interface GameWrapperProps {
   /** The browser refused the session cookie (WebKit third-party block) —
    *  carry the token on the API calls instead. See `src/app/play/page.tsx`. */
   cookieless?: boolean;
+  /** Server-resolved seat decision from the /play Server Component. */
+  seat?: SeatBootstrap;
   children: ReactNode;
 }
 
@@ -216,6 +230,7 @@ export default function GameWrapper({
   lobbyUrl,
   cashierUrl,
   cookieless,
+  seat,
   children,
 }: GameWrapperProps) {
   // Installed during render, NOT in an effect: children's effects run before
@@ -244,6 +259,7 @@ export default function GameWrapper({
       lang={lang}
       lobbyUrl={lobbyUrl}
       cashierUrl={cashierUrl}
+      initialSeat={seat ?? SEAT_BOOTSTRAP_SKIPPED}
     >
       <GameConnections>{children}</GameConnections>
     </GameProvider>

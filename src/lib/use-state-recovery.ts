@@ -169,7 +169,14 @@ export function useStateRecovery() {
         if (typeof payload.idle_exempt === "boolean") {
           setIdleExempt(payload.idle_exempt);
         }
-        // Server-owned seat-balance thresholds (block/warn).
+        // Server-owned seat-balance thresholds (enter/block/warn).
+        //
+        // ONE WRITER RULE: this feeds the THRESHOLDS only. It must never touch
+        // `seat` (the server's decision) — table state has no idea what the
+        // caller's balance is, so it cannot decide anything, and letting a
+        // second writer near one truth is the exact shape of the bug where the
+        // gate silently resolved to "not gated". `seat` is written only by the
+        // SSR bootstrap and use-seat-status.
         if (payload.min_seat_balance) setMinSeatBalance(payload.min_seat_balance);
         // Server-owned bet-limit model — the UI gates the ×2 chip, the per-hand
         // combined cap and the side-bet cap on these same numbers the API enforces.

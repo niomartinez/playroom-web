@@ -178,6 +178,12 @@ const en: Record<string, string> = {
   "seat.return": "Back to lobby",
   "seat.addFunds": "Add funds",
   "seat.warnLow": "Low balance — keep at least {amount} to hold your seat.",
+  "seat.warnDismiss": "Dismiss",
+  /* SeatCheckOverlay — the non-blocking "still checking" pill. Deliberately
+     says nothing about money: at this point we have no figure to quote. */
+  "seat.checking": "Checking your seat…",
+  "seat.checkFailed": "Couldn't confirm your seat — still trying.",
+  "seat.retry": "Retry",
 
   /* Winners marquee */
   "winners.title": "Winners",

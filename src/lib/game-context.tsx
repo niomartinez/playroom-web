@@ -2,6 +2,7 @@
 
 import type { IdlePolicy } from "./idle-policy";
 import type { MinSeatBalance } from "./min-seat-balance";
+import { SEAT_BOOTSTRAP_SKIPPED, type SeatBootstrap } from "./seat-status";
 import {
   createContext,
   useContext,
@@ -235,8 +236,20 @@ export interface GameState {
   /** Raw server thresholds; may omit `enter` on older configs.
    *  Always read through resolveMinSeatBalance(), which fills + clamps. */
   minSeatBalance: Partial<MinSeatBalance> | null;
+  /**
+   * The SERVER's seat decision, resolved before the page rendered (see
+   * lib/seat-server.ts) and refreshed by use-seat-status. This is the fix for
+   * the gate racing two browser transports — read it through
+   * `useSeatGate()`, never directly.
+   *
+   * ONE WRITER RULE: only the SSR bootstrap and use-seat-status may set this.
+   * Table state must never write it — it does not know the caller's balance,
+   * and two writers over one truth is the exact shape of the bug this replaces.
+   */
+  seat: SeatBootstrap;
 
   /* Setters — accept direct values or functional updaters */
+  setSeat: (s: SeatBootstrap) => void;
   setWebrtcUrl: (u: string | null) => void;
   setHlsUrl: (u: string | null) => void;
   setVideoDelayMs: (ms: number) => void;
@@ -308,6 +321,8 @@ interface GameProviderProps {
   lang: string;
   lobbyUrl: string | null;
   cashierUrl: string | null;
+  /** Server-resolved seat decision, available at first paint. */
+  initialSeat?: SeatBootstrap;
   children: ReactNode;
 }
 
@@ -317,6 +332,7 @@ export function GameProvider({
   lang: initialLang,
   lobbyUrl,
   cashierUrl,
+  initialSeat,
   children,
 }: GameProviderProps) {
   const [tableName, setTableName] = useState("");
@@ -399,7 +415,16 @@ export function GameProvider({
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
   const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
-  const [minSeatBalance, setMinSeatBalance] = useState<Partial<MinSeatBalance> | null>(null);
+  // Seeded from the SSR seat decision when we have one. `thresholds` there IS
+  // the same get_min_seat_balance() object table state publishes, so this only
+  // changes WHEN the gate can answer, never WHAT it answers — and it removes
+  // one of the two async transports the gate used to race.
+  const [minSeatBalance, setMinSeatBalance] = useState<Partial<MinSeatBalance> | null>(
+    () => (initialSeat && "seat" in initialSeat ? initialSeat.seat.thresholds : null),
+  );
+  const [seat, setSeat] = useState<SeatBootstrap>(
+    () => initialSeat ?? SEAT_BOOTSTRAP_SKIPPED,
+  );
 
   // Reset the ×2 toggle at the start of each betting round. Fires only on the
   // transition INTO betting_open (roundStatus is a stable string within a
@@ -614,6 +639,8 @@ export function GameProvider({
     confirmedBetRoundId,
     idlePolicy,
     minSeatBalance,
+    seat,
+    setSeat,
     setTableName,
     setDealerName,
     setBalance,

@@ -6,9 +6,9 @@ import { useDisplayBalance } from "@/lib/use-display-balance";
 import { useGame } from "@/lib/game-context";
 import { useSessionCut } from "@/lib/session-cut";
 import { useIsMobile } from "@/lib/use-mobile";
-import { symbolFor, formatBalance, formatMoney } from "@/lib/currency";
+import { symbolFor, formatBalance } from "@/lib/currency";
 import { useT } from "@/lib/i18n";
-import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
+import { useSeatWarn } from "@/lib/use-seat-warn";
 
 const CHIPS = [
   // ₱50 is the smallest chip. A single ₱50 bet is accepted, but a hand must
@@ -38,7 +38,7 @@ const SEAT_WARN_KEYFRAMES = `
 `;
 
 export default function BalanceBar() {
-  const { balance, balanceLoaded, currency, selectedChip, setSelectedChip, chipMultiplier, setChipMultiplier, roundStatus, placedBets, cancelPlacedBets, token, minSeatBalance } = useGame();
+  const { balance, currency, selectedChip, setSelectedChip, chipMultiplier, setChipMultiplier, roundStatus, placedBets, cancelPlacedBets } = useGame();
   const isMobile = useIsMobile();
   const t = useT();
   const displayBalance = useDisplayBalance(balance);
@@ -46,20 +46,11 @@ export default function BalanceBar() {
   const isBettingOpen = roundStatus === "betting_open" && !sessionCut;
   const hasPlacedBets = placedBets.length > 0;
 
-  /**
-   * Seat-balance warning zone: block <= balance < warn. The balance is above
-   * the seat floor (else SeatBalanceGate would cover the screen) but close
-   * enough that we nudge the player before it drops through. Pulses the
-   * balance number red + shows a small, low-opacity, non-obstructive hint.
-   */
-  const { block, warn } = resolveMinSeatBalance(minSeatBalance);
-  const warnLow =
-    token !== "demo" &&
-    balanceLoaded &&
-    minSeatBalance != null &&
-    balance >= block &&
-    balance < warn;
-  const warnLowText = t("seat.warnLow", { amount: formatMoney(block, currency) });
+  // Seat-balance warning band (block <= balance < warn). Desktop pulses the
+  // balance number red and swaps the caption under it for the warning; on
+  // mobile the balance itself lives in TableInfoBar, so SeatWarnBubble shows it
+  // there instead and this branch shows nothing.
+  const { warnLow, text: warnLowText } = useSeatWarn();
 
   /**
    * Auto-step-down: when the live balance can't cover the current selected
@@ -100,33 +91,20 @@ export default function BalanceBar() {
           boxSizing: "border-box",
         }}
       >
-        <style>{SEAT_WARN_KEYFRAMES}</style>
         {/* The old top row held balance + CLEAR BETS. The balance moved to
             TableInfoBar, which left CLEAR BETS marooned alone on a full-width
             row — a big red pill floating above the chips with nothing to
             balance it. Both live controls now sit IN the chip row (Evolution
-            keeps UNDO / x2 / DOUBLE inline with the chip for the same reason),
-            so this row only exists when there is a low-balance warning to show. */}
-        {warnLow && (
-          <div
-            role="status"
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#fb2c36",
-              lineHeight: 1.2,
-              marginBottom: 8,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              animation: "prg-balance-pulse 1.2s ease-in-out infinite",
-            }}
-          >
-            {warnLowText}
-          </div>
-        )}
+            keeps UNDO / x2 / DOUBLE inline with the chip for the same reason).
 
-        {/* Bottom section: chip row + ×2 toggle (bigger than the chips).
+            The low-balance warning used to be the last thing left on that row.
+            It is gone too, and lives in SeatWarnBubble, anchored to the strip
+            that holds the mobile balance: as an in-flow row it added height the
+            moment the balance crossed the band and took it back when it crossed
+            out, shifting the pads under the player's thumb mid-round. This card
+            is now chip-row-only and its height never changes. */}
+
+        {/* Chip row + ×2 toggle (bigger than the chips).
             space-between (no fixed gap) keeps 6 × 36px chips + the 50px ×2
             control inside a ~360px phone without overflow/scroll. */}
         <div
@@ -275,8 +253,28 @@ export default function BalanceBar() {
 
   return (
     <div
-      className="flex items-center justify-between h-full"
+      className="h-full"
       style={{
+        // Grid, not flex+justify-between, because of `minmax(0, 1fr)`: that
+        // track's MINIMUM is 0, so the balance region is sized by whatever
+        // width is LEFT OVER and never by its own content. A long warning
+        // string (zh-Hans is wider than en) therefore cannot add width to the
+        // row — which is exactly how it used to shove CLEAR BETS and the whole
+        // chip row past the panel's overflow-hidden edge. The trailing `auto`
+        // tracks keep those two at their content width, and the 1fr absorbs the
+        // slack `justify-between` used to spread between the groups.
+        //
+        // Track COUNT must match the children: CLEAR BETS is only rendered
+        // while betting is open. Add or remove a child here without updating
+        // this template and the grid invents an implicit column, landing the
+        // chips somewhere unrelated (same failure as the explicit row template
+        // in PlayerLayout). Never add justify-content — that would restore
+        // content-driven sizing and with it the bug.
+        display: "grid",
+        gridTemplateColumns: isBettingOpen
+          ? "minmax(0, 1fr) auto auto"
+          : "minmax(0, 1fr) auto",
+        alignItems: "center",
         backgroundColor: "#101828",
         border: "0.8px solid #364153",
         borderRadius: "0.7vw",
@@ -284,7 +282,10 @@ export default function BalanceBar() {
         gap: "0.5vw",
       }}
     >
-      <div className="flex items-center flex-shrink-0" style={{ gap: "0.7vw" }}>
+      {/* minWidth 0: a grid item defaults to min-width:auto, which would let
+          this group PAINT out of its track even though it can no longer widen
+          it. */}
+      <div className="flex items-center" style={{ gap: "0.7vw", minWidth: 0 }}>
         <img
           src="/mobile-assets/balance-icon.png"
           alt={t("balance.label")}
@@ -293,49 +294,49 @@ export default function BalanceBar() {
         />
         <style>{SEAT_WARN_KEYFRAMES}</style>
         <div style={{ minWidth: 0 }}>
-          <div className="text-[#99a1af]" style={{ fontSize: "clamp(11px, 1.4vh, 16px)" }}>{t("balance.label")}</div>
-          {/* The warning sits BESIDE the amount, not under it.
-              This bar is h-full inside a fixed grid row, so it cannot grow: a
+          {/* The warning sits UNDER the amount, in the caption's line — never
+              beside it. This bar is h-full inside a fixed grid row and cannot
+              grow, so the block has to be exactly two lines in every state: a
               third line pushed the warning onto — and past — the bottom border.
-              Keeping the block at two lines means the warning appearing never
-              changes the height, so there is nothing to overflow. */}
-          <div className="flex items-baseline" style={{ gap: "0.6vw", minWidth: 0 }}>
-            <div
-              className="font-bold text-white flex-shrink-0"
-              style={{
-                fontSize: "clamp(18px, 2.4vh, 30px)",
-                fontVariantNumeric: "tabular-nums",
-                fontFeatureSettings: '"tnum"',
-                ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
-              }}
-            >
-              {formatted}
-            </div>
-            {warnLow && (
-              <div
-                role="status"
-                style={{
-                  fontSize: "clamp(9px, 1.1vh, 12px)",
-                  fontWeight: 600,
-                  color: "#fb2c36",
-                  opacity: 0.85,
-                  lineHeight: 1.2,
-                  // Truncate rather than wrap: a second line would put the
-                  // height back exactly where it started.
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  minWidth: 0,
-                  // The whole left group is flex-shrink-0, so without a ceiling
-                  // this would widen the group and shove CLEAR BETS instead of
-                  // truncating. Full text stays available on hover.
-                  maxWidth: "clamp(140px, 16vw, 300px)",
-                }}
-                title={warnLowText}
-              >
-                {warnLowText}
-              </div>
-            )}
+              Taking the caption's line instead of adding one is what lets the
+              warning live below the figure at all. Only one of the two strings
+              is on screen at a time; while the warning shows, the balance icon
+              carries the "this is your balance" meaning. */}
+          <div
+            className="font-bold text-white"
+            style={{
+              fontSize: "clamp(18px, 2.4vh, 30px)",
+              fontVariantNumeric: "tabular-nums",
+              fontFeatureSettings: '"tnum"',
+              // The 1fr track stops the figure WIDENING the row; these stop a
+              // freak long balance PAINTING over CLEAR BETS inside it.
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              ...(warnLow ? { animation: "prg-balance-pulse 1.2s ease-in-out infinite" } : null),
+            }}
+          >
+            {formatted}
+          </div>
+          <div
+            {...(warnLow ? { role: "status", "data-seat-warn": "", title: warnLowText } : null)}
+            style={{
+              fontSize: warnLow ? "clamp(9px, 1.15vh, 13px)" : "clamp(11px, 1.4vh, 16px)",
+              // Fixed line box, so swapping the caption for the warning cannot
+              // change the block's height even though the two differ in size.
+              lineHeight: "clamp(14px, 1.8vh, 20px)",
+              fontWeight: warnLow ? 600 : 400,
+              color: warnLow ? "#fb2c36" : "#99a1af",
+              opacity: warnLow ? 0.9 : 1,
+              // Truncate rather than wrap — a second caption line is the third
+              // line the bar has no room for. The 1fr track is the width bound
+              // now (no maxWidth band-aid needed); full text is on hover.
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {warnLow ? warnLowText : t("balance.label")}
           </div>
         </div>
       </div>

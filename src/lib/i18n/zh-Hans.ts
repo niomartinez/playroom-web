@@ -178,6 +178,12 @@ const zhHans: Record<string, string> = {
   "seat.return": "返回大厅",
   "seat.addFunds": "充值",
   "seat.warnLow": "余额偏低——请至少保留 {amount} 以保留座位。",
+  "seat.warnDismiss": "关闭",
+  /* SeatCheckOverlay — 非阻断式的“正在确认”提示条。此时尚无金额可显示，
+     因此文案刻意不提任何金额。 */
+  "seat.checking": "正在确认您的座位…",
+  "seat.checkFailed": "暂时无法确认您的座位——正在重试。",
+  "seat.retry": "重试",
 
   /* Winners marquee */
   "winners.title": "本局赢家",

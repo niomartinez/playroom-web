@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
 import { useGame } from "@/lib/game-context";
 import { useT } from "@/lib/i18n";
-import { resolveMinSeatBalance } from "@/lib/min-seat-balance";
+import { useSeatGate } from "@/lib/use-seat-gate";
 import { sendToParent } from "@/lib/iframe-bridge";
 import { formatMoney } from "@/lib/currency";
 
@@ -11,28 +10,30 @@ import { formatMoney } from "@/lib/currency";
  * Minimum seat-balance gate.
  *
  * A funded seat carries an ongoing floor: if the player's wallet drops below
- * the server-configured `block` threshold, the seat is at risk and this
- * full-cover overlay takes over until they top up (or leave). Unlike the
- * idle "Session Expired" overlay this is REACTIVE, not terminal — it lifts on
- * its own the moment a deposit raises the balance back to/above `block`.
+ * the server-configured floor, the seat is at risk and this full-cover overlay
+ * takes over until they top up (or leave). Unlike the idle "Session Expired"
+ * overlay this is REACTIVE, not terminal — it lifts on its own the moment a
+ * deposit raises the balance back over the floor.
  *
- * Modelled on SessionGuard's expired block (fixed full-cover alertdialog) with
- * the cashier handling from LowBalanceGate. Sits at zIndex 190 — above
- * LowBalanceGate (17) so the seat floor wins when both would apply, but BELOW
- * SessionGuard's terminal expired overlay (200) so the non-recoverable
- * session-end dialog wins if a player is both idle-expired and below the floor.
+ * The DECISION is not made here any more — see `use-seat-gate.ts` and
+ * `seat-status.ts`. This component is a pure renderer over it, because the
+ * decision has four consumers that must all agree, and because computing it
+ * locally from two racing browser transports is what let a below-floor player
+ * in with no dialog at all.
+ *
+ * zIndex 190 — above LowBalanceGate (17) so the seat floor wins when both would
+ * apply, and above SeatCheckOverlay (189) so a decision that resolves to
+ * blocked replaces the "checking" panel with no frame showing both.
+ *
+ * Its old relationship with SessionGuard's expired overlay (200) is GONE: that
+ * dialog is now suppressed outright while seat-gated, rather than stacking over
+ * this one. While a player is below the seat floor, the min-balance modal is
+ * the only thing they should ever see — being told they were removed for
+ * inactivity, when the server is refusing their bets over money, named the
+ * wrong reason and hid the right one.
  */
 export default function SeatBalanceGate() {
-  const {
-    token,
-    balance,
-    balanceLoaded,
-    currency,
-    minSeatBalance,
-    placedBets,
-    lobbyUrl,
-    currentRound,
-  } = useGame();
+  const { currency, lobbyUrl, currentRound } = useGame();
   const t = useT();
 
   // Short round reference for the dialog below — players screenshot these when
@@ -45,45 +46,12 @@ export default function SeatBalanceGate() {
     return v.startsWith("ROUND-") ? v.slice(6) : v;
   })();
 
-
-  // Effective thresholds — server value, with the off-prod QA URL override.
-  const { enter, block } = resolveMinSeatBalance(minSeatBalance);
-
-  // Which floor applies right now mirrors the server (internal/bets.py):
-  //   money on the table  -> the keep-seat floor (`block`)
-  //   nothing on the table -> the buy-in floor (`enter`)
-  // Quoting `block` while actually refusing entry at `enter` is what made the
-  // dialog say "minimum balance 100" to a player blocked by a 500 entry bar.
-  // "Seated" must mean HAS PLAYED AT THIS TABLE, latched for the session — not
-  // "has chips down this instant". placedBets empties between rounds and again
-  // the moment settlement clears them, so keying off it re-classified an
-  // already-seated player as someone entering and held them to the buy-in bar:
-  // with enter=500 / keep=100 players were kicked at <500 instead of <100.
-  // Once you have played you keep the seat on the keep floor until you leave.
-  const hasPlayedRef = useRef(false);
-  if (placedBets.length > 0) hasPlayedRef.current = true;
-  const seated = hasPlayedRef.current;
-  const required = seated ? block : enter;
-
-  // Money already on the table buys the seat: a player who went all-in this
-  // round is BELOW the floor immediately, but that stake is riding on the hand
-  // being dealt — if they win, settlement lifts them back above it. Dropping
-  // the shutter mid-round would trap them exactly when they might recover.
-  // Mirror the server-side exemptions (seat-floor bet gate + video-cut both
-  // skip a player with a live ACCEPTED stake) so the client overlay agrees:
-  // exempt while a bet is live/settling, re-evaluate once it clears (a loss
-  // clears placedBets via the settlement fly-back → the gate then applies next
-  // round; a win credits the balance back above the floor first).
-  // Distinct from `seated`: the all-in exemption is about money riding on THIS
-  // hand, so it deliberately stays instantaneous.
-  const hasLiveStake = placedBets.length > 0;
-
-  const gated =
-    token !== "demo" &&
-    balanceLoaded && // never flash before the first real balance frame
-    minSeatBalance != null &&
-    balance < required &&
-    !hasLiveStake;
+  // The decision, and the figure to quote with it. `required` is the APPLICABLE
+  // floor (keep once you have played here, enter before that) — quoting `block`
+  // while actually refusing entry at `enter` is what made this dialog say
+  // "minimum balance 100" to a player blocked by a 500 entry bar.
+  const { state, required, seated } = useSeatGate();
+  const gated = state === "blocked";
 
   // Return the player to wherever they launched from — same priority ladder as
   // SessionGuard.returnToSite(): lobbyUrl → href; embedded → closeGame; else
