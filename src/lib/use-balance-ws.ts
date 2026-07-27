@@ -34,9 +34,11 @@ export function useBalanceWs() {
     setBalanceLoaded,
     setCurrency,
     setRecentWin,
+    setBetRefundNotice,
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    clearPlacedBets,
     videoDelayMs,
   } = useGame();
 
@@ -46,9 +48,11 @@ export function useBalanceWs() {
     setBalanceLoaded,
     setCurrency,
     setRecentWin,
+    setBetRefundNotice,
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    clearPlacedBets,
     videoDelayMs,
   });
   settersRef.current = {
@@ -56,9 +60,11 @@ export function useBalanceWs() {
     setBalanceLoaded,
     setCurrency,
     setRecentWin,
+    setBetRefundNotice,
     stackedChips,
     addFlyingChip,
     clearStackedChips,
+    clearPlacedBets,
     videoDelayMs,
   };
 
@@ -167,6 +173,29 @@ export function useBalanceWs() {
           // than the initial 0 (see #4 / LowBalanceGate).
           s.setBalanceLoaded(true);
           sendToParent("balanceUpdate", { balance });
+        }
+
+        // BetsRefunded — the sweep at betting close voided this player's whole
+        // hand because the combined stake never reached the table minimum.
+        //
+        // The pad MUST be cleared here. `placedBets` is otherwise only cleared
+        // by RoundSettled (which never fires for a voided hand — there is
+        // nothing left to settle) or by the next RoundStarted, so the chips
+        // stayed on the pad for the entire deal while the money was already
+        // back in the balance. Players read that as "my bet is live".
+        //
+        // Not video-synced: the refund happens when betting closes, not when
+        // the dealer announces a result, and the stake is gone the moment the
+        // server says so.
+        if (type === "BetsRefunded") {
+          s.clearPlacedBets();
+          s.clearStackedChips();
+          s.setBetRefundNotice({
+            fightId: String(data.fightId ?? ""),
+            refunded: Number(data.refunded ?? 0),
+            minimum: Number(data.minimum ?? 0),
+          });
+          return;
         }
 
         // RoundSettled — show YOU WON flash + reverse-fly the chips back.

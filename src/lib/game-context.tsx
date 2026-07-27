@@ -151,6 +151,23 @@ export interface RecentWin {
   lines: RecentWinLine[];
 }
 
+/**
+ * The server voided and refunded this player's whole hand at betting close
+ * because the combined stake never reached the table minimum.
+ *
+ * Carried through context rather than toasted straight from the WS hook:
+ * `useBalanceWs` runs in the component that RENDERS `<ToastProvider>`, so it
+ * sits outside the toast tree and cannot call `useToast`.
+ */
+export interface BetRefundNotice {
+  /** External fight id the refund belongs to — also de-dupes repeat frames. */
+  fightId: string;
+  /** Total handed back to the player. */
+  refunded: number;
+  /** The per-hand minimum the stake fell short of. */
+  minimum: number;
+}
+
 /** #6 — per-round global winners for the marquee (screen name + net win). */
 export interface RoundWinnerLine {
   user: string;
@@ -225,6 +242,7 @@ export interface GameState {
 
   /* Settlement flash — set when a RoundSettled event arrives with winners */
   recentWin: RecentWin | null;
+  betRefundNotice: BetRefundNotice | null;
   /** #6 — per-round winners for the marquee. */
   roundWinners: RoundWinners | null;
   /** roundId of the most recent SERVER-CONFIRMED bet. Drives idle reset —
@@ -295,6 +313,7 @@ export interface GameState {
   /** #2 — move all stacked chips from one bet code to another (drag-to-move). */
   moveStackedChips: (from: BetCode, to: BetCode) => void;
   setRecentWin: (w: RecentWin | null) => void;
+  setBetRefundNotice: (n: BetRefundNotice | null) => void;
   setRoundWinners: (w: RoundWinners | null) => void;
   setConfirmedBetRoundId: (id: string | null) => void;
   setIdlePolicy: (p: IdlePolicy | null) => void;
@@ -412,6 +431,7 @@ export function GameProvider({
   const [flyingChips, setFlyingChips] = useState<FlyingChip[]>([]);
   const [stackedChips, setStackedChips] = useState<Record<string, StackedChip[]>>({});
   const [recentWin, setRecentWin] = useState<RecentWin | null>(null);
+  const [betRefundNotice, setBetRefundNotice] = useState<BetRefundNotice | null>(null);
   const [roundWinners, setRoundWinners] = useState<RoundWinners | null>(null);
   const [confirmedBetRoundId, setConfirmedBetRoundId] = useState<string | null>(null);
   const [idlePolicy, setIdlePolicy] = useState<IdlePolicy | null>(null);
@@ -635,6 +655,7 @@ export function GameProvider({
     flyingChips,
     stackedChips,
     recentWin,
+    betRefundNotice,
     roundWinners,
     confirmedBetRoundId,
     idlePolicy,
@@ -663,6 +684,7 @@ export function GameProvider({
     clearStackedChips,
     moveStackedChips,
     setRecentWin,
+    setBetRefundNotice,
     setRoundWinners,
     setConfirmedBetRoundId,
     setIdlePolicy,

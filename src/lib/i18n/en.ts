@@ -16,6 +16,8 @@ const en: Record<string, string> = {
   "bet.bankerPair": "BANKER PAIR",
   "bet.placed": "Bet placed",
   "bet.placedShort": "PLACED",
+  "bet.underMinRefunded":
+    "Bets returned — your total was under the {minimum} table minimum for this hand.",
 
   /* Player counts */
   "players.one": "{count} player",

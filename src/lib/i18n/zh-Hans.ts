@@ -16,6 +16,7 @@ const zhHans: Record<string, string> = {
   "bet.bankerPair": "庄对",
   "bet.placed": "已下注",
   "bet.placedShort": "已下注",
+  "bet.underMinRefunded": "投注已退回 — 本局总额未达台面最低 {minimum}。",
 
   /* Player counts */
   "players.one": "{count} 位玩家",
