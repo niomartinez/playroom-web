@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
 import { useToast } from "@/lib/toast-context";
@@ -39,8 +40,8 @@ export default function TableDetailPage() {
   /* Editable fields */
   const [name, setName] = useState("");
   const [tableType, setTableType] = useState("standard");
-  const [minBet, setMinBet] = useState("");
-  const [maxBet, setMaxBet] = useState("");
+  /* min_bet / max_bet are deliberately NOT edited here — /admin/settings owns
+     them (see the read-only Bet Range panel below). */
   const [dealerName, setDealerName] = useState("");
   const [streamUrl, setStreamUrl] = useState("");
   const [streamKey, setStreamKey] = useState("");
@@ -72,8 +73,6 @@ export default function TableDetailPage() {
     seededFor.current = id;
     setName(tableData.name || "");
     setTableType(tableData.table_type || "standard");
-    setMinBet(String(tableData.min_bet ?? "10"));
-    setMaxBet(String(tableData.max_bet ?? "10000"));
     setDealerName(tableData.dealer_name || "");
     setStreamUrl(tableData.stream_url || "");
     setStreamKey(tableData.stream_key || "");
@@ -96,8 +95,6 @@ export default function TableDetailPage() {
         body: JSON.stringify({
           name: name || undefined,
           table_type: tableType || undefined,
-          min_bet: minBet !== "" ? parseFloat(minBet) : undefined,
-          max_bet: maxBet !== "" ? parseFloat(maxBet) : undefined,
           dealer_name: dealerName || null,
           stream_url: streamUrl || null,
           stream_key: streamKey || null,
@@ -293,30 +290,30 @@ export default function TableDetailPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
-              Min Bet
-            </label>
-            <input
-              type="number"
-              value={minBet}
-              onChange={(e) => setMinBet(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
-              Max Bet
-            </label>
-            <input
-              type="number"
-              value={maxBet}
-              onChange={(e) => setMaxBet(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={inputStyle}
-            />
+        {/* Bet range is read-only here on purpose. It is edited on
+            /admin/settings, where every table's range sits side by side —
+            these numbers only mean something relative to each other, and two
+            screens that both write the same field is how a table ends up with
+            a limit nobody remembers setting. */}
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+            Bet Range
+          </label>
+          <div
+            className="flex items-center justify-between rounded-lg px-3 py-2"
+            style={{ backgroundColor: "rgba(0,0,0,0.35)", border: "1px solid rgba(208,135,0,0.12)" }}
+          >
+            <span className="font-mono text-sm text-white">
+              {table?.min_bet?.toLocaleString() ?? "—"} –{" "}
+              {table?.max_bet?.toLocaleString() ?? "—"}
+            </span>
+            <Link
+              href="/admin/settings"
+              className="text-xs font-medium"
+              style={{ color: "#f0b100" }}
+            >
+              Edit in Settings →
+            </Link>
           </div>
         </div>
 

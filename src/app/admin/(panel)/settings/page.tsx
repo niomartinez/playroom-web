@@ -13,6 +13,16 @@ interface ConfigEntry {
   updated_at: string;
 }
 
+/** One row of the per-table bet-limit editor below. */
+interface TableRow {
+  id: string;
+  external_game_id: string;
+  name: string;
+  min_bet: number;
+  max_bet: number;
+  is_active: boolean;
+}
+
 const BET_CODE_LABELS: Record<string, string> = {
   BAC_Banker: "Banker",
   BAC_Player: "Player",
@@ -60,6 +70,14 @@ export default function SettingsPage() {
   /* Minimum wagered before a player may use live chat. 0 = off. */
   const [chatMinWager, setChatMinWager] = useState("500");
 
+  /* Per-table bet range, keyed by table id. Lives here rather than on the
+   * table detail page so both tables' limits are set side by side — the
+   * numbers only mean anything next to each other. Every other table setting
+   * (dealer, stream, latency) stays on /admin/tables/[id]. */
+  const [tableLimits, setTableLimits] = useState<
+    Record<string, { min: string; max: string }>
+  >({});
+
   /* Danger zone */
   const [showForceClose, setShowForceClose] = useState(false);
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
@@ -77,6 +95,14 @@ export default function SettingsPage() {
     invalidateAdminQuery("/api/admin/config");
     refetch();
   };
+
+  /* Tables for the bet-range editor. Already env-scoped by the proxy route,
+   * so prod lists the live tables and staging lists the TEST-* ones. */
+  const {
+    data: tablesData,
+    refetch: refetchTables,
+  } = useAdminQuery<TableRow[]>("/api/admin/tables");
+  const tables = tablesData ?? [];
 
   /* Seed the form ONCE.
    *
@@ -153,8 +179,68 @@ export default function SettingsPage() {
     }
   }, [configData]);
 
+  /* Same seed-once rule as the config form above: cached data revalidates in
+   * the background, and re-seeding on every payload would wipe a half-typed
+   * bet range. Seeded per table id, so a table that appears later (created
+   * while this page is open) still gets its inputs filled. */
+  useEffect(() => {
+    if (!tablesData) return;
+    setTableLimits((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const t of tablesData) {
+        if (next[t.id]) continue;
+        next[t.id] = { min: String(t.min_bet ?? ""), max: String(t.max_bet ?? "") };
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [tablesData]);
+
   function tryParse(s: string): unknown {
     try { return JSON.parse(s); } catch { return s; }
+  }
+
+  /** Save one table's bet range. Sends BOTH bounds so the server always
+   *  validates the pair it is about to store, never one half of it. */
+  async function saveTableLimits(table: TableRow) {
+    const edit = tableLimits[table.id];
+    if (!edit) return;
+    const min = Number(edit.min);
+    const max = Number(edit.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0) {
+      toast({ type: "error", message: "Min and max must both be above 0" });
+      return;
+    }
+    if (min > max) {
+      toast({ type: "error", message: "Min bet cannot be above max bet" });
+      return;
+    }
+
+    const key = `table_limits_${table.id}`;
+    setSaving(key);
+    try {
+      const res = await fetch(`/api/admin/tables/${table.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ min_bet: min, max_bet: max }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && !data.error_code) {
+        invalidateAdminQuery("/api/admin/tables");
+        refetchTables();
+        toast({
+          type: "success",
+          message: `${table.name} limits saved — ${min.toLocaleString()} to ${max.toLocaleString()}`,
+        });
+      } else {
+        toast({ type: "error", message: data.message || "Failed to save bet limits" });
+      }
+    } catch {
+      toast({ type: "error", message: "Network error" });
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function saveKey(key: string, value: unknown) {
@@ -365,6 +451,112 @@ export default function SettingsPage() {
             />
           </button>
         </div>
+      </div>
+
+      {/* Per-table bet range */}
+      <div
+        className="rounded-xl p-6 space-y-4"
+        style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
+            Table bet limits
+          </h2>
+          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
+            The bet range for each table, in PHP. <strong>Min</strong> is a
+            per-HAND floor, not a per-bet one: a player may build a hand out of
+            smaller chips, but if their combined stake for the round is still
+            under this number when betting closes, the whole hand is voided and
+            refunded. <strong>Max</strong> caps the stake on any single bet.
+            Saving takes effect on the next round — seated players get the new
+            range pushed to them live.
+          </p>
+        </div>
+
+        {tables.length === 0 ? (
+          <p className="text-xs" style={{ color: "#6a7282" }}>
+            No tables in this environment.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {tables.map((table) => {
+              const edit = tableLimits[table.id] ?? { min: "", max: "" };
+              const key = `table_limits_${table.id}`;
+              const dirty =
+                edit.min !== String(table.min_bet ?? "") ||
+                edit.max !== String(table.max_bet ?? "");
+              return (
+                <div
+                  key={table.id}
+                  className="rounded-lg p-4 space-y-3"
+                  style={{
+                    backgroundColor: "rgba(0,0,0,0.35)",
+                    border: "1px solid rgba(208,135,0,0.12)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{table.name}</p>
+                      <p className="text-xs font-mono" style={{ color: "#6a7282" }}>
+                        {table.external_game_id}
+                      </p>
+                    </div>
+                    {!table.is_active && (
+                      <span className="text-xs" style={{ color: "#6a7282" }}>
+                        Closed
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+                        Min bet (per hand)
+                      </label>
+                      <input
+                        type="number" min={1} step={50}
+                        value={edit.min}
+                        onChange={(e) =>
+                          setTableLimits((prev) => ({
+                            ...prev,
+                            [table.id]: { ...edit, min: e.target.value },
+                          }))
+                        }
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
+                        Max bet
+                      </label>
+                      <input
+                        type="number" min={1} step={50}
+                        value={edit.max}
+                        onChange={(e) =>
+                          setTableLimits((prev) => ({
+                            ...prev,
+                            [table.id]: { ...edit, max: e.target.value },
+                          }))
+                        }
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <button
+                      onClick={() => saveTableLimits(table)}
+                      disabled={saving === key || !dirty}
+                      className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                      style={{ backgroundColor: "#f0b100" }}
+                    >
+                      {saving === key ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Inactivity / idle-session policy */}
