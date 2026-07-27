@@ -17,7 +17,9 @@ export async function GET(req: NextRequest) {
 
   // Aggregate stats from multiple endpoints
   const [tablesRes, operatorsRes] = await Promise.allSettled([
-    fetch(`${API_URL}/internal/tables`, { headers }),
+    // env_scoped: the "active tables" tile counts what /admin/tables shows,
+    // so prod must not inflate the number with TEST-* fixtures.
+    fetch(`${API_URL}/internal/tables?env_scoped=true`, { headers }),
     fetch(`${API_URL}/internal/operators`, { headers }),
   ]);
 

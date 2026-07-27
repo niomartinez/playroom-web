@@ -16,9 +16,17 @@ function adminHeaders(req: NextRequest): Record<string, string> {
   return h;
 }
 
-/** GET /api/admin/tables — list all tables */
+/**
+ * GET /api/admin/tables — list this environment's tables.
+ *
+ * `env_scoped` drops the tables that belong to the other environment: prod
+ * carries TEST-BAC-TABLE-01/02 alongside the live tables, and staging carries
+ * the real BAC-TABLE-* rows. Unscoped, the prod admin panel listed QA fixtures
+ * next to the tables real money is on, with nothing in the row to tell them
+ * apart.
+ */
 export async function GET(req: NextRequest) {
-  const res = await fetch(`${API_URL}/internal/tables`, {
+  const res = await fetch(`${API_URL}/internal/tables?env_scoped=true`, {
     headers: adminHeaders(req),
   });
   const data = await res.json();
