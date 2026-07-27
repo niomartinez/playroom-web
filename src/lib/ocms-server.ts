@@ -181,11 +181,23 @@ export async function getPlayers(params: {
   page?: number;
   page_size?: number;
   search?: string;
+  is_active?: string;
+  balance_min?: string;
+  balance_max?: string;
+  sort_by?: string;
+  sort_dir?: string;
 }): Promise<OcmsPlayersPage> {
   const data = await ocmsGet<OcmsPlayersPage>("players", {
     page: params.page,
     page_size: params.page_size,
     search: params.search,
+    // Empty strings are dropped by ocmsGet, so a blank bound means "no bound"
+    // rather than a literal 0 that would hide every zero-balance player.
+    is_active: params.is_active || undefined,
+    balance_min: params.balance_min || undefined,
+    balance_max: params.balance_max || undefined,
+    sort_by: params.sort_by,
+    sort_dir: params.sort_dir,
   });
   return data ?? { players: [], total: 0, page: params.page ?? 1, page_size: params.page_size ?? 20 };
 }
