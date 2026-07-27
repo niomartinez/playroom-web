@@ -34,6 +34,15 @@ import { useEffect, useRef, useState } from "react";
 const MIN_SANE_HEIGHT = 380;
 
 /**
+ * Slack before we call the frame "clipped".
+ *
+ * Sub-pixel rounding and a scrollbar are not an operator's navigation bar,
+ * and treating them as one would swap `100dvh` for a frozen pixel height on
+ * every ordinary launch.
+ */
+const CLIP_TOLERANCE_PX = 8;
+
+/**
  * The measurement is also published on `<html>` as CSS custom properties, so
  * `position: fixed` elements can be corrected without threading React state
  * through every overlay.
@@ -98,8 +107,24 @@ export const SCALE_VAR = "--prg-scale";
 /** Never shrink past this — below it the pads stop being reliably tappable. */
 export const MIN_SCALE = 0.62;
 
-export function useVisibleHeight(): number | null {
-  const [height, setHeight] = useState<number | null>(null);
+export interface VisibleHeight {
+  /** Height of the band the player can actually see. Always a number once measured. */
+  height: number | null;
+  /**
+   * True only when our frame really is cut off — an operator's chrome above a
+   * frame that runs past the bottom of the screen.
+   *
+   * The distinction matters because the two cases want different CSS. Clipped
+   * needs our measured pixel height, since the browser cannot see the operator's
+   * nav. Unclipped wants `100dvh`, which tracks iOS's collapsing URL bar by
+   * itself — a pixel height frozen at load goes stale the moment the bar moves,
+   * leaving the page short of the screen with a white band under it.
+   */
+  clipped: boolean;
+}
+
+export function useVisibleHeight(): VisibleHeight {
+  const [state, setState] = useState<VisibleHeight>({ height: null, clipped: false });
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -129,16 +154,38 @@ export function useVisibleHeight(): number | null {
       const own = ownViewportHeight();
       if (own <= 0) return;
       const usable = visibleSlice !== null && visibleSlice >= MIN_SANE_HEIGHT;
-      const next = usable ? Math.min(own, visibleSlice!) : own;
-      const top = usable ? Math.min(visibleTop, Math.max(0, own - next)) : 0;
-      // NOTE: `visibleSlice` only ever shrinks within a baseline (see the
-      // observer below), so this value is the WORST case, not the current one.
+
+      // Are we ACTUALLY clipped, or just being measured? A top-level launch —
+      // and a well-sized iframe — is not clipped, and for those a frozen pixel
+      // height is strictly worse than `100dvh`.
+      //
+      // iOS proves it: the visual viewport grows when the URL bar collapses, so
+      // a height locked at load (bar expanded) leaves the page short of the
+      // screen the moment the player scrolls. That is where the white band
+      // under the felt came from, and it is why the document could scroll at
+      // all. `100dvh` tracks the URL bar natively; we only need our own number
+      // for the one case the browser cannot see — an operator's chrome above a
+      // frame that runs off the bottom.
+      const clipped = usable && visibleSlice! < own - CLIP_TOLERANCE_PX;
+      const next = clipped ? visibleSlice! : null;
+      const top = clipped ? Math.min(visibleTop, Math.max(0, own - next!)) : 0;
 
       const root = document.documentElement;
-      root.style.setProperty(CSS_VAR_HEIGHT, `${next}px`);
+      // Unclipped resolves the fixed-element insets to zero, so `bottom` lands
+      // on the real bottom edge without a stale pixel value in the way.
+      root.style.setProperty(CSS_VAR_HEIGHT, clipped ? `${next}px` : "100%");
       root.style.setProperty(CSS_VAR_TOP, `${top}px`);
 
-      setHeight((prev) => (prev !== null && Math.abs(prev - next) < 2 ? prev : next));
+      // `height` is always the usable number (for the page scale); `clipped`
+      // decides whether the container is sized in pixels or left to 100dvh.
+      const available = clipped ? visibleSlice! : own;
+      setState((prev) =>
+        prev.height !== null &&
+        Math.abs(prev.height - available) < 2 &&
+        prev.clipped === clipped
+          ? prev
+          : { height: available, clipped },
+      );
     };
 
     let observer: IntersectionObserver | null = null;
@@ -210,7 +257,7 @@ export function useVisibleHeight(): number | null {
     };
   }, []);
 
-  return height;
+  return state;
 }
 
 export default useVisibleHeight;

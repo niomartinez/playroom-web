@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useChatFloats, FLOAT_FADE_MS } from "@/lib/use-chat-floats";
 import { useChatWs } from "@/lib/use-chat-ws";
+import { VISIBLE_BOTTOM_INSET } from "@/lib/use-visible-height";
 import { useT, type TFunction } from "@/lib/i18n";
 import {
   clampOpacity,
@@ -421,7 +422,11 @@ export default function MobileChat() {
     position: "fixed",
     left: 0,
     right: 0,
-    bottom: vp.kb,
+    // Keyboard inset PLUS the clipped-frame offset. `fixed` resolves against
+    // our frame, so inside an operator's page a sheet docked at 0 docks to the
+    // bottom of the iframe — the part hanging off the screen. Resolves to just
+    // the keyboard inset when nothing is clipped.
+    bottom: `calc(${vp.kb}px + ${VISIBLE_BOTTOM_INSET})`,
     height: sheetHeight,
     // Above the sticky header (70) and the pinned info bar (60): it is a modal
     // sheet, so nothing in the page chrome should paint over its input or its

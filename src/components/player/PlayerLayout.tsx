@@ -106,7 +106,7 @@ export default function PlayerLayout() {
   // The height actually on screen — NOT `100vh`. Inside an operator's iframe
   // our viewport runs off the bottom of the phone, under their navigation and
   // the browser's own bars. See lib/use-visible-height.
-  const visibleH = useVisibleHeight();
+  const { height: visibleH, clipped } = useVisibleHeight();
   const { width: layoutW, ref: layoutRef } = useElementWidth<HTMLDivElement>();
 
   /**
@@ -134,6 +134,55 @@ export default function PlayerLayout() {
     if (typeof document === "undefined") return;
     document.documentElement.style.setProperty(SCALE_VAR, String(scale));
   }, [scale]);
+
+  // Lock the DOCUMENT while the mobile player is mounted.
+  //
+  // Sizing the layout to the visible band stops the LAYOUT overflowing; it says
+  // nothing about the page around it. On iOS that page could still be dragged —
+  // up into Safari's pull-to-refresh, and down onto a white slab of bare canvas
+  // with the fixed chat sheet riding on it — on a screen whose whole point is
+  // that there is nothing below the fold.
+  //
+  // Set as inline styles rather than a stylesheet class on purpose: this is the
+  // one rule that must not be at the mercy of CSS layer ordering, and applying
+  // it imperatively means it lands the moment the mobile player mounts and is
+  // removed the moment it unmounts. Restores the previous values so the studio
+  // and admin panels — which are supposed to scroll — are untouched.
+  useEffect(() => {
+    if (typeof document === "undefined" || !isMobile) return;
+    const targets = [document.documentElement, document.body];
+    const LOCK: Record<string, string> = {
+      height: "100%",
+      overflow: "hidden",
+      overscrollBehavior: "none",
+      // The canvas outside our felt was white; any pixel the browser paints
+      // beyond the layout comes from here.
+      background: "#030712",
+    };
+
+    // Snapshot ONLY the properties we touch. Restoring the whole `style`
+    // attribute would also roll back --prg-vh / --prg-scale, which other
+    // effects write to the same element and keep updating.
+    const prev = targets.map((el) =>
+      Object.fromEntries(
+        Object.keys(LOCK).map((k) => [k, el.style[k as never] as string]),
+      ),
+    );
+
+    targets.forEach((el) => {
+      Object.entries(LOCK).forEach(([k, v]) => {
+        el.style[k as never] = v as never;
+      });
+    });
+
+    return () => {
+      targets.forEach((el, i) => {
+        Object.keys(LOCK).forEach((k) => {
+          el.style[k as never] = (prev[i][k] ?? "") as never;
+        });
+      });
+    };
+  }, [isMobile]);
 
   const videoH = layoutW ? Math.round(((layoutW * 9) / 16) * scale) : null;
   const roadH = Math.round(MOBILE_ROAD_NAT_H * scale);
@@ -173,10 +222,12 @@ export default function PlayerLayout() {
         style={{
           display: "flex",
           flexDirection: "column",
-          // Fit the space we can actually see. Before the measurement lands
-          // (first paint, SSR) fall back to `100dvh` — still better than
-          // `100vh`, which ignores the phone's collapsing URL bar.
-          height: visibleH ? `${visibleH}px` : "100dvh",
+          // A pixel height ONLY when the frame is genuinely cut off by an
+          // operator's chrome. Otherwise `100dvh`, which tracks iOS's
+          // collapsing URL bar on its own — freezing a pixel height at load
+          // left the page short of the screen the moment the bar moved, which
+          // is what put a white band under the felt and made it scroll.
+          height: clipped && visibleH ? `${visibleH}px` : "100dvh",
           // NOT scrollable. Every block is sized from one scale factor computed
           // to fit this exact height, so there is nothing below the fold to
           // reach — and a scrollable player is how the pinned footer ended up
@@ -391,7 +442,7 @@ export default function PlayerLayout() {
         // already had, so it lost the footer in exactly that embed. Falls back
         // to 100dvh until the measurement lands, and for a top-level launch the
         // two are the same number.
-        height: visibleH ? `${visibleH}px` : "100dvh",
+        height: clipped && visibleH ? `${visibleH}px` : "100dvh",
         // 4th row = the bottom info strip. Declared EXPLICITLY: adding a
         // fourth child to a three-row template made the grid invent an
         // implicit row and collapsed the video row into a huge gap.
