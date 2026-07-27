@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import StatCard from "@/components/admin/ui/StatCard";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
+import { useAdminQuery } from "@/lib/admin-query";
+import { useUrlFilters } from "@/lib/use-url-filters";
 
 interface Summary {
   total_wagered: number;
@@ -66,54 +69,44 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(url);
 }
 
-export default function ReportsPage() {
-  const [dateFrom, setDateFrom] = useState(daysAgoISO(7));
-  const [dateTo, setDateTo] = useState(todayISO());
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [byOperator, setByOperator] = useState<BreakdownEntry[]>([]);
-  const [byTable, setByTable] = useState<BreakdownEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"operator" | "table">("operator");
+function ReportsPageInner() {
+  /* Period and tab live in the URL. Reports are the page people paste at each
+     other — "the numbers for last month, by table" is now a link rather than a
+     set of instructions — and re-picking a period you looked at minutes ago
+     repaints from cache instead of re-running three aggregations. */
+  const { values, setValues } = useUrlFilters({
+    date_from: daysAgoISO(7),
+    date_to: todayISO(),
+    tab: "operator",
+  });
+  const dateFrom = values.date_from;
+  const dateTo = values.date_to;
+  const activeTab: "operator" | "table" = values.tab === "table" ? "table" : "operator";
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    // "2026-07-27" alone parses as UTC midnight = 08:00 in Manila, which
-    // silently dropped the first 8 hours of the day from every report. The
-    // explicit time makes it parse as LOCAL midnight, matching date_to below.
-    if (dateFrom) params.set("date_from", new Date(dateFrom + "T00:00:00").toISOString());
-    if (dateTo) params.set("date_to", new Date(dateTo + "T23:59:59").toISOString());
-    const qs = params.toString();
+  const params = new URLSearchParams();
+  // "2026-07-27" alone parses as UTC midnight = 08:00 in Manila, which
+  // silently dropped the first 8 hours of the day from every report. The
+  // explicit time makes it parse as LOCAL midnight, matching date_to below.
+  if (dateFrom) params.set("date_from", new Date(dateFrom + "T00:00:00").toISOString());
+  if (dateTo) params.set("date_to", new Date(dateTo + "T23:59:59").toISOString());
+  const qs = params.toString();
 
-    try {
-      const [summaryRes, operatorRes, tableRes] = await Promise.allSettled([
-        fetch(`/api/admin/reports/summary?${qs}`).then((r) => r.json()),
-        fetch(`/api/admin/reports/by-operator?${qs}`).then((r) => r.json()),
-        fetch(`/api/admin/reports/by-table?${qs}`).then((r) => r.json()),
-      ]);
+  // Three independent cache keys rather than one combined fetch: switching the
+  // operator/table tab needs no request at all (both breakdowns are already
+  // cached for this period), and a slow aggregation no longer holds up the two
+  // that finished.
+  const summaryQ = useAdminQuery<Summary>(`/api/admin/reports/summary?${qs}`);
+  const operatorQ = useAdminQuery<BreakdownEntry[]>(`/api/admin/reports/by-operator?${qs}`);
+  const tableQ = useAdminQuery<BreakdownEntry[]>(`/api/admin/reports/by-table?${qs}`);
 
-      if (summaryRes.status === "fulfilled") {
-        const d = summaryRes.value.data ?? summaryRes.value;
-        setSummary(d);
-      }
-      if (operatorRes.status === "fulfilled") {
-        const d = operatorRes.value.data ?? operatorRes.value;
-        setByOperator(Array.isArray(d) ? d : []);
-      }
-      if (tableRes.status === "fulfilled") {
-        const d = tableRes.value.data ?? tableRes.value;
-        setByTable(Array.isArray(d) ? d : []);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [dateFrom, dateTo]);
+  const summary = summaryQ.data ?? null;
+  const byOperator = operatorQ.data ?? [];
+  const byTable = tableQ.data ?? [];
+  const loading = summaryQ.loading || operatorQ.loading || tableQ.loading;
+  const refreshing = summaryQ.refreshing || operatorQ.refreshing || tableQ.refreshing;
 
-  useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
+  const setRange = (from: string, to: string) =>
+    setValues({ date_from: from, date_to: to });
 
   const inputStyle = {
     backgroundColor: "rgba(0,0,0,0.6)" as const,
@@ -168,7 +161,7 @@ export default function ReportsPage() {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) => setValues({ date_from: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -180,7 +173,7 @@ export default function ReportsPage() {
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) => setValues({ date_to: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -189,28 +182,28 @@ export default function ReportsPage() {
           {/* Preset buttons */}
           <div className="flex gap-2">
             <button
-              onClick={() => { setDateFrom(todayISO()); setDateTo(todayISO()); }}
+              onClick={() => setRange(todayISO(), todayISO())}
               className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               Today
             </button>
             <button
-              onClick={() => { setDateFrom(daysAgoISO(7)); setDateTo(todayISO()); }}
+              onClick={() => setRange(daysAgoISO(7), todayISO())}
               className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               7 Days
             </button>
             <button
-              onClick={() => { setDateFrom(daysAgoISO(30)); setDateTo(todayISO()); }}
+              onClick={() => setRange(daysAgoISO(30), todayISO())}
               className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               30 Days
             </button>
             <button
-              onClick={() => { setDateFrom(monthStartISO()); setDateTo(todayISO()); }}
+              onClick={() => setRange(monthStartISO(), todayISO())}
               className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
@@ -228,6 +221,8 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       {/* Summary cards */}
       {loading ? (
@@ -264,7 +259,7 @@ export default function ReportsPage() {
               {(["operator", "table"] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => setValues({ tab })}
                   className="px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors"
                   style={{
                     color: activeTab === tab ? "#f0b100" : "#6a7282",
@@ -407,5 +402,13 @@ export default function ReportsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <UrlFilterBoundary>
+      <ReportsPageInner />
+    </UrlFilterBoundary>
   );
 }

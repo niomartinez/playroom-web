@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
-import { useDebounce } from "@/lib/use-debounce";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
+import { useAdminQuery } from "@/lib/admin-query";
+import { useUrlFilters } from "@/lib/use-url-filters";
 
 interface Round {
   id: string;
@@ -52,75 +54,54 @@ function statusToBadge(status: string): "active" | "inactive" | "pending" | "err
   }
 }
 
-export default function RoundsPage() {
+function RoundsPageInner() {
   const router = useRouter();
-  const [rounds, setRounds] = useState<Round[]>([]);
-  const [tables, setTables] = useState<TableOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  /* Filters */
-  const [filterTable, setFilterTable] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const debouncedDateFrom = useDebounce(dateFrom, 300);
-  const debouncedDateTo = useDebounce(dateTo, 300);
+  /* Filters in the URL: Back restores the exact view, and a filter used a
+     minute ago rebuilds a request URL that is already the cache key — so it
+     repaints with no request and no spinner. */
+  const { values, setValues, setFilter } = useUrlFilters({
+    page: "1",
+    game_id: "",
+    status: "",
+    date_from: "",
+    date_to: "",
+  });
+  const page = Math.max(1, Number(values.page) || 1);
 
-  // Fetch tables for filter dropdown
-  useEffect(() => {
-    fetch("/api/admin/tables")
-      .then((r) => r.json())
-      .then((json) => {
-        const data = Array.isArray(json) ? json : json.data ?? [];
-        setTables(data);
-      })
-      .catch(() => {});
-  }, []);
-
-  const fetchRounds = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("page_size", String(pageSize));
-      if (filterTable) params.set("game_id", filterTable);
-      if (filterStatus) params.set("status", filterStatus);
-      if (debouncedDateFrom) params.set("date_from", new Date(debouncedDateFrom).toISOString());
-      if (debouncedDateTo) params.set("date_to", new Date(debouncedDateTo + "T23:59:59").toISOString());
-
-      const res = await fetch(`/api/admin/rounds?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setRounds(data.rounds ?? []);
-        setTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [page, filterTable, filterStatus, debouncedDateFrom, debouncedDateTo]);
-
-  useEffect(() => {
-    fetchRounds();
-  }, [fetchRounds]);
-
-  function handleFilter() {
-    setPage(1);
-    // useEffect on [page, ...] will trigger the fetch
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (values.game_id) params.set("game_id", values.game_id);
+  if (values.status) params.set("status", values.status);
+  // The date inputs are whole days; the API wants instants. Converting here
+  // (rather than in state) keeps the URL human-editable and shareable.
+  if (values.date_from) {
+    params.set("date_from", new Date(values.date_from).toISOString());
+  }
+  if (values.date_to) {
+    params.set("date_to", new Date(`${values.date_to}T23:59:59`).toISOString());
   }
 
+  const {
+    data: roundsData,
+    loading,
+    refreshing,
+  } = useAdminQuery<{ rounds: Round[]; total: number }>(
+    `/api/admin/rounds?${params.toString()}`,
+  );
+  const rounds = roundsData?.rounds ?? [];
+  const total = roundsData?.total ?? 0;
+
+  // Shared cache key with the Tables page and every other table dropdown, so
+  // this costs one request across the whole session.
+  const { data: tablesData } = useAdminQuery<TableOption[]>("/api/admin/tables");
+  const tables = tablesData ?? [];
+
   function handleClear() {
-    setFilterTable("");
-    setFilterStatus("");
-    setDateFrom("");
-    setDateTo("");
-    setPage(1);
-    // useEffect will trigger the fetch
+    setValues({ page: "1", game_id: "", status: "", date_from: "", date_to: "" });
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -198,8 +179,8 @@ export default function RoundsPage() {
               Table
             </label>
             <select
-              value={filterTable}
-              onChange={(e) => setFilterTable(e.target.value)}
+              value={values.game_id}
+              onChange={(e) => setFilter({ game_id: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
@@ -216,8 +197,8 @@ export default function RoundsPage() {
               Status
             </label>
             <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              value={values.status}
+              onChange={(e) => setFilter({ status: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
@@ -235,8 +216,8 @@ export default function RoundsPage() {
             </label>
             <input
               type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              value={values.date_from}
+              onChange={(e) => setFilter({ date_from: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -247,19 +228,15 @@ export default function RoundsPage() {
             </label>
             <input
               type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              value={values.date_to}
+              onChange={(e) => setFilter({ date_to: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
           </div>
-          <button
-            onClick={handleFilter}
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
-            style={{ backgroundColor: "#f0b100" }}
-          >
-            Filter
-          </button>
+          {/* No "Filter" button: every control above applies on change and
+              writes straight to the URL, so a separate apply step would only be
+              a second way to do what already happened. */}
           <button
             onClick={handleClear}
             className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
@@ -269,6 +246,8 @@ export default function RoundsPage() {
           </button>
         </div>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       {/* Results */}
       <DataTable
@@ -291,7 +270,7 @@ export default function RoundsPage() {
           <div className="flex gap-2">
             <button
               disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
+              onClick={() => setValues({ page: String(page - 1) })}
               className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
               style={{ color: "#99a1af" }}
             >
@@ -299,7 +278,7 @@ export default function RoundsPage() {
             </button>
             <button
               disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
+              onClick={() => setValues({ page: String(page + 1) })}
               className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
               style={{ color: "#99a1af" }}
             >
@@ -309,5 +288,13 @@ export default function RoundsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RoundsPage() {
+  return (
+    <UrlFilterBoundary>
+      <RoundsPageInner />
+    </UrlFilterBoundary>
   );
 }
