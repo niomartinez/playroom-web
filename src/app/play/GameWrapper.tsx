@@ -12,6 +12,7 @@ import SeatBalanceGate from "@/components/player/SeatBalanceGate";
 import BetToasts from "@/components/player/BetToasts";
 import ButtonSfxProvider from "@/lib/use-button-sfx";
 import { ToastProvider } from "@/lib/toast-context";
+import { installSessionTokenHeader } from "@/lib/session-token-fetch";
 
 /* ------------------------------------------------------------------ */
 /*  Username gate                                                      */
@@ -202,6 +203,9 @@ interface GameWrapperProps {
   lang: string;
   lobbyUrl: string | null;
   cashierUrl: string | null;
+  /** The browser refused the session cookie (WebKit third-party block) —
+   *  carry the token on the API calls instead. See `src/app/play/page.tsx`. */
+  cookieless?: boolean;
   children: ReactNode;
 }
 
@@ -211,19 +215,23 @@ export default function GameWrapper({
   lang,
   lobbyUrl,
   cashierUrl,
+  cookieless,
   children,
 }: GameWrapperProps) {
+  // Installed during render, NOT in an effect: children's effects run before
+  // the parent's, so UsernameGate would have already fired its unauthenticated
+  // /api/me/profile fetch by the time a useEffect here got a chance to patch.
+  // The installer is idempotent and a no-op on the server.
+  if (token && cookieless) installSessionTokenHeader(token);
+
   if (!token) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: "#0a0f1a" }}>
-        <div className="text-center">
+        <div className="text-center px-6">
           <div className="text-2xl font-bold text-white mb-2">Session Required</div>
-          <div className="text-[#6a7282] mb-4">
+          <div className="text-[#6a7282]">
             No session token provided. Please launch the game from your operator lobby.
           </div>
-          <a href="/play/demo" className="px-6 py-2 rounded-lg font-semibold text-black" style={{ backgroundColor: "#f0b100" }}>
-            Try Demo Mode
-          </a>
         </div>
       </div>
     );

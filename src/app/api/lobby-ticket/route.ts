@@ -114,7 +114,17 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  const playerToken = req.cookies.get(PLAYER_SESSION_COOKIE)?.value;
+  // The header fallback is what keeps WebKit (iOS/Safari) in the game: inside
+  // an operator iframe it refuses the third-party `prg_session` cookie, so
+  // /play runs "cookieless" and the client sends the token as a header
+  // instead (src/lib/session-token-fetch.ts). This grants nothing the cookie
+  // didn't — the backend validates the session token either way — and it is
+  // deliberately NOT extended to the studio branch below, whose cookie is a
+  // signed JWT we verify ourselves.
+  const playerToken =
+    req.cookies.get(PLAYER_SESSION_COOKIE)?.value ||
+    req.headers.get("x-session-token") ||
+    undefined;
   const studioToken = req.cookies.get(STUDIO_COOKIE)?.value;
 
   // Build the backend payload based on which cookie is present. Player
