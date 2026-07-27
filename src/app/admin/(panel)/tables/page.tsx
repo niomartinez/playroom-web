@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
@@ -25,8 +27,6 @@ interface Table {
 export default function TablesPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [tables, setTables] = useState<Table[]>([]);
-  const [loading, setLoading] = useState(true);
 
   /* Create dialog state */
   const [showCreate, setShowCreate] = useState(false);
@@ -39,26 +39,22 @@ export default function TablesPage() {
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const fetchTables = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/tables");
-      if (res.ok) {
-        const json = await res.json();
-        setTables(
-          Array.isArray(json) ? json : json.data ?? json.tables ?? []
-        );
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  /* Cached: shared with every other page that reads tables, so it repaints
+     instantly on revisit and refreshes underneath instead of blanking. */
+  const {
+    data: tablesData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<Table[]>("/api/admin/tables");
+  const tables = tablesData ?? [];
 
-  useEffect(() => {
-    fetchTables();
-  }, [fetchTables]);
+  /* A write can change any cached view of this resource, not just the one on
+     screen, so invalidate the whole prefix and refetch. */
+  const fetchTables = () => {
+    invalidateAdminQuery("/api/admin/tables");
+    refetch();
+  };
 
   async function handleCreate() {
     if (!newName.trim() || !newGameId.trim()) return;
@@ -204,6 +200,8 @@ export default function TablesPage() {
           Create Table
         </button>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       <DataTable
         columns={columns}

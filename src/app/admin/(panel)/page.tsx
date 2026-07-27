@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import StatCard from "@/components/admin/ui/StatCard";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery } from "@/lib/admin-query";
 
 interface DashboardStats {
   active_tables: number;
@@ -11,22 +12,19 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) setStats(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  /* The dashboard is the landing page and the one people bounce back to all
+     shift, so it is the biggest single winner from the cache: returning to it
+     paints the numbers immediately and refreshes them underneath, instead of
+     showing "..." in every tile again. */
+  const { data: stats, loading, refreshing } = useAdminQuery<DashboardStats>(
+    "/api/admin/stats",
+  );
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

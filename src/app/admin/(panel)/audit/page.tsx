@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
+import { useAdminQuery } from "@/lib/admin-query";
+import { useUrlFilters } from "@/lib/use-url-filters";
+import { useDebounce } from "@/lib/use-debounce";
 
 interface AuditEntry {
   id: string;
@@ -31,66 +36,63 @@ const ACTION_COLORS: Record<string, string> = {
   deactivate_admin_user: "#fb2c36",
 };
 
-export default function AuditPage() {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  /* Filters */
-  const [filterAction, setFilterAction] = useState("");
-  const [filterEntity, setFilterEntity] = useState("");
-  const [search, setSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [sortBy, setSortBy] = useState("created_at");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+function AuditPageInner() {
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  /* Debounce the free-text box so typing doesn't fire a request per keystroke. */
-  const [searchInput, setSearchInput] = useState("");
+  /* Every filter, the sort and the page size live in the URL. An audit view is
+     the one people quote at each other — "this action, this week, sorted oldest
+     first" is now a link — and revisiting one repaints from cache. */
+  const { values, setValues, setFilter } = useUrlFilters({
+    page: "1",
+    page_size: "20",
+    action: "",
+    entity_type: "",
+    q: "",
+    date_from: "",
+    date_to: "",
+    sort_by: "created_at",
+    sort_dir: "desc",
+  });
+  const page = Math.max(1, Number(values.page) || 1);
+  const pageSize = Number(values.page_size) || 20;
+  const sortBy = values.sort_by;
+  const sortDir: "asc" | "desc" = values.sort_dir === "asc" ? "asc" : "desc";
+
+  /* The search box is typed into, so it keeps local state; the URL is only
+     written once typing settles, or every keystroke would be a router.replace
+     AND a distinct cache key. */
+  const [searchInput, setSearchInput] = useState(values.q);
+  const debouncedSearch = useDebounce(searchInput, 350);
   useEffect(() => {
-    const t = setTimeout(() => {
-      setSearch(searchInput);
-      setPage(1);
-    }, 350);
-    return () => clearTimeout(t);
-  }, [searchInput]);
+    if (debouncedSearch !== values.q) setFilter({ q: debouncedSearch });
+  }, [debouncedSearch, values.q, setFilter]);
 
-  const fetchAudit = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("page_size", String(pageSize));
-      if (filterAction) params.set("action", filterAction);
-      if (filterEntity) params.set("entity_type", filterEntity);
-      if (search.trim()) params.set("q", search.trim());
-      // <input type="date"> gives a bare YYYY-MM-DD; widen it to cover the whole
-      // local day so "to = today" doesn't exclude everything logged today.
-      if (dateFrom) params.set("date_from", new Date(`${dateFrom}T00:00:00`).toISOString());
-      if (dateTo) params.set("date_to", new Date(`${dateTo}T23:59:59.999`).toISOString());
-      params.set("sort_by", sortBy);
-      params.set("sort_dir", sortDir);
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  if (values.action) params.set("action", values.action);
+  if (values.entity_type) params.set("entity_type", values.entity_type);
+  if (values.q.trim()) params.set("q", values.q.trim());
+  // <input type="date"> gives a bare YYYY-MM-DD; widen it to cover the whole
+  // local day so "to = today" doesn't exclude everything logged today.
+  if (values.date_from) {
+    params.set("date_from", new Date(`${values.date_from}T00:00:00`).toISOString());
+  }
+  if (values.date_to) {
+    params.set("date_to", new Date(`${values.date_to}T23:59:59.999`).toISOString());
+  }
+  params.set("sort_by", sortBy);
+  params.set("sort_dir", sortDir);
 
-      const res = await fetch(`/api/admin/audit?${params.toString()}`, { cache: "no-store" });
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data ?? json;
-        setEntries(data.entries ?? []);
-        setTotal(data.total ?? 0);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, filterAction, filterEntity, search, dateFrom, dateTo, sortBy, sortDir]);
-
-  useEffect(() => {
-    fetchAudit();
-  }, [fetchAudit]);
+  const {
+    data: auditData,
+    loading,
+    refreshing,
+  } = useAdminQuery<{ entries: AuditEntry[]; total: number }>(
+    `/api/admin/audit?${params.toString()}`,
+  );
+  const entries = auditData?.entries ?? [];
+  const total = auditData?.total ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -125,8 +127,8 @@ export default function AuditPage() {
             <input
               type="text"
               placeholder="e.g. update, soft_delete"
-              value={filterAction}
-              onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
+              value={values.action}
+              onChange={(e) => setFilter({ action: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -134,8 +136,8 @@ export default function AuditPage() {
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Entity Type</label>
             <select
-              value={filterEntity}
-              onChange={(e) => { setFilterEntity(e.target.value); setPage(1); }}
+              value={values.entity_type}
+              onChange={(e) => setFilter({ entity_type: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
@@ -154,8 +156,8 @@ export default function AuditPage() {
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>From</label>
             <input
               type="date"
-              value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              value={values.date_from}
+              onChange={(e) => setFilter({ date_from: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -164,8 +166,8 @@ export default function AuditPage() {
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>To</label>
             <input
               type="date"
-              value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              value={values.date_to}
+              onChange={(e) => setFilter({ date_to: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             />
@@ -176,9 +178,7 @@ export default function AuditPage() {
               value={`${sortBy}:${sortDir}`}
               onChange={(e) => {
                 const [col, dir] = e.target.value.split(":");
-                setSortBy(col);
-                setSortDir(dir === "asc" ? "asc" : "desc");
-                setPage(1);
+                setFilter({ sort_by: col, sort_dir: dir === "asc" ? "asc" : "desc" });
               }}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
@@ -195,7 +195,7 @@ export default function AuditPage() {
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Per page</label>
             <select
               value={String(pageSize)}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              onChange={(e) => setFilter({ page_size: e.target.value })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none"
               style={inputStyle}
             >
@@ -204,15 +204,18 @@ export default function AuditPage() {
               ))}
             </select>
           </div>
-          {(searchInput || filterAction || filterEntity || dateFrom || dateTo) && (
+          {(searchInput || values.action || values.entity_type || values.date_from || values.date_to) && (
             <button
               onClick={() => {
                 setSearchInput("");
-                setFilterAction("");
-                setFilterEntity("");
-                setDateFrom("");
-                setDateTo("");
-                setPage(1);
+                setValues({
+                  page: "1",
+                  action: "",
+                  entity_type: "",
+                  q: "",
+                  date_from: "",
+                  date_to: "",
+                });
               }}
               className="rounded-lg px-3 py-2 text-sm"
               style={{ backgroundColor: "#262626", color: "#d1d5db" }}
@@ -222,6 +225,8 @@ export default function AuditPage() {
           )}
         </div>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       {/* Log entries */}
       <div
@@ -304,12 +309,20 @@ export default function AuditPage() {
           >
             <span>Page {page} of {totalPages} ({total} entries)</span>
             <div className="flex gap-2">
-              <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Prev</button>
-              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Next</button>
+              <button disabled={page <= 1} onClick={() => setValues({ page: String(page - 1) })} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Prev</button>
+              <button disabled={page >= totalPages} onClick={() => setValues({ page: String(page + 1) })} className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5" style={{ color: "#99a1af" }}>Next</button>
             </div>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuditPage() {
+  return (
+    <UrlFilterBoundary>
+      <AuditPageInner />
+    </UrlFilterBoundary>
   );
 }

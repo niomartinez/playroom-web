@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
@@ -25,8 +27,6 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
 
   /* Create dialog */
   const [showCreate, setShowCreate] = useState(false);
@@ -51,22 +51,22 @@ export default function UsersPage() {
   const [resetResult, setResetResult] = useState<{ email: string; tempPassword: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/users");
-      if (res.ok) {
-        const json = await res.json();
-        setUsers(Array.isArray(json) ? json : json.data ?? []);
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  /* Cached: shared with every other page that reads users, so it repaints
+     instantly on revisit and refreshes underneath instead of blanking. */
+  const {
+    data: usersData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<AdminUser[]>("/api/admin/users");
+  const users = usersData ?? [];
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  /* A write can change any cached view of this resource, not just the one on
+     screen, so invalidate the whole prefix and refetch. */
+  const fetchUsers = () => {
+    invalidateAdminQuery("/api/admin/users");
+    refetch();
+  };
 
   async function handleCreate() {
     if (!newEmail.trim() || !newPassword || !newDisplayName.trim()) return;
@@ -279,6 +279,8 @@ export default function UsersPage() {
           Create User
         </button>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       <DataTable
         columns={columns}

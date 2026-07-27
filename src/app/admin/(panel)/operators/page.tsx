@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useRouter } from "next/navigation";
 import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
@@ -20,8 +22,6 @@ interface Operator {
 export default function OperatorsPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [operators, setOperators] = useState<Operator[]>([]);
-  const [loading, setLoading] = useState(true);
 
   /* Create dialog state */
   const [showCreate, setShowCreate] = useState(false);
@@ -31,26 +31,24 @@ export default function OperatorsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOperators = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/operators");
-      if (res.ok) {
-        const data = await res.json();
-        setOperators(
-          Array.isArray(data) ? data : data.data ?? data.operators ?? []
-        );
-      }
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  /* Cached: the operators list is read by several pages and barely changes, so
+     it repaints instantly on revisit and refreshes underneath. `refetch` after a
+     mutation replaces the old manual re-fetch. */
+  const {
+    data: operatorsData,
+    loading,
+    refreshing,
+    refetch,
+  } = useAdminQuery<Operator[]>("/api/admin/operators");
+  const operators = operatorsData ?? [];
 
-  useEffect(() => {
-    fetchOperators();
-  }, [fetchOperators]);
+  /* Any write invalidates every cached view of this resource — a create or a
+     status change can appear on a page or filter combination other than the one
+     we are looking at. */
+  const fetchOperators = () => {
+    invalidateAdminQuery("/api/admin/operators");
+    refetch();
+  };
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -121,6 +119,8 @@ export default function OperatorsPage() {
           Create System Provider
         </button>
       </div>
+
+      <RefreshingHint show={refreshing && !loading} />
 
       <DataTable
         columns={columns}
