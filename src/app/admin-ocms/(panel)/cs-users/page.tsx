@@ -9,7 +9,7 @@ export default async function OcmsCsUsersPage() {
   // also enforces require_admin on every cs-user endpoint.
   if (session?.role !== "ocms_admin") {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center px-4 py-20 text-center">
         <span style={{ color: "#6a7282" }}>
           You do not have access to CS account management.
         </span>

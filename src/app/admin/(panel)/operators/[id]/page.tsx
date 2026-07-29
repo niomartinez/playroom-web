@@ -197,12 +197,17 @@ export default function OperatorDetailPage() {
     border: "1px solid rgba(208,135,0,0.2)" as const,
   };
 
+  /* The switch pills are 44x24. Below md an invisible ::after stretches the tap
+     area to a full 44px of height without changing how the pill looks. */
+  const toggleTap =
+    "max-md:after:absolute max-md:after:inset-x-0 max-md:after:-top-2.5 max-md:after:-bottom-2.5 max-md:after:content-['']";
+
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/operators")}
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm hover:underline max-md:min-h-[44px]"
         style={{ color: "#99a1af" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -211,7 +216,7 @@ export default function OperatorDetailPage() {
         Back to System Providers
       </button>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{operator.name}</h1>
         <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={operator.is_active ? "active" : "inactive"} />
@@ -219,13 +224,14 @@ export default function OperatorDetailPage() {
 
       {/* Info card */}
       <div
-        className="rounded-xl p-6 space-y-1"
+        className="rounded-xl p-6 space-y-1 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        {/* Created is a full timestamp, so it gets its own row on a phone. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <span style={{ color: "#6a7282" }}>Client ID</span>
             <p className="text-white font-mono mt-0.5">
@@ -263,7 +269,7 @@ export default function OperatorDetailPage() {
 
       {/* Edit form */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
@@ -287,7 +293,7 @@ export default function OperatorDetailPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
@@ -303,7 +309,7 @@ export default function OperatorDetailPage() {
             type="url"
             value={walletUrl}
             onChange={(e) => setWalletUrl(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
@@ -318,7 +324,7 @@ export default function OperatorDetailPage() {
           <select
             value={walletMode}
             onChange={(e) => setWalletMode(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           >
             <option value="seamless">Seamless</option>
@@ -338,20 +344,21 @@ export default function OperatorDetailPage() {
             placeholder="1.2.3.4, 5.6.7.8"
             value={allowedIps}
             onChange={(e) => setAllowedIps(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
 
         {/* Per-operator inactivity policy */}
         <div className="pt-2" style={{ borderTop: "1px solid #262626" }}>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between gap-3 mb-1">
             <label className="text-xs font-medium" style={{ color: "#99a1af" }}>
               Inactivity policy (override platform default)
             </label>
             <button
               onClick={() => setIdleOverride((v) => !v)}
-              className="relative rounded-full transition-colors"
+              aria-label="Override the platform inactivity policy"
+              className={`relative shrink-0 rounded-full transition-colors ${toggleTap}`}
               style={{ width: 44, height: 24, backgroundColor: idleOverride ? "rgba(208,135,0,0.5)" : "rgba(255,255,255,0.1)" }}
             >
               <span className="absolute top-0.5 rounded-full transition-transform bg-white" style={{ width: 20, height: 20, left: idleOverride ? 22 : 2 }} />
@@ -363,27 +370,27 @@ export default function OperatorDetailPage() {
               : "Off = this operator uses the platform default (Settings → Inactivity)."}
           </p>
           {idleOverride && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div>
                 <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>Freeze after</label>
                 <input type="number" min={1} max={50} value={idleExpire} onChange={(e) => setIdleExpire(e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>1st warning</label>
                 <input type="number" min={1} max={49} value={idleWarn1} onChange={(e) => setIdleWarn1(e.target.value)} placeholder="—"
-                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
               </div>
               <div>
                 <label className="block text-xs mb-1" style={{ color: "#99a1af" }}>Final warning</label>
                 <input type="number" min={1} max={49} value={idleWarn2} onChange={(e) => setIdleWarn2(e.target.value)} placeholder="—"
-                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+                  className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
               </div>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <label
             className="text-xs font-medium"
             style={{ color: "#99a1af" }}
@@ -392,7 +399,8 @@ export default function OperatorDetailPage() {
           </label>
           <button
             onClick={() => setIsActive(!isActive)}
-            className="relative rounded-full transition-colors"
+            aria-label="Active"
+            className={`relative shrink-0 rounded-full transition-colors ${toggleTap}`}
             style={{
               width: 44,
               height: 24,
@@ -418,11 +426,11 @@ export default function OperatorDetailPage() {
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-2 max-md:flex-col">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#f0b100" }}
           >
             {saving ? "Saving..." : "Save Changes"}
@@ -432,7 +440,7 @@ export default function OperatorDetailPage() {
 
       {/* Danger zone */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(251,44,54,0.2)",
@@ -448,7 +456,7 @@ export default function OperatorDetailPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             onClick={() => setShowRegenKey(true)}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(240,177,0,0.1)",
               color: "#f0b100",
@@ -459,7 +467,7 @@ export default function OperatorDetailPage() {
           </button>
           <button
             onClick={() => setShowDeactivate(true)}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(251,44,54,0.1)",
               color: "#fb2c36",

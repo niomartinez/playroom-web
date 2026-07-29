@@ -129,11 +129,19 @@ function RoundsPageInner() {
     border: "1px solid rgba(208,135,0,0.15)" as const,
   };
 
+  /* Below md every control goes full width and grows to a 44px touch target.
+     Above md nothing here applies, so the bar is byte-identical on desktop. */
+  const controlClass =
+    "rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]";
+
+  /* Card mode below md: the round ID names the card and all four remaining
+     columns stay \u2014 a round has nothing spare to drop. */
   const columns: Column<Round>[] = [
     {
       key: "external_fight_id",
       label: "Round ID",
       header: <SortHeader label="Round ID" {...sortProps("external_fight_id", "asc")} />,
+      mobile: "title",
       render: (row) => (
         <span className="font-mono text-xs">{row.external_fight_id}</span>
       ),
@@ -141,6 +149,7 @@ function RoundsPageInner() {
     {
       key: "game_name",
       label: "Table",
+      mobile: "row",
       render: (row) => (
         <span>{row.game_name || row.external_game_id || "\u2014"}</span>
       ),
@@ -149,6 +158,7 @@ function RoundsPageInner() {
       key: "status",
       label: "Status",
       header: <SortHeader label="Status" {...sortProps("status", "asc")} />,
+      mobile: "row",
       render: (row) => (
         <StatusBadge
           status={statusToBadge(row.status)}
@@ -160,6 +170,7 @@ function RoundsPageInner() {
       key: "result",
       label: "Result",
       header: <SortHeader label="Result" {...sortProps("result", "asc")} />,
+      mobile: "row",
       render: (row) => {
         if (!row.result) return <span style={{ color: "#6a7282" }}>{"\u2014"}</span>;
         const color =
@@ -175,6 +186,7 @@ function RoundsPageInner() {
       key: "started_at",
       label: "Started",
       header: <SortHeader label="Started" {...sortProps("started_at")} />,
+      mobile: "row",
       render: (row) =>
         row.started_at
           ? new Date(row.started_at).toLocaleString()
@@ -194,15 +206,15 @@ function RoundsPageInner() {
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="flex flex-wrap gap-3 items-end">
-          <div>
+        <div className="flex flex-wrap gap-3 items-end max-md:flex-col max-md:items-stretch">
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               Table
             </label>
             <select
               value={values.game_id}
               onChange={(e) => setFilter({ game_id: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             >
               <option value="">All Tables</option>
@@ -213,14 +225,14 @@ function RoundsPageInner() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               Status
             </label>
             <select
               value={values.status}
               onChange={(e) => setFilter({ status: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             >
               <option value="">All Statuses</option>
@@ -231,7 +243,7 @@ function RoundsPageInner() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               From
             </label>
@@ -239,11 +251,11 @@ function RoundsPageInner() {
               type="date"
               value={values.date_from}
               onChange={(e) => setFilter({ date_from: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               To
             </label>
@@ -251,7 +263,7 @@ function RoundsPageInner() {
               type="date"
               value={values.date_to}
               onChange={(e) => setFilter({ date_to: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             />
           </div>
@@ -261,7 +273,7 @@ function RoundsPageInner() {
           {hasFilters && (
             <button
               onClick={handleClear}
-              className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
+              className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors max-md:w-full max-md:min-h-[44px]"
               style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
             >
               Clear filters

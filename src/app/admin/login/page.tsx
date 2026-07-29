@@ -30,21 +30,25 @@ export default function AdminLogin() {
       setError(typeof data.error === "string" ? data.error : "Login failed");
       setLoading(false);
     } catch {
-      setError("Network error — please try again.");
+      setError("Network error - please try again.");
       setLoading(false);
     }
   }
 
   return (
+    // `min-h-[100dvh]` (not `h-screen`) so iOS Safari's collapsing address bar
+    // does not clip the card, and `m-auto` on the form rather than
+    // `items-center` so the card falls back to the top - instead of overflowing
+    // above it - when the on-screen keyboard shrinks the viewport.
     <main
-      className="min-h-screen flex items-center justify-center"
+      className="min-h-[100dvh] flex items-center justify-center p-4"
       style={{
         background: "linear-gradient(to right, #000000, #171717, #000000)",
       }}
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-xl p-8 flex flex-col gap-5"
+        className="m-auto w-full max-w-sm rounded-xl p-8 max-md:p-6 flex flex-col gap-5"
         style={{
           background: "linear-gradient(135deg, #171717 0%, #000000 100%)",
           border: "1px solid rgba(208,135,0,0.3)",
@@ -74,6 +78,8 @@ export default function AdminLogin() {
           </p>
         )}
 
+        {/* Mobile: 44px touch height, and `text-base` keeps the field at 16px
+            so iOS Safari does not auto-zoom the form on focus. */}
         <div>
           <label
             htmlFor="admin-identifier"
@@ -92,7 +98,7 @@ export default function AdminLogin() {
             autoCapitalize="none"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition"
+            className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition max-md:min-h-[44px] max-md:text-base"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.2)",
@@ -116,7 +122,7 @@ export default function AdminLogin() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition"
+            className="w-full px-4 py-3 rounded-lg text-white placeholder:text-[#6a7282] focus:outline-none transition max-md:min-h-[44px] max-md:text-base"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.2)",
@@ -128,7 +134,7 @@ export default function AdminLogin() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 text-black font-bold rounded-lg disabled:opacity-50 transition hover:brightness-110"
+          className="w-full py-3 text-black font-bold rounded-lg disabled:opacity-50 transition hover:brightness-110 max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           {loading ? "Signing in..." : "Sign In"}

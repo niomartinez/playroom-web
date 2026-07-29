@@ -87,7 +87,7 @@ export default function OcmsPlayersSearch({
       }}
     >
       <div className="flex flex-wrap gap-3 items-end">
-        <div>
+        <div className="max-md:w-full">
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
             Search
           </label>
@@ -96,12 +96,12 @@ export default function OcmsPlayersSearch({
             placeholder="Username or external ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-lg px-3 py-2 text-sm text-white outline-none min-w-[220px]"
+            className="rounded-lg px-3 py-2 text-sm text-white outline-none min-w-[220px] max-md:w-full max-md:min-w-0 max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
 
-        <div>
+        <div className="max-md:w-full">
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
             Status
           </label>
@@ -111,7 +111,7 @@ export default function OcmsPlayersSearch({
               setActive(e.target.value);
               push({ is_active: e.target.value });
             }}
-            className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
             style={inputStyle}
           >
             <option value="">Any</option>
@@ -120,7 +120,7 @@ export default function OcmsPlayersSearch({
           </select>
         </div>
 
-        <div>
+        <div className="max-md:w-full">
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
             Balance
           </label>
@@ -131,7 +131,7 @@ export default function OcmsPlayersSearch({
               placeholder="Min"
               value={min}
               onChange={(e) => setMin(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px]"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px] max-md:w-auto max-md:min-w-0 max-md:flex-1 max-md:min-h-[44px]"
               style={inputStyle}
             />
             <span style={{ color: "#6a7282" }}>–</span>
@@ -141,7 +141,7 @@ export default function OcmsPlayersSearch({
               placeholder="Max"
               value={max}
               onChange={(e) => setMax(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px]"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px] max-md:w-auto max-md:min-w-0 max-md:flex-1 max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -156,7 +156,7 @@ export default function OcmsPlayersSearch({
               setMax("");
               push({ search: "", is_active: "", balance_min: "", balance_max: "" });
             }}
-            className="rounded-lg px-3 py-2 text-sm"
+            className="rounded-lg px-3 py-2 text-sm max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#262626", color: "#d1d5db" }}
           >
             Clear filters

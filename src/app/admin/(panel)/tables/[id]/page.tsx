@@ -178,7 +178,7 @@ export default function TableDetailPage() {
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/tables")}
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm hover:underline max-md:min-h-[44px]"
         style={{ color: "#99a1af" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -187,7 +187,7 @@ export default function TableDetailPage() {
         Back to Tables
       </button>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{table.name}</h1>
         <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={table.is_active ? "active" : "inactive"} />
@@ -195,13 +195,15 @@ export default function TableDetailPage() {
 
       {/* Info card */}
       <div
-        className="rounded-xl p-6"
+        className="rounded-xl p-6 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        {/* Two across is fine for the short facts, but Created is a full
+            timestamp, so the pairs stack on a phone. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
             <span style={{ color: "#6a7282" }}>Game ID</span>
             <p className="text-white font-mono mt-0.5">
@@ -230,7 +232,7 @@ export default function TableDetailPage() {
         <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(208,135,0,0.1)" }}>
           <button
             onClick={handleToggle}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
             style={{
               backgroundColor: table.is_active
                 ? "rgba(251,44,54,0.1)"
@@ -248,7 +250,7 @@ export default function TableDetailPage() {
 
       {/* Edit form */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
@@ -269,7 +271,7 @@ export default function TableDetailPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
@@ -281,7 +283,7 @@ export default function TableDetailPage() {
           <select
             value={tableType}
             onChange={(e) => setTableType(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           >
             <option value="standard">Standard</option>
@@ -300,7 +302,7 @@ export default function TableDetailPage() {
             Bet Range
           </label>
           <div
-            className="flex items-center justify-between rounded-lg px-3 py-2"
+            className="flex items-center justify-between rounded-lg px-3 py-2 max-md:flex-col max-md:items-start max-md:gap-1"
             style={{ backgroundColor: "rgba(0,0,0,0.35)", border: "1px solid rgba(208,135,0,0.12)" }}
           >
             <span className="font-mono text-sm text-white">
@@ -309,7 +311,7 @@ export default function TableDetailPage() {
             </span>
             <Link
               href="/admin/settings"
-              className="text-xs font-medium"
+              className="text-xs font-medium max-md:inline-flex max-md:min-h-[44px] max-md:items-center"
               style={{ color: "#f0b100" }}
             >
               Edit in Settings →
@@ -326,7 +328,7 @@ export default function TableDetailPage() {
             placeholder="e.g. Dealer Maria"
             value={dealerName}
             onChange={(e) => setDealerName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
@@ -347,7 +349,7 @@ export default function TableDetailPage() {
               placeholder="rtmp://stream.example.com/live"
               value={streamUrl}
               onChange={(e) => setStreamUrl(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -360,7 +362,7 @@ export default function TableDetailPage() {
               placeholder="stream-key-abc123"
               value={streamKey}
               onChange={(e) => setStreamKey(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none font-mono"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none font-mono max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -374,7 +376,7 @@ export default function TableDetailPage() {
               max={60}
               value={bettingTime}
               onChange={(e) => setBettingTime(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -386,11 +388,11 @@ export default function TableDetailPage() {
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-2 max-md:flex-col">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#f0b100" }}
           >
             {saving ? "Saving..." : "Save Changes"}
@@ -400,7 +402,7 @@ export default function TableDetailPage() {
 
       {/* Danger zone */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(251,44,54,0.2)",
@@ -415,7 +417,7 @@ export default function TableDetailPage() {
 
         <button
           onClick={() => setShowDeactivate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
           style={{
             backgroundColor: "rgba(251,44,54,0.1)",
             color: "#fb2c36",

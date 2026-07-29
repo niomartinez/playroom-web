@@ -113,6 +113,7 @@ function MonitoringPageInner() {
     {
       key: "operation",
       label: "Operation",
+      mobile: "row",
       render: (row) => (
         <span className="text-xs font-semibold uppercase" style={{
           color: row.operation === "credit" ? "#00bc7d" : row.operation === "debit" ? "#fb2c36" : "#f0b100"
@@ -124,8 +125,12 @@ function MonitoringPageInner() {
     {
       key: "error_message",
       label: "Error",
+      // The message is what identifies the row, so it heads the card. It only
+      // truncates in the table, where a column has a width to respect; on a
+      // card there is nothing to the right of it and it wraps instead.
+      mobile: "title",
       render: (row) => (
-        <span className="text-xs max-w-[300px] truncate block" title={row.error_message}>
+        <span className="text-xs block md:max-w-[300px] md:truncate" title={row.error_message}>
           {row.error_message}
         </span>
       ),
@@ -133,6 +138,7 @@ function MonitoringPageInner() {
     {
       key: "http_status",
       label: "HTTP",
+      mobile: "row",
       render: (row) => (
         <span className="font-mono text-xs" style={{ color: "#99a1af" }}>
           {row.http_status ?? "—"}
@@ -142,11 +148,13 @@ function MonitoringPageInner() {
     {
       key: "retries",
       label: "Retries",
+      mobile: "row",
       render: (row) => <span className="font-mono text-xs">{row.retries}</span>,
     },
     {
       key: "created_at",
       label: "Time",
+      mobile: "row",
       render: (row) => (
         <span className="text-xs" style={{ color: "#99a1af" }}>
           {new Date(row.created_at).toLocaleString()}
@@ -159,6 +167,7 @@ function MonitoringPageInner() {
     {
       key: "response_code",
       label: "Status",
+      mobile: "row",
       render: (row) => (
         <span className="font-mono text-xs font-bold" style={{ color: statusColor(row.response_code) }}>
           {row.response_code}
@@ -168,8 +177,10 @@ function MonitoringPageInner() {
     {
       key: "endpoint",
       label: "Endpoint",
+      // Method + path names the row; the status and reason hang off it.
+      mobile: "title",
       render: (row) => (
-        <span className="text-xs font-mono">
+        <span className="text-xs font-mono break-all md:break-normal">
           <span style={{ color: "#6a7282" }}>{row.method} </span>
           {row.endpoint}
         </span>
@@ -178,8 +189,9 @@ function MonitoringPageInner() {
     {
       key: "message",
       label: "Reason",
+      mobile: "row",
       render: (row) => (
-        <span className="text-xs max-w-[380px] truncate block" title={row.message}>
+        <span className="text-xs block md:max-w-[380px] md:truncate" title={row.message}>
           {row.message || "—"}
           {row.error_code && (
             <span className="ml-1 font-mono" style={{ color: "#6a7282" }}>
@@ -192,6 +204,7 @@ function MonitoringPageInner() {
     {
       key: "processing_time_ms",
       label: "Took",
+      mobile: "row",
       render: (row) => (
         <span className="font-mono text-xs" style={{ color: "#99a1af" }}>
           {row.processing_time_ms != null ? `${row.processing_time_ms}ms` : "—"}
@@ -201,6 +214,7 @@ function MonitoringPageInner() {
     {
       key: "created_at",
       label: "Time",
+      mobile: "row",
       render: (row) => (
         <span className="text-xs" style={{ color: "#99a1af" }}>
           {new Date(row.created_at).toLocaleString()}
@@ -251,7 +265,7 @@ function MonitoringPageInner() {
               <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#d08700" }}>
                 Errors by Operation (24h)
               </h3>
-              <div className="flex gap-4">
+              <div className="flex gap-4 max-md:flex-wrap max-md:gap-x-6 max-md:gap-y-3">
                 {Object.entries(stats.data.wallet_errors_by_operation).map(([op, count]) => (
                   <div key={op} className="text-center">
                     <span className="text-lg font-bold text-white">{count}</span>
@@ -271,7 +285,7 @@ function MonitoringPageInner() {
           style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
         >
           <div
-            className="px-6 py-4 flex flex-wrap items-center justify-between gap-3"
+            className="px-6 py-4 flex flex-wrap items-center justify-between gap-3 max-md:px-4"
             style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
           >
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
@@ -283,22 +297,25 @@ function MonitoringPageInner() {
               )}
             </h2>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-md:w-full max-md:flex-wrap">
               {(values.status || values.endpoint) && (
                 <button
                   onClick={() => setFilter({ status: "", endpoint: "" })}
-                  className="rounded px-3 py-1 text-xs hover:bg-white/5"
+                  className="rounded px-3 py-1 text-xs hover:bg-white/5 max-md:min-h-[44px] max-md:flex-1 max-md:px-4"
                   style={{ color: "#f0b100", border: "1px solid rgba(240,177,0,0.35)" }}
                 >
                   Clear filter
                 </button>
               )}
-              <div className="flex rounded overflow-hidden" style={{ border: "1px solid rgba(208,135,0,0.25)" }}>
+              <div
+                className="flex rounded overflow-hidden max-md:flex-1"
+                style={{ border: "1px solid rgba(208,135,0,0.25)" }}
+              >
                 {WINDOWS.map((w) => (
                   <button
                     key={w.value}
                     onClick={() => setFilter({ hours: w.value, apiPage: "1" })}
-                    className="px-3 py-1 text-xs"
+                    className="px-3 py-1 text-xs max-md:min-h-[44px] max-md:flex-1"
                     style={{
                       backgroundColor: values.hours === w.value ? "rgba(208,135,0,0.18)" : "transparent",
                       color: values.hours === w.value ? "#f0b100" : "#99a1af",
@@ -321,7 +338,7 @@ function MonitoringPageInner() {
               need completely different responses, and the raw list alone does
               not distinguish them. Each row filters the table below. */}
           {(apiErrors.data?.breakdown?.length ?? 0) > 0 && (
-            <div className="px-6 py-4 space-y-2" style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}>
+            <div className="px-6 py-4 space-y-2 max-md:px-4" style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}>
               <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#6a7282" }}>
                 Grouped by endpoint
               </h3>
@@ -344,7 +361,7 @@ function MonitoringPageInner() {
                             : { status: String(g.response_code), endpoint: g.endpoint },
                         )
                       }
-                      className="w-full flex items-center gap-3 rounded px-3 py-2 text-left hover:bg-white/5"
+                      className="w-full flex items-center gap-3 rounded px-3 py-2 text-left hover:bg-white/5 max-md:min-h-[44px] max-md:flex-wrap max-md:gap-y-1"
                       style={{
                         backgroundColor: active ? "rgba(208,135,0,0.12)" : "rgba(255,255,255,0.02)",
                       }}
@@ -355,9 +372,14 @@ function MonitoringPageInner() {
                       >
                         {g.response_code}
                       </span>
-                      <span className="font-mono text-xs shrink-0 text-white">{g.endpoint}</span>
+                      <span className="font-mono text-xs shrink-0 text-white max-md:shrink max-md:break-all">
+                        {g.endpoint}
+                      </span>
+                      {/* On a card-width screen the sample message takes its own
+                          line and wraps; truncating it there hides the only clue
+                          to what actually failed. */}
                       <span
-                        className="text-xs truncate flex-1"
+                        className="text-xs truncate flex-1 max-md:w-full max-md:flex-none max-md:overflow-visible max-md:whitespace-normal"
                         style={{ color: "#99a1af" }}
                         title={g.sample_message}
                       >
@@ -385,15 +407,15 @@ function MonitoringPageInner() {
 
           {apiPages > 1 && (
             <div
-              className="flex items-center justify-between px-4 py-3 text-xs"
+              className="flex items-center justify-between px-4 py-3 text-xs max-md:flex-col max-md:items-stretch max-md:gap-3"
               style={{ borderTop: "1px solid rgba(208,135,0,0.1)", color: "#6a7282" }}
             >
-              <span>Page {apiPage} of {apiPages}</span>
+              <span className="max-md:text-center">Page {apiPage} of {apiPages}</span>
               <div className="flex gap-2">
                 <button
                   disabled={apiPage <= 1}
                   onClick={() => setValues({ apiPage: String(apiPage - 1) })}
-                  className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                  className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                   style={{ color: "#99a1af" }}
                 >
                   Prev
@@ -401,7 +423,7 @@ function MonitoringPageInner() {
                 <button
                   disabled={apiPage >= apiPages}
                   onClick={() => setValues({ apiPage: String(apiPage + 1) })}
-                  className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                  className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                   style={{ color: "#99a1af" }}
                 >
                   Next
@@ -417,7 +439,7 @@ function MonitoringPageInner() {
         className="rounded-xl overflow-hidden"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
-        <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}>
+        <div className="px-6 py-4 max-md:px-4" style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}>
           <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
             Wallet Error Log ({walletTotal})
             {wallet.refreshing && (
@@ -439,15 +461,15 @@ function MonitoringPageInner() {
 
         {walletPages > 1 && (
           <div
-            className="flex items-center justify-between px-4 py-3 text-xs"
+            className="flex items-center justify-between px-4 py-3 text-xs max-md:flex-col max-md:items-stretch max-md:gap-3"
             style={{ borderTop: "1px solid rgba(208,135,0,0.1)", color: "#6a7282" }}
           >
-            <span>Page {page} of {walletPages}</span>
+            <span className="max-md:text-center">Page {page} of {walletPages}</span>
             <div className="flex gap-2">
               <button
                 disabled={page <= 1}
                 onClick={() => setValues({ page: String(page - 1) })}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                 style={{ color: "#99a1af" }}
               >
                 Prev
@@ -455,7 +477,7 @@ function MonitoringPageInner() {
               <button
                 disabled={page >= walletPages}
                 onClick={() => setValues({ page: String(page + 1) })}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                 style={{ color: "#99a1af" }}
               >
                 Next

@@ -7,6 +7,9 @@ import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
 import StatCard from "@/components/admin/ui/StatCard";
+import MobileCardList, {
+  type MobileCardItem,
+} from "@/components/admin/ui/MobileCardList";
 import { useToast } from "@/lib/toast-context";
 
 interface PlayerDetail {
@@ -125,12 +128,55 @@ export default function PlayerDetailPage() {
     return "#99a1af";
   }
 
+  const money = (v: number) =>
+    Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+  /* Below md a six-column ledger either side-scrolls or squashes, so each
+     transaction becomes a card instead: the type heads it, the rest of the
+     columns drop underneath as label/value pairs. */
+  const txCards: MobileCardItem[] = transactions.map((tx) => ({
+    id: tx.id,
+    title: (
+      <span
+        className="text-xs font-semibold uppercase"
+        style={{ color: txTypeColor(tx.type) }}
+      >
+        {tx.type.replace(/_/g, " ")}
+      </span>
+    ),
+    rows: [
+      {
+        label: "Amount",
+        value: (
+          <span className="font-mono" style={{ color: txTypeColor(tx.type) }}>
+            {tx.type === "credit" || tx.type === "void_refund" ? "+" : "-"}
+            {money(Math.abs(Number(tx.amount)))}
+          </span>
+        ),
+      },
+      {
+        label: "Before",
+        value: (
+          <span className="font-mono" style={{ color: "#99a1af" }}>
+            {money(tx.balance_before)}
+          </span>
+        ),
+      },
+      {
+        label: "After",
+        value: <span className="font-mono">{money(tx.balance_after)}</span>,
+      },
+      { label: "Description", value: tx.description || "\u2014" },
+      { label: "Date", value: new Date(tx.created_at).toLocaleString() },
+    ],
+  }));
+
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/players")}
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm hover:underline max-md:min-h-[44px]"
         style={{ color: "#99a1af" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -139,7 +185,7 @@ export default function PlayerDetailPage() {
         Back to Players
       </button>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{player.username}</h1>
         <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={player.is_active ? "active" : "inactive"} />
@@ -162,13 +208,14 @@ export default function PlayerDetailPage() {
 
       {/* Info card */}
       <div
-        className="rounded-xl p-6"
+        className="rounded-xl p-6 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+        {/* Single column on a phone: half of 390px cannot hold a timestamp. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div>
             <span style={{ color: "#6a7282" }}>External ID</span>
             <p className="text-white font-mono mt-0.5">
@@ -208,7 +255,7 @@ export default function PlayerDetailPage() {
       </div>
 
       {/* Bet statistics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Bets"
           value={stats.total_bets.toLocaleString()}
@@ -243,7 +290,7 @@ export default function PlayerDetailPage() {
         }}
       >
         <div
-          className="px-6 py-4"
+          className="px-6 py-4 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
         >
           <h2
@@ -263,7 +310,12 @@ export default function PlayerDetailPage() {
             No transactions found
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Cards below md, the table above it. */}
+          <div className="md:hidden px-4 py-4">
+            <MobileCardList items={txCards} />
+          </div>
+          <div className="overflow-x-auto max-md:hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr
@@ -338,25 +390,26 @@ export default function PlayerDetailPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Transaction pagination */}
         {txTotalPages > 1 && (
           <div
-            className="flex items-center justify-between px-4 py-3 text-xs"
+            className="flex items-center justify-between px-4 py-3 text-xs max-md:flex-col max-md:items-stretch max-md:gap-3"
             style={{
               borderTop: "1px solid rgba(208,135,0,0.1)",
               color: "#6a7282",
             }}
           >
-            <span>
+            <span className="max-md:text-center">
               Page {txPage} of {txTotalPages}
             </span>
             <div className="flex gap-2">
               <button
                 disabled={txPage <= 1}
                 onClick={() => setTxPage(txPage - 1)}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                 style={{ color: "#99a1af" }}
               >
                 Prev
@@ -364,7 +417,7 @@ export default function PlayerDetailPage() {
               <button
                 disabled={txPage >= txTotalPages}
                 onClick={() => setTxPage(txPage + 1)}
-                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5"
+                className="rounded px-3 py-1 disabled:opacity-30 hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
                 style={{ color: "#99a1af" }}
               >
                 Next
@@ -376,7 +429,7 @@ export default function PlayerDetailPage() {
 
       {/* Kick action */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(251,44,54,0.2)",
@@ -390,7 +443,7 @@ export default function PlayerDetailPage() {
         </h2>
         <button
           onClick={() => setShowKick(true)}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
           style={{
             backgroundColor: "rgba(251,44,54,0.1)",
             color: "#fb2c36",

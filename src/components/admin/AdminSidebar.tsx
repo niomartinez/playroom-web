@@ -1,9 +1,14 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAdmin } from "@/lib/admin-context";
 import { isProdEnv } from "@/lib/server-env";
+
+/** Everything the drawer's focus trap considers tabbable. */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 interface NavItem {
   label: string;
@@ -160,93 +165,207 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { sidebarCollapsed, setSidebarCollapsed } = useAdmin();
+  const { sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, setMobileNavOpen } =
+    useAdmin();
   // Test-only nav items are hidden on production.
   const prodEnv = isProdEnv();
 
+  const asideRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
+
+  /* Close the drawer whenever the route changes. Desktop never opens it, so
+     this is a no-op above lg. */
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname, setMobileNavOpen]);
+
+  /* While the drawer is open: lock body scroll, trap Tab inside it, close on
+     Escape. Everything is torn down when it closes or the component unmounts. */
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const visibleFocusable = () =>
+      Array.from(
+        asideRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []
+      ).filter((el) => el.getClientRects().length > 0);
+
+    visibleFocusable()[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const node = asideRef.current;
+      if (!node) return;
+      const items = visibleFocusable();
+      if (items.length === 0) return;
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (active === first || !active || !node.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !active || !node.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileNavOpen, setMobileNavOpen]);
+
+  /* Hand focus back to the hamburger once the drawer closes. */
+  useEffect(() => {
+    if (wasOpenRef.current && !mobileNavOpen) {
+      document.getElementById("admin-mobile-nav-toggle")?.focus();
+    }
+    wasOpenRef.current = mobileNavOpen;
+  }, [mobileNavOpen]);
+
   return (
-    <aside
-      className="shrink-0 flex flex-col h-full transition-all duration-200"
-      style={{
-        width: sidebarCollapsed ? 64 : 220,
-        backgroundColor: "#0a0a0a",
-        borderRight: "1px solid rgba(208,135,0,0.2)",
-      }}
-    >
-      {/* Logo + collapse toggle */}
-      <div
-        className="flex items-center justify-between px-3 shrink-0"
+    <>
+      {/* Drawer backdrop (below lg only) */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        id="admin-sidebar"
+        ref={asideRef}
+        className={
+          "shrink-0 flex flex-col h-full transition-all duration-200 " +
+          "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:h-[100dvh] " +
+          "max-lg:w-[280px]! max-lg:max-w-[85vw] max-lg:shadow-2xl " +
+          "max-lg:motion-reduce:transition-none " +
+          (mobileNavOpen
+            ? "max-lg:visible max-lg:translate-x-0"
+            : "max-lg:invisible max-lg:-translate-x-full")
+        }
         style={{
-          height: 56,
-          borderBottom: "1px solid rgba(208,135,0,0.15)",
+          width: sidebarCollapsed ? 64 : 220,
+          backgroundColor: "#0a0a0a",
+          borderRight: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        {!sidebarCollapsed && (
+        {/* Logo + collapse toggle */}
+        <div
+          className="flex items-center justify-between px-3 shrink-0"
+          style={{
+            height: 56,
+            borderBottom: "1px solid rgba(208,135,0,0.15)",
+          }}
+        >
           <img
             src="/logo.png"
             alt="Playroom Gaming"
-            className="h-8 object-contain"
+            className={
+              "h-8 object-contain" + (sidebarCollapsed ? " hidden max-lg:block" : "")
+            }
           />
-        )}
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="p-1.5 rounded hover:bg-white/5 transition-colors"
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#6a7282"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {sidebarCollapsed ? (
-              <>
-                <polyline points="9 18 15 12 9 6" />
-              </>
-            ) : (
-              <>
-                <polyline points="15 18 9 12 15 6" />
-              </>
-            )}
-          </svg>
-        </button>
-      </div>
 
-      {/* Nav items */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.filter((item) => !(item.stagingOnly && prodEnv)).map((item) => {
-          const active = isActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
-              style={{
-                color: active ? "#f0b100" : "#99a1af",
-                backgroundColor: active
-                  ? "rgba(208,135,0,0.12)"
-                  : "transparent",
-                borderLeft: active
-                  ? "2px solid #f0b100"
-                  : "2px solid transparent",
-              }}
-              title={sidebarCollapsed ? item.label : undefined}
+          {/* Drawer close (below lg only) */}
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(false)}
+            className="lg:hidden flex h-11 w-11 items-center justify-center rounded hover:bg-white/5 transition-colors"
+            aria-label="Close navigation menu"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6a7282"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <span
-                className="shrink-0"
-                style={{ color: active ? "#f0b100" : "#6a7282" }}
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="max-lg:hidden p-1.5 rounded hover:bg-white/5 transition-colors"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6a7282"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {sidebarCollapsed ? (
+                <>
+                  <polyline points="9 18 15 12 9 6" />
+                </>
+              ) : (
+                <>
+                  <polyline points="15 18 9 12 15 6" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
+          {NAV_ITEMS.filter((item) => !(item.stagingOnly && prodEnv)).map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors max-lg:min-h-11"
+                style={{
+                  color: active ? "#f0b100" : "#99a1af",
+                  backgroundColor: active
+                    ? "rgba(208,135,0,0.12)"
+                    : "transparent",
+                  borderLeft: active
+                    ? "2px solid #f0b100"
+                    : "2px solid transparent",
+                }}
+                title={sidebarCollapsed ? item.label : undefined}
               >
-                {item.icon}
-              </span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+                <span
+                  className="shrink-0"
+                  style={{ color: active ? "#f0b100" : "#6a7282" }}
+                >
+                  {item.icon}
+                </span>
+                <span className={sidebarCollapsed ? "hidden max-lg:inline" : undefined}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

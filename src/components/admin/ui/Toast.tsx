@@ -36,13 +36,15 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-60 flex flex-col gap-2 pointer-events-none">
+    // Below md the stack is pinned to both edges: a 400px-wide toast plus its
+    // gutters does not fit a 390px phone, so it spans the width instead.
+    <div className="fixed bottom-4 right-4 z-60 flex flex-col gap-2 pointer-events-none max-md:left-4">
       {toasts.map((t) => {
         const c = COLORS[t.type];
         return (
           <div
             key={t.id}
-            className="pointer-events-auto flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm font-medium shadow-lg animate-slide-in-right min-w-[280px] max-w-[400px]"
+            className="pointer-events-auto flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm font-medium shadow-lg animate-slide-in-right min-w-[280px] max-w-[400px] max-md:min-w-0 max-md:max-w-none"
             style={{
               backgroundColor: c.bg,
               border: `1px solid ${c.border}`,
@@ -54,7 +56,8 @@ export default function ToastContainer() {
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => dismiss(t.id)}
-              className="opacity-60 hover:opacity-100 transition-opacity ml-1 shrink-0"
+              aria-label="Dismiss"
+              className="opacity-60 hover:opacity-100 transition-opacity ml-1 shrink-0 max-md:-my-2 max-md:-mr-2 max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />

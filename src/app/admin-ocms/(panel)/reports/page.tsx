@@ -1,4 +1,5 @@
 import StatCard from "@/components/admin/ui/StatCard";
+import MobileCardList from "@/components/admin/ui/MobileCardList";
 import OcmsReportsControls from "@/components/admin/OcmsReportsControls";
 import { getReportSummary, getReportMonthly } from "@/lib/ocms-server";
 
@@ -42,6 +43,40 @@ export default async function OcmsReportsPage({
   const totalGgr = monthly.reduce((s, r) => s + r.ggr, 0);
   const totalBets = monthly.reduce((s, r) => s + r.bet_count, 0);
 
+  const monthlyCards = monthly.map((row) => ({
+    id: row.month,
+    title: row.month,
+    rows: [
+      {
+        label: "Wagered",
+        value: <span className="font-mono">{fmt(row.total_wagered)}</span>,
+      },
+      {
+        label: "Payout",
+        value: <span className="font-mono">{fmt(row.total_payout)}</span>,
+      },
+      {
+        label: "GGR",
+        value: (
+          <span
+            className="font-mono font-semibold"
+            style={{ color: row.ggr >= 0 ? "#00bc7d" : "#fb2c36" }}
+          >
+            {fmt(row.ggr)}
+          </span>
+        ),
+      },
+      {
+        label: "Bets",
+        value: (
+          <span className="font-mono" style={{ color: "#99a1af" }}>
+            {row.bet_count.toLocaleString()}
+          </span>
+        ),
+      },
+    ],
+  }));
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Reports</h1>
@@ -78,7 +113,7 @@ export default async function OcmsReportsPage({
         }}
       >
         <div
-          className="px-6 py-4"
+          className="px-6 py-4 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
         >
           <h2
@@ -90,11 +125,90 @@ export default async function OcmsReportsPage({
         </div>
 
         {monthly.length === 0 ? (
-          <div className="px-6 py-8 text-center" style={{ color: "#6a7282" }}>
+          <div className="px-6 py-8 text-center max-md:px-4" style={{ color: "#6a7282" }}>
             No monthly data
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Cards (below md) — the five-column ledger squashes on a phone. */}
+          <div className="px-4 py-4 space-y-2 md:hidden">
+            <MobileCardList items={monthlyCards} emptyMessage="No monthly data" />
+
+            {/* Totals, carrying the same gold emphasis as the desktop row. */}
+            <div
+              className="rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: "rgba(208,135,0,0.05)",
+                border: "1px solid rgba(208,135,0,0.2)",
+              }}
+            >
+              <div
+                className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "#d08700" }}
+              >
+                Total
+              </div>
+              <dl className="mt-2 space-y-1.5">
+                {[
+                  {
+                    label: "Wagered",
+                    value: (
+                      <span className="font-mono font-semibold text-white">
+                        {fmt(totalWagered)}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: "Payout",
+                    value: (
+                      <span className="font-mono font-semibold text-white">
+                        {fmt(totalPayout)}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: "GGR",
+                    value: (
+                      <span
+                        className="font-mono font-bold"
+                        style={{ color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36" }}
+                      >
+                        {fmt(totalGgr)}
+                      </span>
+                    ),
+                  },
+                  {
+                    label: "Bets",
+                    value: (
+                      <span
+                        className="font-mono font-semibold"
+                        style={{ color: "#99a1af" }}
+                      >
+                        {totalBets.toLocaleString()}
+                      </span>
+                    ),
+                  },
+                ].map((f) => (
+                  <div
+                    key={f.label}
+                    className="flex items-baseline justify-between gap-3"
+                  >
+                    <dt
+                      className="shrink-0 text-[10px] uppercase tracking-wider"
+                      style={{ color: "#6a7282" }}
+                    >
+                      {f.label}
+                    </dt>
+                    <dd className="min-w-0 text-right text-xs break-words">
+                      {f.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto max-md:hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}>
@@ -180,6 +294,7 @@ export default async function OcmsReportsPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

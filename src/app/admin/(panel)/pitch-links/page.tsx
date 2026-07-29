@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import MobileCardList, {
+  type MobileCardItem,
+} from "@/components/admin/ui/MobileCardList";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
@@ -94,6 +97,49 @@ export default function PitchLinksPage() {
     }
   }
 
+  /* Shared by the table and the mobile cards so the two cannot drift. */
+  const statusCell = (h: PitchLinkRow) => (
+    <span style={{ color: h.status === "active" ? "#6ee7b7" : "#9ca3af" }}>
+      ● {h.status}
+    </span>
+  );
+
+  const rowAction = (h: PitchLinkRow) =>
+    h.token ? (
+      <button
+        onClick={() => copy(`${window.location.origin}/pitch?t=${h.token}`)}
+        className="text-xs px-2 py-1 rounded max-md:min-h-[44px] max-md:px-3"
+        style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
+      >
+        Copy link
+      </button>
+    ) : (
+      <span style={{ color: "#4b5563" }} title="expired — no longer works">—</span>
+    );
+
+  /* Eight columns do not fit a 390px screen, and the copy button is the last
+     of them — side-scrolling would bury the only control on the row. */
+  const historyCards: MobileCardItem[] = history.map((h, i) => ({
+    id: i,
+    title: h.operator,
+    rows: [
+      {
+        label: "Link",
+        value: (
+          <span className="font-mono break-all" style={{ color: "#9ca3af" }}>
+            {h.token_preview || "—"}
+          </span>
+        ),
+      },
+      { label: "Status", value: statusCell(h) },
+      { label: "Sent by", value: h.sent_by || "—" },
+      { label: "Valid for", value: h.expiry_label || "—" },
+      { label: "Sent", value: fmt(h.created_at) },
+      { label: "Expires", value: fmt(h.expires_at) },
+      { label: "Action", value: rowAction(h) },
+    ],
+  }));
+
   return (
     <div className="space-y-8">
       <div className="space-y-6 max-w-2xl">
@@ -108,7 +154,7 @@ export default function PitchLinksPage() {
         </div>
 
         <div
-          className="rounded-xl p-6 space-y-4"
+          className="rounded-xl p-6 space-y-4 max-md:p-4"
           style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
         >
           <div>
@@ -121,7 +167,7 @@ export default function PitchLinksPage() {
               onChange={(e) => setOperator(e.target.value)}
               placeholder="e.g. Time2bet"
               maxLength={60}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -137,7 +183,7 @@ export default function PitchLinksPage() {
                   <button
                     key={d}
                     onClick={() => { setDays(d); setCustomHours(""); }}
-                    className="rounded-lg px-4 py-2 text-sm font-semibold transition"
+                    className="rounded-lg px-4 py-2 text-sm font-semibold transition max-md:min-h-[44px] max-md:flex-1"
                     style={{
                       backgroundColor: active ? "#f0b100" : "#0a0a0a",
                       color: active ? "#000" : "#e5e7eb",
@@ -149,7 +195,7 @@ export default function PitchLinksPage() {
                 );
               })}
               <span className="text-xs" style={{ color: "#4b5563" }}>or</span>
-              <div className="relative">
+              <div className="relative max-md:flex-1">
                 <input
                   type="number"
                   min={1}
@@ -157,7 +203,7 @@ export default function PitchLinksPage() {
                   value={customHours}
                   onChange={(e) => setCustomHours(e.target.value.replace(/[^0-9]/g, ""))}
                   placeholder="hours"
-                  className="w-32 rounded-lg pl-3 pr-10 py-2 text-sm text-white outline-none"
+                  className="w-32 rounded-lg pl-3 pr-10 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
                   style={{
                     ...inputStyle,
                     border: customHours.trim() ? "1px solid #f0b100" : "1px solid #262626",
@@ -179,7 +225,7 @@ export default function PitchLinksPage() {
           <button
             onClick={generate}
             disabled={busy}
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#f0b100" }}
           >
             {busy ? "Generating…" : "Generate link"}
@@ -188,23 +234,23 @@ export default function PitchLinksPage() {
 
         {result && (
           <div
-            className="rounded-xl p-6 space-y-3"
+            className="rounded-xl p-6 space-y-3 max-md:p-4"
             style={{ backgroundColor: "#171717", border: "1px solid rgba(5,223,114,0.3)" }}
           >
             <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#05df72" }}>
               Link for {result.operator} · expires in {result.expiresLabel}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 max-md:flex-col">
               <input
                 readOnly
                 value={result.url}
                 onFocus={(e) => e.currentTarget.select()}
-                className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none"
+                className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px] max-md:w-full"
                 style={inputStyle}
               />
               <button
                 onClick={() => copy(result.url)}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
                 style={{ backgroundColor: "#05df72" }}
               >
                 Copy
@@ -229,7 +275,12 @@ export default function PitchLinksPage() {
             No links sent yet. Generate one above and it will show here.
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg" style={{ border: "1px solid #1f1f1f" }}>
+          <>
+          <div className="md:hidden">
+            <MobileCardList items={historyCards} />
+          </div>
+
+          <div className="overflow-x-auto rounded-lg max-md:hidden" style={{ border: "1px solid #1f1f1f" }}>
             <table className="w-full text-xs" style={{ color: "#d1d5db" }}>
               <thead style={{ color: "#6b7280" }}>
                 <tr className="text-left">
@@ -250,33 +301,18 @@ export default function PitchLinksPage() {
                     <td className="px-3 py-2 font-mono whitespace-nowrap" style={{ color: "#9ca3af" }}>
                       {h.token_preview || "—"}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span style={{ color: h.status === "active" ? "#6ee7b7" : "#9ca3af" }}>
-                        ● {h.status}
-                      </span>
-                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{statusCell(h)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{h.sent_by || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{h.expiry_label || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.created_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.expires_at)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {h.token ? (
-                        <button
-                          onClick={() => copy(`${window.location.origin}/pitch?t=${h.token}`)}
-                          className="text-xs px-2 py-1 rounded"
-                          style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
-                        >
-                          Copy link
-                        </button>
-                      ) : (
-                        <span style={{ color: "#4b5563" }} title="expired — no longer works">—</span>
-                      )}
-                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{rowAction(h)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

@@ -24,6 +24,10 @@ export interface AdminState {
   sidebarCollapsed: boolean;
   loading: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  /** Below lg the sidebar is an off-canvas drawer; this is its open state.
+   *  Desktop ignores it entirely. */
+  mobileNavOpen: boolean;
+  setMobileNavOpen: (open: boolean) => void;
 }
 
 const AdminContext = createContext<AdminState | null>(null);
@@ -39,6 +43,7 @@ interface AdminProviderProps {
 export function AdminProvider({ children }: AdminProviderProps) {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -68,6 +73,8 @@ export function AdminProvider({ children }: AdminProviderProps) {
     sidebarCollapsed,
     loading,
     setSidebarCollapsed,
+    mobileNavOpen,
+    setMobileNavOpen,
   };
 
   return <AdminContext value={value}>{children}</AdminContext>;

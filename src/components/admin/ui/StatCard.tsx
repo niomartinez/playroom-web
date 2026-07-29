@@ -27,7 +27,7 @@ export default function StatCard({ label, value, icon, trend, color, onClick, hi
   return (
     <Tag
       onClick={onClick}
-      className={`rounded-xl p-5 flex flex-col gap-2 text-left w-full ${
+      className={`rounded-xl p-5 max-md:p-4 flex flex-col gap-2 text-left w-full ${
         onClick ? "cursor-pointer transition-colors hover:bg-white/[0.04]" : ""
       }`}
       style={{
@@ -35,20 +35,28 @@ export default function StatCard({ label, value, icon, trend, color, onClick, hi
         border: "1px solid rgba(208,135,0,0.2)",
       }}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:gap-2">
         <span
-          className="text-xs font-semibold uppercase tracking-wider"
+          className="text-xs font-semibold uppercase tracking-wider max-md:min-w-0"
           style={{ color: "#d08700" }}
         >
           {label}
         </span>
         {icon && (
-          <span style={{ color: "#6a7282" }}>{icon}</span>
+          <span className="max-md:shrink-0" style={{ color: "#6a7282" }}>{icon}</span>
         )}
       </div>
 
-      <div className="flex items-end gap-2">
-        <span className="text-3xl font-bold" style={{ color: color || "#ffffff" }}>{value}</span>
+      {/* Below md these cards sit two-up on a 390px screen, so a long value
+          (a peso total, a big count) has to be allowed to shrink and wrap
+          rather than push the card wider than its column. */}
+      <div className="flex items-end gap-2 max-md:min-w-0">
+        <span
+          className="text-3xl font-bold max-md:text-2xl max-md:min-w-0 max-md:[overflow-wrap:anywhere]"
+          style={{ color: color || "#ffffff" }}
+        >
+          {value}
+        </span>
         {trend && (
           <span
             className="text-xs font-medium mb-1"

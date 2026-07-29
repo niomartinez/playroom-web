@@ -72,9 +72,13 @@ export default function Pagination({
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
+  // minWidth lives in a class, not here, so the mobile 44px touch target can
+  // override it — an inline style would win over the breakpoint.
+  const btnClass =
+    "min-w-[30px] max-md:min-w-[44px] max-md:min-h-[44px]";
+
   const btn = (active: boolean) =>
     ({
-      minWidth: 30,
       padding: "4px 8px",
       borderRadius: 6,
       fontSize: 12,
@@ -102,7 +106,7 @@ export default function Pagination({
             <select
               value={String(pageSize)}
               onChange={(e) => onPageSize(Number(e.target.value))}
-              className="rounded px-2 py-1 text-white outline-none"
+              className="rounded px-2 py-1 text-white outline-none max-md:min-h-[44px]"
               style={{
                 backgroundColor: "rgba(0,0,0,0.6)",
                 border: "1px solid rgba(208,135,0,0.15)",
@@ -123,7 +127,7 @@ export default function Pagination({
           <button
             disabled={page <= 1}
             onClick={() => onPage(page - 1)}
-            className="rounded px-2 py-1 disabled:opacity-30 hover:bg-white/5"
+            className="rounded px-2 py-1 disabled:opacity-30 hover:bg-white/5 max-md:min-h-[44px] max-md:px-3"
             style={{ color: "#99a1af" }}
             aria-label="Previous page"
           >
@@ -142,7 +146,7 @@ export default function Pagination({
                 style={btn(p === page)}
                 aria-label={`Page ${p}`}
                 aria-current={p === page ? "page" : undefined}
-                className={p === page ? "" : "hover:bg-white/5"}
+                className={p === page ? btnClass : `${btnClass} hover:bg-white/5`}
               >
                 {p}
               </button>
@@ -152,7 +156,7 @@ export default function Pagination({
           <button
             disabled={page >= totalPages}
             onClick={() => onPage(page + 1)}
-            className="rounded px-2 py-1 disabled:opacity-30 hover:bg-white/5"
+            className="rounded px-2 py-1 disabled:opacity-30 hover:bg-white/5 max-md:min-h-[44px] max-md:px-3"
             style={{ color: "#99a1af" }}
             aria-label="Next page"
           >

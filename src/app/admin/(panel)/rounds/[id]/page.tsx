@@ -6,6 +6,9 @@ import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import MobileCardList, {
+  type MobileCardItem,
+} from "@/components/admin/ui/MobileCardList";
 import {
   RoundCards,
   resultColor,
@@ -111,12 +114,59 @@ export default function RoundDetailPage() {
 
   const canVoid = !["settled", "settling", "voided"].includes(round.status);
 
+  const money = (v: number) =>
+    Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+  /* Below md the bet table becomes one card per bet: the player heads it and
+     the remaining columns drop underneath as label/value pairs. */
+  const betCards: MobileCardItem[] = round.bets.map((bet) => ({
+    id: bet.id,
+    title: bet.player_username || bet.player_external_id,
+    rows: [
+      {
+        label: "Bet",
+        value: <span className="font-mono">{bet.team}</span>,
+      },
+      {
+        label: "Amount",
+        value: <span className="font-mono">{money(bet.bet_amount)}</span>,
+      },
+      {
+        label: "Odds",
+        value: (
+          <span className="font-mono" style={{ color: "#99a1af" }}>
+            {bet.odds ?? "\u2014"}
+          </span>
+        ),
+      },
+      {
+        label: "Payout",
+        value: (
+          <span
+            className="font-mono"
+            style={{
+              color: bet.payoff && Number(bet.payoff) > 0 ? "#00bc7d" : "#99a1af",
+            }}
+          >
+            {bet.payoff ? money(bet.payoff) : "\u2014"}
+          </span>
+        ),
+      },
+      {
+        label: "Status",
+        value: (
+          <StatusBadge status={betStatusBadge(bet.status)} label={bet.status} />
+        ),
+      },
+    ],
+  }));
+
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back link */}
       <button
         onClick={() => router.push("/admin/rounds")}
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm hover:underline max-md:min-h-[44px]"
         style={{ color: "#99a1af" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -125,8 +175,8 @@ export default function RoundDetailPage() {
         Back to Rounds
       </button>
 
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-white font-mono">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold text-white font-mono max-md:break-all">
           {round.external_fight_id}
         </h1>
         <StatusBadge
@@ -153,13 +203,15 @@ export default function RoundDetailPage() {
 
       {/* Round info */}
       <div
-        className="rounded-xl p-6"
+        className="rounded-xl p-6 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        {/* Started/Ended are full timestamps, so they get their own row on a
+            phone and a half-width one on a tablet. Four across from lg up. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
           <div>
             <span style={{ color: "#6a7282" }}>Table</span>
             <p className="text-white mt-0.5">{round.game_name || round.external_game_id}</p>
@@ -206,7 +258,7 @@ export default function RoundDetailPage() {
         }}
       >
         <div
-          className="flex items-center justify-between px-6 py-4"
+          className="flex items-center justify-between px-6 py-4 max-md:flex-col max-md:items-start max-md:gap-1 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
         >
           <h2
@@ -225,7 +277,12 @@ export default function RoundDetailPage() {
             No bets placed on this round
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Cards below md, the table above it. */}
+          <div className="md:hidden px-4 py-4">
+            <MobileCardList items={betCards} />
+          </div>
+          <div className="overflow-x-auto max-md:hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}>
@@ -278,13 +335,14 @@ export default function RoundDetailPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
       {/* Void action */}
       {canVoid && (
         <div
-          className="rounded-xl p-6 space-y-4"
+          className="rounded-xl p-6 space-y-4 max-md:p-4"
           style={{
             backgroundColor: "#171717",
             border: "1px solid rgba(251,44,54,0.2)",
@@ -298,7 +356,7 @@ export default function RoundDetailPage() {
           </h2>
           <button
             onClick={() => setShowVoid(true)}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(251,44,54,0.1)",
               color: "#fb2c36",

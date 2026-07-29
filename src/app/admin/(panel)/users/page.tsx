@@ -209,12 +209,15 @@ export default function UsersPage() {
     border: "1px solid rgba(208,135,0,0.2)" as const,
   };
 
+  /* Card mode below md. This list has no row click, so the card is a plain
+     container and the per-row actions can stay inside it as real buttons. */
   const columns: Column<AdminUser>[] = [
-    { key: "display_name", label: "Name", sortable: true },
-    { key: "email", label: "Username / Email" },
+    { key: "display_name", label: "Name", sortable: true, mobile: "title" },
+    { key: "email", label: "Username / Email", mobile: "row", mobileLabel: "Username" },
     {
       key: "role",
       label: "Role",
+      mobile: "row",
       render: (row) => (
         <span
           className="text-xs font-semibold uppercase"
@@ -227,28 +230,33 @@ export default function UsersPage() {
     {
       key: "is_active",
       label: "Status",
+      mobile: "row",
       render: (row) => <StatusBadge status={row.is_active ? "active" : "inactive"} />,
     },
     {
       key: "created_at",
       label: "Created",
+      mobile: "row",
       render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString() : "\u2014",
     },
     {
       key: "_actions",
       label: "",
+      mobile: "row",
+      // The table header is blank, which reads as nothing at all in a card.
+      mobileLabel: "Actions",
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-md:flex-wrap max-md:justify-end">
           <button
             onClick={(e) => { e.stopPropagation(); openEdit(row); }}
-            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors max-md:min-h-[44px] max-md:px-3"
             style={{ color: "#99a1af" }}
           >
             Edit
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setResetUser(row); }}
-            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors max-md:min-h-[44px] max-md:px-3"
             style={{ color: "#f0b100" }}
           >
             Reset password
@@ -256,7 +264,7 @@ export default function UsersPage() {
           {row.is_active && (
             <button
               onClick={(e) => { e.stopPropagation(); setDeactivateUser(row); }}
-              className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+              className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors max-md:min-h-[44px] max-md:px-3"
               style={{ color: "#fb2c36" }}
             >
               Deactivate
@@ -269,11 +277,11 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
         <h1 className="text-2xl font-bold text-white">Admin Users</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           Create User
@@ -301,22 +309,22 @@ export default function UsersPage() {
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Username / Email</label>
           <input type="text" placeholder="username or admin@example.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
         </div>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Display Name</label>
           <input type="text" placeholder="Jane Doe" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
         </div>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Password</label>
           <input type="password" placeholder="Min 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
         </div>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Role</label>
           <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle}>
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle}>
             <option value="viewer">Viewer</option>
             <option value="operator_admin">Operator Admin</option>
             <option value="superadmin">Super Admin</option>
@@ -335,12 +343,12 @@ export default function UsersPage() {
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Display Name</label>
           <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
         </div>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Role</label>
           <select value={editRole} onChange={(e) => setEditRole(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle}>
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle}>
             <option value="viewer">Viewer</option>
             <option value="operator_admin">Operator Admin</option>
             <option value="superadmin">Super Admin</option>
@@ -351,7 +359,7 @@ export default function UsersPage() {
             New Password (leave blank to keep current)
           </label>
           <input type="password" placeholder="Leave blank to keep" value={editPassword} onChange={(e) => setEditPassword(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none" style={inputStyle} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle} />
         </div>
       </FormDialog>
 
@@ -378,13 +386,13 @@ export default function UsersPage() {
 
       {/* Reset Password Result */}
       {resetResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center max-md:p-4">
           <div
             className="absolute inset-0 bg-black/70"
             onClick={() => setResetResult(null)}
           />
           <div
-            className="relative z-10 w-full max-w-md rounded-xl overflow-hidden"
+            className="relative z-10 w-full max-w-md rounded-xl overflow-hidden max-md:max-h-[90dvh] max-md:overflow-y-auto"
             style={{
               background: "linear-gradient(135deg, #171717 0%, #000000 100%)",
               border: "1px solid rgba(208,135,0,0.3)",
@@ -416,14 +424,14 @@ export default function UsersPage() {
               </p>
               <div className="flex items-center gap-2">
                 <code
-                  className="flex-1 rounded-lg px-3 py-2 text-sm font-mono text-white select-all"
+                  className="flex-1 rounded-lg px-3 py-2 text-sm font-mono text-white select-all max-md:min-w-0 max-md:break-all"
                   style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.2)" }}
                 >
                   {resetResult.tempPassword}
                 </code>
                 <button
                   onClick={copyTempPassword}
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-black shrink-0"
+                  className="rounded-lg px-3 py-2 text-sm font-semibold text-black shrink-0 max-md:min-h-[44px]"
                   style={{ backgroundColor: "#f0b100" }}
                 >
                   {copied ? "Copied!" : "Copy"}
@@ -440,7 +448,7 @@ export default function UsersPage() {
             >
               <button
                 onClick={() => setResetResult(null)}
-                className="rounded-lg px-6 py-2 text-sm font-semibold text-black"
+                className="rounded-lg px-6 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
                 style={{ backgroundColor: "#f0b100" }}
               >
                 Done

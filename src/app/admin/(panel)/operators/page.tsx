@@ -85,13 +85,17 @@ export default function OperatorsPage() {
     }
   }
 
+  /* Card mode below md: the name identifies the provider, and the four
+     remaining columns all answer something an operator asks on a phone (which
+     credentials, which wallet mode, live or not, since when). */
   const columns: Column<Operator>[] = [
-    { key: "name", label: "Name", sortable: true },
-    { key: "client_id", label: "Client ID" },
-    { key: "wallet_mode", label: "Wallet Mode" },
+    { key: "name", label: "Name", sortable: true, mobile: "title" },
+    { key: "client_id", label: "Client ID", mobile: "row" },
+    { key: "wallet_mode", label: "Wallet Mode", mobile: "row", mobileLabel: "Wallet" },
     {
       key: "is_active",
       label: "Active",
+      mobile: "row",
       render: (row) => (
         <StatusBadge status={row.is_active ? "active" : "inactive"} />
       ),
@@ -100,6 +104,7 @@ export default function OperatorsPage() {
       key: "created_at",
       label: "Created",
       sortable: true,
+      mobile: "row",
       render: (row) =>
         row.created_at
           ? new Date(row.created_at).toLocaleDateString()
@@ -109,11 +114,13 @@ export default function OperatorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* "System Providers" and "Create System Provider" cannot share a 390px
+          row, so below md they stack and the action spans the width. */}
+      <div className="flex items-center justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
         <h1 className="text-2xl font-bold text-white">System Providers</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           Create System Provider
@@ -156,7 +163,7 @@ export default function OperatorsPage() {
             placeholder="e.g. Galaxy Club"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.2)",
@@ -175,7 +182,7 @@ export default function OperatorsPage() {
             placeholder="https://operator.com/wallet/api"
             value={newWalletUrl}
             onChange={(e) => setNewWalletUrl(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.2)",
@@ -192,7 +199,7 @@ export default function OperatorsPage() {
           <select
             value={newWalletMode}
             onChange={(e) => setNewWalletMode(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.2)",

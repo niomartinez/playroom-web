@@ -14,6 +14,21 @@ import { nextSort, type SortDir } from "@/components/admin/ui/SortHeader";
  * caller folds in whatever filters are currently active. Losing the filter on
  * a sort click would be its own bug.
  */
+/**
+ * Exported for the same reason as {@link SortHeaderProps}: card mode has no
+ * `<thead>`, so DataTable reads these props back off the header element and
+ * drives the equivalent navigation from a `<select>`. The URL stays the source
+ * of truth for these tables.
+ */
+export interface SortHeaderLinkProps {
+  label: string;
+  sortKey: string;
+  activeKey: string;
+  activeDir: SortDir;
+  defaultDir?: SortDir;
+  hrefFor: (next: { sort_by: string; sort_dir: SortDir }) => string;
+}
+
 export default function SortHeaderLink({
   label,
   sortKey,
@@ -21,14 +36,7 @@ export default function SortHeaderLink({
   activeDir,
   defaultDir = "desc",
   hrefFor,
-}: {
-  label: string;
-  sortKey: string;
-  activeKey: string;
-  activeDir: SortDir;
-  defaultDir?: SortDir;
-  hrefFor: (next: { sort_by: string; sort_dir: SortDir }) => string;
-}) {
+}: SortHeaderLinkProps) {
   const active = activeKey === sortKey;
   const next = nextSort(sortKey, activeKey, activeDir, defaultDir);
 

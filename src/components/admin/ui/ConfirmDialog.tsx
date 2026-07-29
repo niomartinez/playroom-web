@@ -22,13 +22,14 @@ export default function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center max-md:p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
 
-      {/* Dialog */}
+      {/* Dialog. Capped at 90dvh below md so a long message scrolls in the body
+          instead of pushing the buttons off a short phone viewport. */}
       <div
-        className="relative z-10 w-full max-w-sm rounded-xl overflow-hidden"
+        className="relative z-10 w-full max-w-sm rounded-xl overflow-hidden max-md:flex max-md:flex-col max-md:max-h-[90dvh]"
         style={{
           background: "linear-gradient(135deg, #171717 0%, #000000 100%)",
           border: danger
@@ -40,7 +41,7 @@ export default function ConfirmDialog({
       >
         {/* Header */}
         <div
-          className="px-6 py-4"
+          className="px-6 py-4 max-md:shrink-0 max-md:px-4"
           style={{
             borderBottom: danger
               ? "1px solid rgba(251,44,54,0.2)"
@@ -56,15 +57,15 @@ export default function ConfirmDialog({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:px-4">
           <p className="text-sm" style={{ color: "#99a1af" }}>
             {message}
           </p>
         </div>
 
-        {/* Footer */}
+        {/* Footer. Stacked and full width below md, primary action on top. */}
         <div
-          className="flex items-center justify-end gap-3 px-6 py-4"
+          className="flex items-center justify-end gap-3 px-6 py-4 max-md:shrink-0 max-md:flex-col-reverse max-md:items-stretch max-md:px-4"
           style={{
             borderTop: danger
               ? "1px solid rgba(251,44,54,0.2)"
@@ -73,7 +74,7 @@ export default function ConfirmDialog({
         >
           <button
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
+            className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors max-md:min-h-[44px] max-md:w-full"
             style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
           >
             Cancel
@@ -83,7 +84,7 @@ export default function ConfirmDialog({
               onConfirm();
               onClose();
             }}
-            className="rounded-lg px-6 py-2 text-sm font-semibold text-white"
+            className="rounded-lg px-6 py-2 text-sm font-semibold text-white max-md:min-h-[44px] max-md:w-full"
             style={{
               backgroundColor: danger ? "#fb2c36" : "#f0b100",
               color: danger ? "#ffffff" : "#000000",

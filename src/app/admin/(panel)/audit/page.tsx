@@ -112,34 +112,37 @@ function AuditPageInner() {
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div className="flex flex-wrap gap-3 items-end">
-          <div className="grow min-w-[220px]">
+          {/* Below md every control is its own full-width row: the pinned
+              min-w-[220px] and the intrinsic width of a date input together
+              overflow a 390px screen. */}
+          <div className="grow min-w-[220px] max-md:w-full max-md:min-w-0">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Search</label>
             <input
               type="text"
               placeholder="Action, entity, entity id or IP..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Action</label>
             <input
               type="text"
               placeholder="e.g. update, soft_delete"
               value={values.action}
               onChange={(e) => setFilter({ action: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Entity Type</label>
             <select
               value={values.entity_type}
               onChange={(e) => setFilter({ entity_type: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             >
               <option value="">All</option>
@@ -153,27 +156,27 @@ function AuditPageInner() {
               <option value="ip_allowlist">IP Allowlist</option>
             </select>
           </div>
-          <div>
+          <div className="max-md:flex-1 max-md:min-w-[9rem]">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>From</label>
             <input
               type="date"
               value={values.date_from}
               onChange={(e) => setFilter({ date_from: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:flex-1 max-md:min-w-[9rem]">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>To</label>
             <input
               type="date"
               value={values.date_to}
               onChange={(e) => setFilter({ date_to: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Sort by</label>
             <select
               value={`${sortBy}:${sortDir}`}
@@ -181,7 +184,7 @@ function AuditPageInner() {
                 const [col, dir] = e.target.value.split(":");
                 setFilter({ sort_by: col, sort_dir: dir === "asc" ? "asc" : "desc" });
               }}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             >
               <option value="created_at:desc">Newest first</option>
@@ -208,7 +211,7 @@ function AuditPageInner() {
                   date_to: "",
                 });
               }}
-              className="rounded-lg px-3 py-2 text-sm"
+              className="rounded-lg px-3 py-2 text-sm max-md:w-full max-md:min-h-[44px]"
               style={{ backgroundColor: "#262626", color: "#d1d5db" }}
             >
               Clear
@@ -233,11 +236,11 @@ function AuditPageInner() {
             {entries.map((entry) => (
               <div
                 key={entry.id}
-                className="px-6 py-4 cursor-pointer transition-colors hover:bg-white/[0.02]"
+                className="px-6 py-4 cursor-pointer transition-colors hover:bg-white/[0.02] max-md:px-4"
                 onClick={() => setExpanded(expanded === entry.id ? null : entry.id)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between max-md:flex-col max-md:items-start max-md:gap-2">
+                  <div className="flex items-center gap-3 max-md:flex-wrap max-md:gap-y-1">
                     <span
                       className="text-xs font-semibold uppercase px-2 py-0.5 rounded"
                       style={{
@@ -254,8 +257,11 @@ function AuditPageInner() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-xs" style={{ color: "#6a7282" }}>
-                    <span>{entry.admin_display_name || entry.admin_email}</span>
+                  <div
+                    className="flex items-center gap-4 text-xs max-md:w-full max-md:flex-wrap max-md:gap-x-3 max-md:gap-y-1"
+                    style={{ color: "#6a7282" }}
+                  >
+                    <span className="max-md:break-all">{entry.admin_display_name || entry.admin_email}</span>
                     <span>{new Date(entry.created_at).toLocaleString()}</span>
                     <span className="font-mono">{entry.ip_address}</span>
                   </div>
@@ -263,7 +269,10 @@ function AuditPageInner() {
 
                 {/* Expanded detail */}
                 {expanded === entry.id && (
-                  <div className="mt-3 grid grid-cols-2 gap-4">
+                  /* One column below md: two JSON panes side by side on a
+                     390px screen leaves ~170px each. Each pane keeps its own
+                     horizontal scroll rather than widening the page. */
+                  <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
                     {entry.old_value && (
                       <div>
                         <span className="text-xs font-medium" style={{ color: "#fb2c36" }}>Old Value</span>

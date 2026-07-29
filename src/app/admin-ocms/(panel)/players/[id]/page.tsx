@@ -2,6 +2,7 @@ import Link from "next/link";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import StatCard from "@/components/admin/ui/StatCard";
 import LinkSpinner from "@/components/admin/ui/LinkSpinner";
+import MobileCardList from "@/components/admin/ui/MobileCardList";
 import { getPlayerDetail, getPlayerTransactions } from "@/lib/ocms-server";
 
 const TX_PAGE_SIZE = 15;
@@ -61,12 +62,73 @@ export default async function OcmsPlayerDetailPage({
       : `/admin-ocms/players/${id}`;
   }
 
+  const txAmount = (tx: (typeof transactions)[number]) =>
+    `${tx.type === "credit" || tx.type === "void_refund" ? "+" : "-"}${Math.abs(
+      Number(tx.amount),
+    ).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+  const txCards = transactions.map((tx) => ({
+    id: tx.id,
+    title: (
+      <span
+        className="text-xs font-semibold uppercase"
+        style={{ color: txTypeColor(tx.type) }}
+      >
+        {tx.type.replace(/_/g, " ")}
+      </span>
+    ),
+    rows: [
+      {
+        label: "Amount",
+        value: (
+          <span className="font-mono" style={{ color: txTypeColor(tx.type) }}>
+            {txAmount(tx)}
+          </span>
+        ),
+      },
+      {
+        label: "Before",
+        value: (
+          <span className="font-mono" style={{ color: "#99a1af" }}>
+            {Number(tx.balance_before).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}
+          </span>
+        ),
+      },
+      {
+        label: "After",
+        value: (
+          <span className="font-mono">
+            {Number(tx.balance_after).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}
+          </span>
+        ),
+      },
+      {
+        label: "Description",
+        value: (
+          <span style={{ color: "#6a7282" }}>{tx.description || "—"}</span>
+        ),
+      },
+      {
+        label: "Date",
+        value: (
+          <span style={{ color: "#99a1af" }}>
+            {new Date(tx.created_at).toLocaleString()}
+          </span>
+        ),
+      },
+    ],
+  }));
+
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back link */}
       <Link
         href="/admin-ocms/players"
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm hover:underline max-md:min-h-[44px]"
         style={{ color: "#99a1af" }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -76,20 +138,23 @@ export default async function OcmsPlayerDetailPage({
         <LinkSpinner />
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold text-white">{player.username}</h1>
         <StatusBadge status={player.is_active ? "active" : "inactive"} />
       </div>
 
       {/* Info card */}
       <div
-        className="rounded-xl p-6"
+        className="rounded-xl p-6 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+        {/* Single column on a phone: Joined and Last Updated are full
+            timestamps, and half of 390px cannot hold one without pushing the
+            page sideways. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div>
             <span style={{ color: "#6a7282" }}>External ID</span>
             <p className="text-white font-mono mt-0.5">
@@ -161,7 +226,7 @@ export default async function OcmsPlayerDetailPage({
         }}
       >
         <div
-          className="px-6 py-4"
+          className="px-6 py-4 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
         >
           <h2
@@ -173,11 +238,17 @@ export default async function OcmsPlayerDetailPage({
         </div>
 
         {transactions.length === 0 ? (
-          <div className="px-6 py-8 text-center" style={{ color: "#6a7282" }}>
+          <div className="px-6 py-8 text-center max-md:px-4" style={{ color: "#6a7282" }}>
             No transactions found
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Cards (below md) — a six-column ledger cannot be read on a phone. */}
+          <div className="px-4 py-4 md:hidden">
+            <MobileCardList items={txCards} emptyMessage="No transactions found" />
+          </div>
+
+          <div className="overflow-x-auto max-md:hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}>
@@ -243,6 +314,7 @@ export default async function OcmsPlayerDetailPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Transaction pagination */}
@@ -262,13 +334,16 @@ export default async function OcmsPlayerDetailPage({
                 <Link
                   href={txPageHref(txPage - 1)}
                   scroll={false}
-                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5"
+                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5 max-md:min-h-[44px] max-md:px-4"
                   style={{ color: "#99a1af" }}
                 >
                   <LinkSpinner /> Prev
                 </Link>
               ) : (
-                <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                <span
+                  className="rounded px-3 py-1 opacity-30 max-md:flex max-md:items-center max-md:min-h-[44px] max-md:px-4"
+                  style={{ color: "#99a1af" }}
+                >
                   Prev
                 </span>
               )}
@@ -276,13 +351,16 @@ export default async function OcmsPlayerDetailPage({
                 <Link
                   href={txPageHref(txPage + 1)}
                   scroll={false}
-                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5"
+                  className="flex items-center gap-1.5 rounded px-3 py-1 hover:bg-white/5 max-md:min-h-[44px] max-md:px-4"
                   style={{ color: "#99a1af" }}
                 >
                   Next <LinkSpinner />
                 </Link>
               ) : (
-                <span className="rounded px-3 py-1 opacity-30" style={{ color: "#99a1af" }}>
+                <span
+                  className="rounded px-3 py-1 opacity-30 max-md:flex max-md:items-center max-md:min-h-[44px] max-md:px-4"
+                  style={{ color: "#99a1af" }}
+                >
                   Next
                 </span>
               )}

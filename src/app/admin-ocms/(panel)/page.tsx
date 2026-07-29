@@ -63,7 +63,7 @@ export default async function OcmsDashboard() {
 
       {/* Report shortcut */}
       <div
-        className="rounded-xl p-6"
+        className="rounded-xl p-6 max-md:p-4"
         style={{
           backgroundColor: "#171717",
           border: "1px solid rgba(208,135,0,0.2)",

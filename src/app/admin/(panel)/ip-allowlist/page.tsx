@@ -156,21 +156,27 @@ export default function IPAllowlistPage() {
     }
   }
 
+  /* Card mode below md. The address is the identity, and nothing here is
+     droppable: an allowlist entry you cannot see the surfaces or the active
+     flag of is an entry you cannot safely act on from a phone. */
   const columns: Column<IPEntry>[] = [
     {
       key: "ip_address",
       label: "IP Address",
       sortable: true,
+      mobile: "title",
       render: (r) => (
         <span style={{ fontFamily: "ui-monospace, monospace" }}>{r.ip_address}</span>
       ),
     },
-    { key: "label", label: "Belongs to", sortable: true },
+    { key: "label", label: "Belongs to", sortable: true, mobile: "row", mobileLabel: "Owner" },
     {
       key: "surfaces",
       label: "Can access",
+      mobile: "row",
+      mobileLabel: "Access",
       render: (r) => (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap max-md:justify-end">
           {(r.surfaces ?? []).map((s) => (
             <span
               key={s}
@@ -190,11 +196,13 @@ export default function IPAllowlistPage() {
     {
       key: "is_active",
       label: "Active",
+      mobile: "row",
       render: (r) => <StatusBadge status={r.is_active ? "active" : "inactive"} />,
     },
     {
       key: "notes",
       label: "Notes",
+      mobile: "row",
       render: (r) => (
         <span style={{ color: "#6a7282" }}>{r.notes || "—"}</span>
       ),
@@ -202,18 +210,21 @@ export default function IPAllowlistPage() {
     {
       key: "actions",
       label: "",
+      mobile: "row",
+      // The table header is blank, which reads as nothing at all in a card.
+      mobileLabel: "Actions",
       render: (r) => (
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end max-md:flex-wrap">
           <button
             onClick={() => openEdit(r)}
-            className="rounded px-2 py-1 text-xs font-medium"
+            className="rounded px-2 py-1 text-xs font-medium max-md:min-h-[44px] max-md:px-4"
             style={{ backgroundColor: "#262626", color: "#d1d5db" }}
           >
             Edit
           </button>
           <button
             onClick={() => setConfirmDelete(r)}
-            className="rounded px-2 py-1 text-xs font-medium"
+            className="rounded px-2 py-1 text-xs font-medium max-md:min-h-[44px] max-md:px-4"
             style={{ backgroundColor: "rgba(251,44,54,0.14)", color: "#ff6467" }}
           >
             Remove
@@ -239,7 +250,7 @@ export default function IPAllowlistPage() {
           onChange={(e) => setIp(e.target.value)}
           disabled={Boolean(editing)}
           placeholder="112.201.70.116"
-          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none disabled:opacity-50"
+          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none disabled:opacity-50 max-md:min-h-[44px]"
           style={{ ...inputStyle, fontFamily: "ui-monospace, monospace" }}
         />
         {!editing && (
@@ -257,7 +268,7 @@ export default function IPAllowlistPage() {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Studio 1 / Office / Nio"
-          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
           style={inputStyle}
         />
       </div>
@@ -267,7 +278,10 @@ export default function IPAllowlistPage() {
         </span>
         <div className="space-y-1">
           {SURFACES.map((s) => (
-            <label key={s.key} className="flex items-center gap-2 text-sm text-white">
+            <label
+              key={s.key}
+              className="flex items-center gap-2 text-sm text-white max-md:min-h-[44px]"
+            >
               <input
                 type="checkbox"
                 checked={surfaces.includes(s.key)}
@@ -289,11 +303,11 @@ export default function IPAllowlistPage() {
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+          className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
           style={inputStyle}
         />
       </div>
-      <label className="flex items-center gap-2 text-sm text-white">
+      <label className="flex items-center gap-2 text-sm text-white max-md:min-h-[44px]">
         <input
           type="checkbox"
           checked={isActive}
@@ -306,7 +320,7 @@ export default function IPAllowlistPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">IP Allowlist</h1>
       <RefreshingHint show={refreshing && !loading} />
@@ -322,7 +336,7 @@ export default function IPAllowlistPage() {
             resetForm();
             setShowCreate(true);
           }}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px] max-md:shrink-0"
           style={{ backgroundColor: "#f0b100" }}
         >
           Add IP

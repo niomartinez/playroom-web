@@ -168,8 +168,8 @@ export default function OcmsCsUsersClient({
   };
 
   const columns: Column<OcmsCsUser>[] = [
-    { key: "display_name", label: "Name", sortable: true },
-    { key: "email", label: "Username / Email" },
+    { key: "display_name", label: "Name", sortable: true, mobile: "title" },
+    { key: "email", label: "Username / Email", mobileLabel: "Username" },
     {
       key: "is_active",
       label: "Status",
@@ -186,14 +186,16 @@ export default function OcmsCsUsersClient({
     {
       key: "_actions",
       label: "",
+      // The header is blank, which reads as an unlabelled pair in card mode.
+      mobileLabel: "Actions",
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-md:justify-end">
           <button
             onClick={(e) => {
               e.stopPropagation();
               openReset(row);
             }}
-            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors max-md:min-h-[44px] max-md:px-3"
             style={{ color: "#99a1af" }}
           >
             Reset Password
@@ -203,7 +205,7 @@ export default function OcmsCsUsersClient({
               e.stopPropagation();
               setToggleUser(row);
             }}
-            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors"
+            className="rounded px-2 py-1 text-xs hover:bg-white/5 transition-colors max-md:min-h-[44px] max-md:px-3"
             style={{ color: row.is_active ? "#fb2c36" : "#00bc7d" }}
           >
             {row.is_active ? "Deactivate" : "Activate"}
@@ -215,11 +217,11 @@ export default function OcmsCsUsersClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 max-md:flex-wrap">
         <h1 className="text-2xl font-bold text-white">CS Accounts</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           Create CS Account
@@ -285,13 +287,13 @@ export default function OcmsCsUsersClient({
       {/* Reset password dialog — one click sets the shared temp password and
           forces a change on next login. */}
       {pwUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center max-md:p-4">
           <div
             className="absolute inset-0 bg-black/70"
             onClick={() => setPwUser(null)}
           />
           <div
-            className="relative z-10 w-full max-w-md rounded-xl overflow-hidden"
+            className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col rounded-xl overflow-hidden"
             style={{
               background: "linear-gradient(135deg, #171717 0%, #000000 100%)",
               border: "1px solid rgba(208,135,0,0.3)",
@@ -308,7 +310,7 @@ export default function OcmsCsUsersClient({
               </h2>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4 max-md:px-4">
               {tempPassword ? (
                 <>
                   <p className="text-sm" style={{ color: "#99a1af" }}>
@@ -316,21 +318,21 @@ export default function OcmsCsUsersClient({
                     user — they will be required to set a new one at next login.
                   </p>
                   <div
-                    className="flex items-center justify-between gap-3 rounded-lg px-4 py-3"
+                    className="flex items-center justify-between gap-3 rounded-lg px-4 py-3 max-md:flex-wrap"
                     style={{
                       backgroundColor: "rgba(0,0,0,0.6)",
                       border: "1px solid rgba(208,135,0,0.3)",
                     }}
                   >
                     <code
-                      className="font-mono text-base tracking-wide"
+                      className="font-mono text-base tracking-wide max-md:min-w-0 max-md:break-all"
                       style={{ color: "#f0b100" }}
                     >
                       {tempPassword}
                     </code>
                     <button
                       onClick={copyTemp}
-                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-black transition hover:brightness-110"
+                      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-black transition hover:brightness-110 max-md:min-h-[44px] max-md:px-4"
                       style={{ backgroundColor: "#f0b100" }}
                     >
                       {copied ? "Copied!" : "Copy"}
@@ -350,12 +352,12 @@ export default function OcmsCsUsersClient({
             </div>
 
             <div
-              className="flex items-center justify-end gap-3 px-6 py-4"
+              className="flex items-center justify-end gap-3 px-6 py-4 max-md:flex-col-reverse max-md:items-stretch max-md:px-4"
               style={{ borderTop: "1px solid rgba(208,135,0,0.2)" }}
             >
               <button
                 onClick={() => setPwUser(null)}
-                className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors"
+                className="rounded-lg px-4 py-2 text-sm text-[#99a1af] hover:text-white transition-colors max-md:w-full max-md:min-h-[44px]"
                 style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
               >
                 {tempPassword ? "Done" : "Cancel"}
@@ -364,7 +366,7 @@ export default function OcmsCsUsersClient({
                 <button
                   onClick={handleResetPassword}
                   disabled={resetting}
-                  className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                  className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
                   style={{ backgroundColor: "#f0b100" }}
                 >
                   {resetting ? "Resetting..." : "Reset Password"}

@@ -1,6 +1,9 @@
 "use client";
 
 import StatCard from "@/components/admin/ui/StatCard";
+import MobileCardList, {
+  type MobileCardItem,
+} from "@/components/admin/ui/MobileCardList";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
@@ -141,6 +144,77 @@ function ReportsPageInner() {
 
   const breakdownData = activeTab === "operator" ? byOperator : byTable;
 
+  const totalWagered = breakdownData.reduce((s, r) => s + r.total_wagered, 0);
+  const totalPayout = breakdownData.reduce((s, r) => s + r.total_payout, 0);
+  const totalGgr = breakdownData.reduce((s, r) => s + r.ggr, 0);
+  const totalBets = breakdownData.reduce((s, r) => s + r.bet_count, 0);
+
+  /* Below md the five-column breakdown becomes one card per row, with the
+     totals row as a final card. Four right-aligned money columns squashed into
+     390px are unreadable, and side-scrolling a report you are reading top to
+     bottom is worse. */
+  const money = (v: number, style?: React.CSSProperties) => (
+    <span className="font-mono" style={style}>
+      {fmt(v)}
+    </span>
+  );
+
+  const breakdownCards: MobileCardItem[] = [
+    ...breakdownData.map((row, i) => {
+      const name = activeTab === "operator" ? row.operator_name : row.table_name;
+      return {
+        id: i,
+        title: name || "Unknown",
+        rows: [
+          { label: "Wagered", value: money(row.total_wagered) },
+          { label: "Payout", value: money(row.total_payout) },
+          {
+            label: "GGR",
+            value: money(row.ggr, {
+              color: row.ggr >= 0 ? "#00bc7d" : "#fb2c36",
+              fontWeight: 600,
+            }),
+          },
+          {
+            label: "Bets",
+            value: (
+              <span className="font-mono" style={{ color: "#99a1af" }}>
+                {row.bet_count.toLocaleString()}
+              </span>
+            ),
+          },
+        ],
+      };
+    }),
+    {
+      id: "total",
+      title: (
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
+          Total
+        </span>
+      ),
+      rows: [
+        { label: "Wagered", value: money(totalWagered) },
+        { label: "Payout", value: money(totalPayout) },
+        {
+          label: "GGR",
+          value: money(totalGgr, {
+            color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36",
+            fontWeight: 700,
+          }),
+        },
+        {
+          label: "Bets",
+          value: (
+            <span className="font-mono" style={{ color: "#99a1af" }}>
+              {totalBets.toLocaleString()}
+            </span>
+          ),
+        },
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Reports</h1>
@@ -154,7 +228,9 @@ function ReportsPageInner() {
         }}
       >
         <div className="flex flex-wrap gap-3 items-end">
-          <div>
+          {/* The two date inputs share a row below md; the presets become a
+              2-up grid and the export button its own full-width row. */}
+          <div className="max-md:flex-1 max-md:min-w-[9rem]">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               From
             </label>
@@ -162,11 +238,11 @@ function ReportsPageInner() {
               type="date"
               value={dateFrom}
               onChange={(e) => setValues({ date_from: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div>
+          <div className="max-md:flex-1 max-md:min-w-[9rem]">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               To
             </label>
@@ -174,37 +250,37 @@ function ReportsPageInner() {
               type="date"
               value={dateTo}
               onChange={(e) => setValues({ date_to: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
 
           {/* Preset buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 max-md:grid max-md:w-full max-md:grid-cols-2">
             <button
               onClick={() => setRange(todayISO(), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
+              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               Today
             </button>
             <button
               onClick={() => setRange(daysAgoISO(7), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
+              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               7 Days
             </button>
             <button
               onClick={() => setRange(daysAgoISO(30), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
+              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               30 Days
             </button>
             <button
               onClick={() => setRange(monthStartISO(), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors"
+              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
               style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               This Month
@@ -214,7 +290,7 @@ function ReportsPageInner() {
           <button
             onClick={exportCsv}
             disabled={loading || !summary}
-            className="ml-auto rounded-lg px-4 py-2 text-xs font-bold transition hover:brightness-110 disabled:opacity-40"
+            className="ml-auto rounded-lg px-4 py-2 text-xs font-bold transition hover:brightness-110 disabled:opacity-40 max-md:ml-0 max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#f0b100", color: "#000" }}
           >
             Export CSV
@@ -260,7 +336,7 @@ function ReportsPageInner() {
                 <button
                   key={tab}
                   onClick={() => setValues({ tab })}
-                  className="px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors"
+                  className="px-6 py-3 text-sm font-semibold uppercase tracking-wider transition-colors max-md:flex-1 max-md:min-h-[44px] max-md:px-3"
                   style={{
                     color: activeTab === tab ? "#f0b100" : "#6a7282",
                     borderBottom:
@@ -280,7 +356,12 @@ function ReportsPageInner() {
                 No data for this period
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              <div className="md:hidden px-4 py-4">
+                <MobileCardList items={breakdownCards} />
+              </div>
+
+              <div className="overflow-x-auto max-md:hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}>
@@ -355,44 +436,30 @@ function ReportsPageInner() {
                         Total
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold text-white">
-                        {fmt(
-                          breakdownData.reduce(
-                            (s, r) => s + r.total_wagered,
-                            0
-                          )
-                        )}
+                        {fmt(totalWagered)}
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold text-white">
-                        {fmt(
-                          breakdownData.reduce(
-                            (s, r) => s + r.total_payout,
-                            0
-                          )
-                        )}
+                        {fmt(totalPayout)}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-bold"
                         style={{
-                          color:
-                            breakdownData.reduce((s, r) => s + r.ggr, 0) >= 0
-                              ? "#00bc7d"
-                              : "#fb2c36",
+                          color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36",
                         }}
                       >
-                        {fmt(breakdownData.reduce((s, r) => s + r.ggr, 0))}
+                        {fmt(totalGgr)}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-semibold"
                         style={{ color: "#99a1af" }}
                       >
-                        {breakdownData
-                          .reduce((s, r) => s + r.bet_count, 0)
-                          .toLocaleString()}
+                        {totalBets.toLocaleString()}
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </>

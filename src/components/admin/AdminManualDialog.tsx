@@ -49,15 +49,17 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center max-md:p-3"
       style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
       onClick={onClose}
     >
+      {/* The size lives in classes rather than the style object so the mobile
+          override can win: below md the manual fills the width and is capped at
+          90dvh, which keeps the header (and its close button) on screen on a
+          short viewport while the body scrolls underneath it. */}
       <div
-        className="relative flex flex-col rounded-2xl overflow-hidden"
+        className="relative flex flex-col rounded-2xl overflow-hidden w-[min(90vw,860px)] h-[min(90vh,760px)] max-md:h-auto max-md:w-full max-md:max-h-[90dvh]"
         style={{
-          width: "min(90vw, 860px)",
-          height: "min(90vh, 760px)",
           background: "linear-gradient(135deg, #171717, #000000)",
           border: "1px solid rgba(208,135,0,0.3)",
           boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
@@ -66,7 +68,7 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-6 py-4 shrink-0"
+          className="flex items-center justify-between px-6 py-4 shrink-0 max-md:flex-wrap max-md:gap-3 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.2)" }}
         >
           <div className="flex items-center gap-3">
@@ -76,18 +78,18 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
             </svg>
             <h2 className="font-bold text-white" style={{ fontSize: 18 }}>Admin Manual</h2>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 max-md:w-full max-md:gap-2">
             <input
               type="text"
               placeholder="Search manual..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="rounded-lg px-3 py-1.5 text-xs text-white outline-none w-44"
+              className="rounded-lg px-3 py-1.5 text-xs text-white outline-none w-44 max-md:w-auto max-md:min-w-0 max-md:flex-1 max-md:min-h-[44px]"
               style={{ backgroundColor: "rgba(0,0,0,0.6)", border: "1px solid rgba(208,135,0,0.15)" }}
             />
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80"
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-opacity hover:opacity-80 max-md:min-h-[44px] max-md:shrink-0 max-md:px-3"
               style={{ backgroundColor: "rgba(208,135,0,0.2)", color: "#d08700", border: "1px solid rgba(208,135,0,0.4)" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -99,8 +101,9 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
             </button>
             <button
               onClick={onClose}
-              className="flex items-center justify-center rounded-lg transition-opacity hover:opacity-80"
-              style={{ width: 32, height: 32, backgroundColor: "rgba(255,255,255,0.06)" }}
+              aria-label="Close"
+              className="flex items-center justify-center rounded-lg transition-opacity hover:opacity-80 w-8 h-8 shrink-0 max-md:h-11 max-md:w-11"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#99a1af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -134,7 +137,7 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
           </nav>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5" style={{ color: "#d1d5db" }}>
+          <div className="flex-1 min-w-0 overflow-y-auto px-6 py-5 max-md:px-4" style={{ color: "#d1d5db" }}>
             <style>{`
               .admin-manual h2 { color: #d08700; font-size: 17px; font-weight: 700; margin: 28px 0 12px; letter-spacing: 0.03em; padding-bottom: 6px; border-bottom: 1px solid rgba(208,135,0,0.15); }
               .admin-manual h2:first-child { margin-top: 0; }
@@ -148,6 +151,13 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
               .admin-manual td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #d1d5db; }
               .admin-manual .tip { background: rgba(0,188,125,0.08); border: 1px solid rgba(0,188,125,0.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #7ddfb0; margin: 10px 0; }
               .admin-manual .warn { background: rgba(251,44,54,0.1); border: 1px solid rgba(251,44,54,0.3); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #fb8080; margin: 10px 0; }
+              /* Below md a three-column reference table squashes to unreadable.
+                 Let it keep its natural width and scroll inside itself instead
+                 of widening the dialog. */
+              @media (max-width: 767px) {
+                .admin-manual table { display: block; width: 100%; overflow-x: auto; }
+                .admin-manual code { overflow-wrap: anywhere; }
+              }
             `}</style>
 
             <div className="admin-manual" id="admin-manual-content">

@@ -28,15 +28,14 @@ export function nextSort(
   return { sort_by: key, sort_dir: defaultDir };
 }
 
-export default function SortHeader({
-  label,
-  sortKey,
-  activeKey,
-  activeDir,
-  defaultDir = "desc",
-  onSort,
-  align = "left",
-}: {
+/**
+ * Exported because a table header is a desktop-only affordance: below `md`
+ * there is no `<thead>` to click. DataTable reads these props off the header
+ * element it was handed and re-offers the same sort as a `<select>`, so the
+ * sort keeps happening in the database rather than quietly degrading to a
+ * reorder of the page you can already see.
+ */
+export interface SortHeaderProps {
   label: string;
   sortKey: string;
   activeKey: string;
@@ -45,7 +44,17 @@ export default function SortHeader({
   defaultDir?: SortDir;
   onSort: (next: { sort_by: string; sort_dir: SortDir }) => void;
   align?: "left" | "right";
-}) {
+}
+
+export default function SortHeader({
+  label,
+  sortKey,
+  activeKey,
+  activeDir,
+  defaultDir = "desc",
+  onSort,
+  align = "left",
+}: SortHeaderProps) {
   const active = activeKey === sortKey;
   return (
     <button

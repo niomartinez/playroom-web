@@ -1,6 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { isValidElement, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+
+import MobileCardList, {
+  type MobileCardItem,
+} from "@/components/admin/ui/MobileCardList";
+import SortHeader, {
+  type SortDir,
+  type SortHeaderProps,
+} from "@/components/admin/ui/SortHeader";
+import SortHeaderLink, {
+  type SortHeaderLinkProps,
+} from "@/components/admin/ui/SortHeaderLink";
 
 export interface Column<T> {
   key: string;
@@ -17,6 +29,10 @@ export interface Column<T> {
   /** Custom header node — used to drive server-side sorting. Wins over label. */
   header?: React.ReactNode;
   render?: (row: T) => React.ReactNode;
+  /** How this column appears in mobile card mode. Default: "row". */
+  mobile?: "title" | "row" | "hide";
+  /** Shorter label to use in card mode when the table header is verbose. */
+  mobileLabel?: string;
 }
 
 interface DataTableProps<T> {
@@ -32,6 +48,12 @@ interface DataTableProps<T> {
   disablePagination?: boolean;
 }
 
+/** Read a header element's props back, but only if it really is `type`. */
+function propsOf<P>(node: React.ReactNode, type: React.ElementType): P | null {
+  if (!isValidElement(node) || node.type !== type) return null;
+  return node.props as P;
+}
+
 export default function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
@@ -44,6 +66,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   pageSize = 10,
   disablePagination = false,
 }: DataTableProps<T>) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -77,6 +100,101 @@ export default function DataTable<T extends Record<string, unknown>>({
     onSearch?.(q);
   }
 
+  /* ---------------------------------------------------------------- *
+   * Card mode (below md). Everything from here to the return is used  *
+   * only by the card branch; the <table> below is untouched.          *
+   * ---------------------------------------------------------------- */
+
+  function cell(col: Column<T>, row: T): React.ReactNode {
+    return col.render
+      ? col.render(row)
+      : (row[col.key] as React.ReactNode) ?? "\u2014";
+  }
+
+  const cardColumns = columns.filter((col) => col.mobile !== "hide");
+  const titleColumn =
+    columns.find((col) => col.mobile === "title") ?? cardColumns[0];
+  const fieldColumns = cardColumns.filter((col) => col !== titleColumn);
+
+  const cardItems: MobileCardItem[] = pagedData.map((row, i) => {
+    const title = titleColumn ? cell(titleColumn, row) : null;
+    return {
+      id: i,
+      title,
+      rows: fieldColumns.map((col) => ({
+        label: col.mobileLabel ?? col.label,
+        value: cell(col, row),
+      })),
+      onClick: onRowClick ? () => onRowClick(row) : undefined,
+      // A rendered cell is often an element; only a plain value makes a useful
+      // accessible name. Otherwise the card's own content names the button.
+      actionLabel:
+        typeof title === "string" || typeof title === "number"
+          ? String(title)
+          : undefined,
+    };
+  });
+
+  /* A column header is unreachable in card mode, so the sort is re-offered as
+     a pair of selects. Server-sorted columns keep sorting on the server —
+     through the SAME callback (or the same URL) the header would have used, so
+     nothing silently degrades into "sorted among the twenty rows on screen". */
+  type SortOption = {
+    key: string;
+    label: string;
+    defaultDir: SortDir;
+    apply: (dir: SortDir) => void;
+  };
+
+  const sortOptions: SortOption[] = [];
+  let serverSort: { key: string; dir: SortDir } | null = null;
+
+  for (const col of columns) {
+    const cb = propsOf<SortHeaderProps>(col.header, SortHeader);
+    const link = propsOf<SortHeaderLinkProps>(col.header, SortHeaderLink);
+    if (cb) {
+      serverSort ??= { key: cb.activeKey, dir: cb.activeDir };
+      sortOptions.push({
+        key: cb.sortKey,
+        label: col.mobileLabel ?? cb.label,
+        defaultDir: cb.defaultDir ?? "desc",
+        apply: (dir) => cb.onSort({ sort_by: cb.sortKey, sort_dir: dir }),
+      });
+    } else if (link) {
+      serverSort ??= { key: link.activeKey, dir: link.activeDir };
+      sortOptions.push({
+        key: link.sortKey,
+        label: col.mobileLabel ?? link.label,
+        defaultDir: link.defaultDir ?? "desc",
+        apply: (dir) =>
+          router.push(link.hrefFor({ sort_by: link.sortKey, sort_dir: dir })),
+      });
+    } else if (col.sortable && !col.header) {
+      sortOptions.push({
+        key: col.key,
+        label: col.mobileLabel ?? col.label,
+        defaultDir: "asc",
+        apply: (dir) => {
+          setSortKey(col.key);
+          setSortDir(dir);
+          onSort?.(col.key, dir);
+        },
+      });
+    }
+  }
+
+  const activeSortKey = serverSort ? serverSort.key : sortKey ?? "";
+  const activeSortDir: SortDir = serverSort ? serverSort.dir : sortDir;
+  const activeSortOption =
+    sortOptions.find((opt) => opt.key === activeSortKey) ?? null;
+
+  const selectStyle = {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    border: "1px solid rgba(208,135,0,0.15)",
+  } as const;
+  const selectClass =
+    "w-full min-h-[44px] rounded-lg px-3 text-sm text-white outline-none disabled:opacity-40";
+
   return (
     <div
       className="rounded-xl overflow-hidden"
@@ -93,7 +211,7 @@ export default function DataTable<T extends Record<string, unknown>>({
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full max-w-xs rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full max-w-xs rounded-lg px-3 py-2 text-sm text-white outline-none max-md:max-w-none max-md:min-h-[44px]"
             style={{
               backgroundColor: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(208,135,0,0.15)",
@@ -102,8 +220,65 @@ export default function DataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
+      {/* Cards (below md) */}
+      <div className="md:hidden px-4 py-4 space-y-4">
+        {sortOptions.length > 0 && (
+          <div className="flex flex-wrap items-end gap-2">
+            <label
+              className="flex min-w-[9rem] flex-1 flex-col gap-1 text-[10px] uppercase tracking-wider"
+              style={{ color: "#d08700" }}
+            >
+              Sort by
+              <select
+                value={activeSortOption ? activeSortKey : ""}
+                onChange={(e) => {
+                  const opt = sortOptions.find((o) => o.key === e.target.value);
+                  if (!opt) return;
+                  opt.apply(
+                    opt.key === activeSortKey ? activeSortDir : opt.defaultDir,
+                  );
+                }}
+                className={selectClass}
+                style={selectStyle}
+              >
+                {!activeSortOption && <option value="">Default</option>}
+                {sortOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label
+              className="flex min-w-[9rem] flex-1 flex-col gap-1 text-[10px] uppercase tracking-wider"
+              style={{ color: "#d08700" }}
+            >
+              Order
+              <select
+                value={activeSortDir}
+                disabled={!activeSortOption}
+                onChange={(e) =>
+                  activeSortOption?.apply(e.target.value as SortDir)
+                }
+                className={selectClass}
+                style={selectStyle}
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </label>
+          </div>
+        )}
+
+        <MobileCardList
+          items={cardItems}
+          loading={loading}
+          emptyMessage={emptyMessage}
+        />
+      </div>
+
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-md:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}>
@@ -192,20 +367,20 @@ export default function DataTable<T extends Record<string, unknown>>({
       {/* Pagination */}
       {!disablePagination && totalPages > 1 && (
         <div
-          className="flex items-center justify-between px-4 py-3 text-xs"
+          className="flex items-center justify-between px-4 py-3 text-xs max-md:flex-col max-md:items-stretch max-md:gap-3"
           style={{
             borderTop: "1px solid rgba(208,135,0,0.1)",
             color: "#6a7282",
           }}
         >
-          <span>
+          <span className="max-md:text-center">
             Page {page + 1} of {totalPages} ({filteredData.length} rows)
           </span>
           <div className="flex gap-2">
             <button
               disabled={page === 0}
               onClick={() => setPage(page - 1)}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
+              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
               style={{ color: "#99a1af" }}
             >
               Prev
@@ -213,7 +388,7 @@ export default function DataTable<T extends Record<string, unknown>>({
             <button
               disabled={page >= totalPages - 1}
               onClick={() => setPage(page + 1)}
-              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5"
+              className="rounded px-3 py-1 disabled:opacity-30 transition-colors hover:bg-white/5 max-md:flex-1 max-md:min-h-[44px]"
               style={{ color: "#99a1af" }}
             >
               Next

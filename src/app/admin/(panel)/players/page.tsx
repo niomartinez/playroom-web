@@ -124,14 +124,26 @@ function PlayersPageInner() {
     border: "1px solid rgba(208,135,0,0.15)" as const,
   };
 
+  /* Below md every control goes full width and grows to a 44px touch target.
+     Above md nothing here applies, so the bar is byte-identical on desktop. */
+  const controlClass =
+    "rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]";
+
   /* Headers sort on the SERVER (see SortHeader). DataTable's own `sortable`
      would reorder only the twenty rows on screen, which answers a different
-     question than the header implies. */
+     question than the header implies.
+
+     `mobile` decides what survives below md, where a row becomes a card: the
+     username identifies it, and the four fields an operator actually acts on
+     (who they are, whose brand, how much, whether they can play) follow. Joined
+     is the one column nobody opens a phone to check \u2014 it stays on the detail
+     page, and it is still sortable from the card-mode sort control. */
   const columns: Column<Player>[] = [
     {
       key: "username",
       label: "Username",
       header: <SortHeader label="Username" {...sortProps("username", "asc")} />,
+      mobile: "title",
     },
     {
       key: "external_user_id",
@@ -139,6 +151,7 @@ function PlayersPageInner() {
       header: (
         <SortHeader label="External ID" {...sortProps("external_user_id", "asc")} />
       ),
+      mobile: "row",
       render: (row) => (
         <span className="font-mono text-xs">{row.external_user_id}</span>
       ),
@@ -146,6 +159,8 @@ function PlayersPageInner() {
     {
       key: "operator_name",
       label: "System Provider",
+      mobile: "row",
+      mobileLabel: "Provider",
       render: (row) => (
         <span>{row.operator_name || "\u2014"}</span>
       ),
@@ -154,6 +169,7 @@ function PlayersPageInner() {
       key: "balance",
       label: "Balance",
       header: <SortHeader label="Balance" {...sortProps("balance")} />,
+      mobile: "row",
       render: (row) => (
         <span className="font-mono">
           {Number(row.balance).toLocaleString(undefined, {
@@ -167,6 +183,7 @@ function PlayersPageInner() {
       key: "is_active",
       label: "Status",
       header: <SortHeader label="Status" {...sortProps("is_active")} />,
+      mobile: "row",
       render: (row) => (
         <StatusBadge status={row.is_active ? "active" : "inactive"} />
       ),
@@ -175,6 +192,7 @@ function PlayersPageInner() {
       key: "created_at",
       label: "Joined",
       header: <SortHeader label="Joined" {...sortProps("created_at")} />,
+      mobile: "hide",
       render: (row) =>
         row.created_at
           ? new Date(row.created_at).toLocaleDateString()
@@ -194,8 +212,8 @@ function PlayersPageInner() {
           border: "1px solid rgba(208,135,0,0.2)",
         }}
       >
-        <div className="flex flex-wrap gap-3 items-end">
-          <div>
+        <div className="flex flex-wrap gap-3 items-end max-md:flex-col max-md:items-stretch">
+          <div className="max-md:w-full">
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
@@ -205,7 +223,7 @@ function PlayersPageInner() {
             <select
               value={values.operator_id}
               onChange={(e) => setFilter({ operator_id: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             >
               <option value="">All System Providers</option>
@@ -216,24 +234,26 @@ function PlayersPageInner() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="max-md:w-full">
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
             >
               Search
             </label>
+            {/* The 220px floor is what a two-word search needs on desktop and
+                what blows the row out on a 390px phone, so it is dropped there. */}
             <input
               type="text"
               placeholder="Username or external ID..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none min-w-[220px]"
+              className={`${controlClass} min-w-[220px] max-md:min-w-0`}
               style={inputStyle}
             />
           </div>
 
-          <div>
+          <div className="max-md:w-full">
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
@@ -243,7 +263,7 @@ function PlayersPageInner() {
             <select
               value={values.is_active}
               onChange={(e) => setFilter({ is_active: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className={controlClass}
               style={inputStyle}
             >
               <option value="">Any</option>
@@ -256,13 +276,15 @@ function PlayersPageInner() {
               useful question changes constantly — "who is over 100k", "who is
               sitting at zero" — and a dropdown of guesses would never have the
               one being asked today. Either bound may be left blank. */}
-          <div>
+          <div className="max-md:w-full">
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
             >
               Balance
             </label>
+            {/* The pair stays side by side on a phone: two bounds read as one
+                range, and each half of a 390px row is still a wide field. */}
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -270,7 +292,7 @@ function PlayersPageInner() {
                 placeholder="Min"
                 value={balanceMin}
                 onChange={(e) => setBalanceMin(e.target.value)}
-                className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px]"
+                className={`${controlClass} w-[100px] max-md:flex-1 max-md:min-w-0`}
                 style={inputStyle}
               />
               <span style={{ color: "#6a7282" }}>–</span>
@@ -280,7 +302,7 @@ function PlayersPageInner() {
                 placeholder="Max"
                 value={balanceMax}
                 onChange={(e) => setBalanceMax(e.target.value)}
-                className="rounded-lg px-3 py-2 text-sm text-white outline-none w-[100px]"
+                className={`${controlClass} w-[100px] max-md:flex-1 max-md:min-w-0`}
                 style={inputStyle}
               />
             </div>
@@ -301,7 +323,7 @@ function PlayersPageInner() {
                   balance_max: "",
                 });
               }}
-              className="rounded-lg px-3 py-2 text-sm"
+              className="rounded-lg px-3 py-2 text-sm max-md:w-full max-md:min-h-[44px]"
               style={{ backgroundColor: "#262626", color: "#d1d5db" }}
             >
               Clear filters

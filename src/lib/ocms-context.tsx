@@ -25,6 +25,10 @@ export interface OcmsState {
   sidebarCollapsed: boolean;
   loading: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  /** Below lg the sidebar is an off-canvas drawer; this is its open state.
+   *  Desktop ignores it entirely. */
+  mobileNavOpen: boolean;
+  setMobileNavOpen: (open: boolean) => void;
 }
 
 const OcmsContext = createContext<OcmsState | null>(null);
@@ -44,6 +48,7 @@ export function OcmsProvider({
 }) {
   const [currentUser, setCurrentUser] = useState<OcmsUser | null>(initialUser);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [loading, setLoading] = useState(initialUser === null);
 
   useEffect(() => {
@@ -77,6 +82,8 @@ export function OcmsProvider({
     sidebarCollapsed,
     loading,
     setSidebarCollapsed,
+    mobileNavOpen,
+    setMobileNavOpen,
   };
 
   return <OcmsContext value={value}>{children}</OcmsContext>;

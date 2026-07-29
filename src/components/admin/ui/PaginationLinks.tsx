@@ -32,9 +32,14 @@ export default function PaginationLinks({
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
+  // minWidth is a class rather than an inline style so the mobile 44px touch
+  // target can override it at the breakpoint.
+  const numClass =
+    "min-w-[30px] max-md:inline-flex max-md:items-center max-md:justify-center max-md:min-w-[44px] max-md:min-h-[44px]";
+  const tapClass = "max-md:min-h-[44px] max-md:px-3";
+
   const numStyle = (active: boolean) =>
     ({
-      minWidth: 30,
       padding: "4px 8px",
       borderRadius: 6,
       fontSize: 12,
@@ -61,13 +66,16 @@ export default function PaginationLinks({
           {page > 1 ? (
             <Link
               href={hrefFor(page - 1)}
-              className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-white/5"
+              className={`flex items-center gap-1.5 rounded px-2 py-1 hover:bg-white/5 ${tapClass}`}
               style={{ color: "#99a1af" }}
             >
               <LinkSpinner /> Prev
             </Link>
           ) : (
-            <span className="rounded px-2 py-1 opacity-30" style={{ color: "#99a1af" }}>
+            <span
+              className={`flex items-center rounded px-2 py-1 opacity-30 ${tapClass}`}
+              style={{ color: "#99a1af" }}
+            >
               Prev
             </span>
           )}
@@ -78,7 +86,7 @@ export default function PaginationLinks({
                 …
               </span>
             ) : p === page ? (
-              <span key={p} style={numStyle(true)} aria-current="page">
+              <span key={p} style={numStyle(true)} className={numClass} aria-current="page">
                 {p}
               </span>
             ) : (
@@ -86,7 +94,7 @@ export default function PaginationLinks({
                 key={p}
                 href={hrefFor(p)}
                 style={numStyle(false)}
-                className="hover:bg-white/5"
+                className={`${numClass} hover:bg-white/5`}
                 aria-label={`Page ${p}`}
               >
                 {p}
@@ -97,13 +105,16 @@ export default function PaginationLinks({
           {page < totalPages ? (
             <Link
               href={hrefFor(page + 1)}
-              className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-white/5"
+              className={`flex items-center gap-1.5 rounded px-2 py-1 hover:bg-white/5 ${tapClass}`}
               style={{ color: "#99a1af" }}
             >
               Next <LinkSpinner />
             </Link>
           ) : (
-            <span className="rounded px-2 py-1 opacity-30" style={{ color: "#99a1af" }}>
+            <span
+              className={`flex items-center rounded px-2 py-1 opacity-30 ${tapClass}`}
+              style={{ color: "#99a1af" }}
+            >
               Next
             </span>
           )}

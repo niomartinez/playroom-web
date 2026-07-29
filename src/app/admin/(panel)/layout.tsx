@@ -15,7 +15,7 @@ export default function AdminLayout({
     <AdminProvider>
       <ToastProvider>
         <div
-          className="flex h-screen overflow-hidden"
+          className="flex min-h-[100dvh] max-h-[100dvh] overflow-hidden"
           style={{ backgroundColor: "#000000" }}
         >
           {/* Sidebar */}
@@ -28,7 +28,7 @@ export default function AdminLayout({
 
             {/* Page content */}
             <main
-              className="flex-1 overflow-y-auto p-6"
+              className="flex-1 overflow-y-auto p-6 max-md:p-4"
               style={{
                 background:
                   "linear-gradient(to right, #000000, #171717, #000000)",

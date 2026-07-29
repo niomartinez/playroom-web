@@ -312,6 +312,11 @@ export default function SettingsPage() {
     border: "1px solid rgba(208,135,0,0.2)" as const,
   };
 
+  /* The switch pills are 44x24. Below md an invisible ::after stretches the tap
+     area to a full 44px of height without changing how the pill looks. */
+  const toggleTap =
+    "max-md:after:absolute max-md:after:inset-x-0 max-md:after:-top-2.5 max-md:after:-bottom-2.5 max-md:after:content-['']";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -339,7 +344,7 @@ export default function SettingsPage() {
 
       {/* General settings */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
@@ -355,13 +360,13 @@ export default function SettingsPage() {
               type="number" min={5} max={60}
               value={bettingTime}
               onChange={(e) => setBettingTime(e.target.value)}
-              className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
             <button
               onClick={() => saveKey("default_betting_time", parseInt(bettingTime) || 15)}
               disabled={saving === "default_betting_time"}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 shrink-0 max-md:min-h-[44px]"
               style={{ backgroundColor: "#f0b100" }}
             >
               {saving === "default_betting_time" ? "..." : "Save"}
@@ -378,7 +383,7 @@ export default function SettingsPage() {
               type="text"
               value={currencies}
               onChange={(e) => setCurrencies(e.target.value)}
-              className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
             <button
@@ -389,7 +394,7 @@ export default function SettingsPage() {
                 )
               }
               disabled={saving === "supported_currencies"}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 shrink-0 max-md:min-h-[44px]"
               style={{ backgroundColor: "#f0b100" }}
             >
               {saving === "supported_currencies" ? "..." : "Save"}
@@ -397,7 +402,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between gap-3 pt-2">
           <div>
             <label className="text-xs font-medium" style={{ color: "#99a1af" }}>
               Live Chat (Player UI)
@@ -409,7 +414,8 @@ export default function SettingsPage() {
           <button
             onClick={handleToggleLiveChat}
             disabled={saving === "live_chat_enabled"}
-            className="relative rounded-full transition-colors disabled:opacity-50"
+            aria-label="Live Chat (Player UI)"
+            className={`relative shrink-0 rounded-full transition-colors disabled:opacity-50 ${toggleTap}`}
             style={{
               width: 44, height: 24,
               backgroundColor: liveChatEnabled ? "rgba(5,223,114,0.6)" : "rgba(255,255,255,0.1)",
@@ -422,7 +428,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between gap-3 pt-2">
           <div>
             <label className="text-xs font-medium" style={{ color: "#99a1af" }}>
               Maintenance Mode
@@ -439,7 +445,8 @@ export default function SettingsPage() {
                 handleToggleMaintenance();
               }
             }}
-            className="relative rounded-full transition-colors"
+            aria-label="Maintenance Mode"
+            className={`relative shrink-0 rounded-full transition-colors ${toggleTap}`}
             style={{
               width: 44, height: 24,
               backgroundColor: maintenanceMode ? "rgba(251,44,54,0.5)" : "rgba(255,255,255,0.1)",
@@ -455,7 +462,7 @@ export default function SettingsPage() {
 
       {/* Per-table bet range */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div>
@@ -522,7 +529,7 @@ export default function SettingsPage() {
                             [table.id]: { ...edit, min: e.target.value },
                           }))
                         }
-                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
                         style={inputStyle}
                       />
                     </div>
@@ -539,14 +546,14 @@ export default function SettingsPage() {
                             [table.id]: { ...edit, max: e.target.value },
                           }))
                         }
-                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+                        className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
                         style={inputStyle}
                       />
                     </div>
                     <button
                       onClick={() => saveTableLimits(table)}
                       disabled={saving === key || !dirty}
-                      className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                      className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 shrink-0 max-md:min-h-[44px]"
                       style={{ backgroundColor: "#f0b100" }}
                     >
                       {saving === key ? "Saving..." : "Save"}
@@ -561,7 +568,7 @@ export default function SettingsPage() {
 
       {/* Inactivity / idle-session policy */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div>
@@ -585,7 +592,7 @@ export default function SettingsPage() {
               type="number" min={1} max={50}
               value={idleExpire}
               onChange={(e) => setIdleExpire(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -598,7 +605,7 @@ export default function SettingsPage() {
               value={idleWarn1}
               onChange={(e) => setIdleWarn1(e.target.value)}
               placeholder="—"
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -611,7 +618,7 @@ export default function SettingsPage() {
               value={idleWarn2}
               onChange={(e) => setIdleWarn2(e.target.value)}
               placeholder="—"
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -627,7 +634,7 @@ export default function SettingsPage() {
             saveKey("player_idle_policy", { expire, warn1: clean(w1), warn2: clean(w2) });
           }}
           disabled={saving === "player_idle_policy"}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "player_idle_policy" ? "Applying..." : "Apply"}
@@ -636,7 +643,7 @@ export default function SettingsPage() {
 
       {/* Chat minimum wager */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div>
@@ -668,7 +675,7 @@ export default function SettingsPage() {
         <button
           onClick={() => saveKey("chat_min_wager", Math.max(0, Number(chatMinWager) || 0))}
           disabled={saving === "chat_min_wager"}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "chat_min_wager" ? "Applying..." : "Apply"}
@@ -677,7 +684,7 @@ export default function SettingsPage() {
 
       {/* Minimum seat balance */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <div>
@@ -705,7 +712,7 @@ export default function SettingsPage() {
               type="number" min={0} step={50}
               value={seatEnter}
               onChange={(e) => setSeatEnter(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -717,7 +724,7 @@ export default function SettingsPage() {
               type="number" min={0} step={50}
               value={seatBlock}
               onChange={(e) => setSeatBlock(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -729,7 +736,7 @@ export default function SettingsPage() {
               type="number" min={0} step={50}
               value={seatWarn}
               onChange={(e) => setSeatWarn(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -747,7 +754,7 @@ export default function SettingsPage() {
             saveKey("min_seat_balance", { enter, block, warn });
           }}
           disabled={saving === "min_seat_balance"}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "min_seat_balance" ? "Applying..." : "Apply"}
@@ -756,7 +763,7 @@ export default function SettingsPage() {
 
       {/* Payout Odds */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(208,135,0,0.2)" }}
       >
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#d08700" }}>
@@ -766,14 +773,14 @@ export default function SettingsPage() {
         <div className="space-y-2">
           {Object.entries(odds).map(([code, val]) => (
             <div key={code} className="flex items-center gap-3">
-              <span className="text-sm text-white w-36 shrink-0">
+              <span className="text-sm text-white w-36 shrink-0 max-md:w-24">
                 {BET_CODE_LABELS[code] || code}
               </span>
               <input
                 type="number" step="0.01" min="0"
                 value={val}
                 onChange={(e) => setOdds({ ...odds, [code]: e.target.value })}
-                className="flex-1 rounded-lg px-3 py-1.5 text-sm text-white outline-none font-mono"
+                className="flex-1 rounded-lg px-3 py-1.5 text-sm text-white outline-none font-mono max-md:min-h-[44px]"
                 style={inputStyle}
               />
               <span className="text-xs" style={{ color: "#6a7282" }}>x</span>
@@ -790,7 +797,7 @@ export default function SettingsPage() {
             saveKey("baccarat_odds", numericOdds);
           }}
           disabled={saving === "baccarat_odds"}
-          className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-lg px-6 py-2 text-sm font-semibold text-black disabled:opacity-50 max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           {saving === "baccarat_odds" ? "Saving..." : "Save Odds"}
@@ -799,7 +806,7 @@ export default function SettingsPage() {
 
       {/* Danger Zone */}
       <div
-        className="rounded-xl p-6 space-y-4"
+        className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{ backgroundColor: "#171717", border: "1px solid rgba(251,44,54,0.2)" }}
       >
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#fb2c36" }}>
@@ -808,7 +815,7 @@ export default function SettingsPage() {
 
         <button
           onClick={() => setShowForceClose(true)}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
           style={{
             backgroundColor: "rgba(251,44,54,0.1)",
             color: "#fb2c36",

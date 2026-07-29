@@ -119,22 +119,31 @@ export default function TablesPage() {
     border: "1px solid rgba(208,135,0,0.2)" as const,
   };
 
+  /* Card mode below md. Eight columns is four too many for a 390px card, so:
+     the studio name titles it; type is dropped (it is on the detail page and
+     rarely the thing being checked); and the Open/Close action is dropped too,
+     because the card itself is the button that opens the table's detail page
+     and a button inside a button is neither valid nor tappable. Closing a table
+     from a phone is done from that detail page. */
   const columns: Column<Table>[] = [
-    { key: "name", label: "Name (studio)", sortable: true },
+    { key: "name", label: "Name (studio)", sortable: true, mobile: "title" },
     {
       key: "lobby_name",
       label: "Lobby Name (players)",
+      mobile: "row",
+      mobileLabel: "Lobby",
       render: (r) => (
         <span style={{ color: r.lobby_name ? undefined : "#6a7282" }}>
           {(r.lobby_name as string) || "— same as name"}
         </span>
       ),
     },
-    { key: "external_game_id", label: "Game ID" },
-    { key: "table_type", label: "Type" },
+    { key: "external_game_id", label: "Game ID", mobile: "row" },
+    { key: "table_type", label: "Type", mobile: "hide" },
     {
       key: "min_bet",
       label: "Bet Range",
+      mobile: "row",
       render: (row) => (
         <span className="font-mono text-xs">
           {row.min_bet?.toLocaleString()} – {row.max_bet?.toLocaleString()}
@@ -144,6 +153,7 @@ export default function TablesPage() {
     {
       key: "dealer_name",
       label: "Dealer",
+      mobile: "row",
       render: (row) => (
         <span style={{ color: row.dealer_name ? "#ffffff" : "#6a7282" }}>
           {row.dealer_name || "\u2014"}
@@ -153,6 +163,7 @@ export default function TablesPage() {
     {
       key: "is_active",
       label: "Status",
+      mobile: "row",
       render: (row) => (
         <StatusBadge status={row.is_active ? "active" : "inactive"} />
       ),
@@ -160,6 +171,7 @@ export default function TablesPage() {
     {
       key: "_actions",
       label: "",
+      mobile: "hide",
       render: (row) => (
         <button
           onClick={(e) => {
@@ -190,11 +202,11 @@ export default function TablesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
         <h1 className="text-2xl font-bold text-white">Tables</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
           style={{ backgroundColor: "#f0b100" }}
         >
           Create Table
@@ -232,7 +244,7 @@ export default function TablesPage() {
             placeholder="e.g. Baccarat Table 1"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
@@ -251,7 +263,7 @@ export default function TablesPage() {
             placeholder="e.g. XXX Baccarat Table 1"
             value={newLobbyName}
             onChange={(e) => setNewLobbyName(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
@@ -272,7 +284,7 @@ export default function TablesPage() {
             placeholder="e.g. BAC-A1"
             value={newGameId}
             onChange={(e) => setNewGameId(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           />
         </div>
@@ -286,7 +298,7 @@ export default function TablesPage() {
           <select
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+            className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
             style={inputStyle}
           >
             <option value="standard">Standard</option>
@@ -306,7 +318,7 @@ export default function TablesPage() {
               type="number"
               value={newMinBet}
               onChange={(e) => setNewMinBet(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -321,7 +333,7 @@ export default function TablesPage() {
               type="number"
               value={newMaxBet}
               onChange={(e) => setNewMaxBet(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
