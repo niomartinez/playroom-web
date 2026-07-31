@@ -7,6 +7,7 @@ import MobileCardList, {
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
+import TestTokenActivity from "@/components/admin/TestTokenActivity";
 import { isProdEnv } from "@/lib/server-env";
 
 const inputStyle = {
@@ -30,6 +31,8 @@ interface HistoryRow {
   expires_at: string;
   status: "active" | "expired" | "revoked";
   last_seen_ip: string | null;
+  /** ip_allowlist label for that address; null when we don't know the IP. */
+  last_seen_ip_label: string | null;
   stream_revoked: boolean | null;
   idle_rounds: number | null;
   last_seen_at: string | null;
@@ -40,8 +43,21 @@ interface HistoryRow {
 
 interface AuditRow {
   created_at: string;
+  /** test_token.generate | test_token.add_funds | test_token.expire. This was
+   *  never read before, so every row rendered as a "generate" — an expire came
+   *  out as "generated ? token(s) on uitest-xxx". */
+  action: string;
   entity_id: string;
-  new_value: { count?: number; balance?: string; by?: string; testers?: string[] };
+  new_value: {
+    count?: number;
+    balance?: string;
+    by?: string;
+    testers?: string[];
+    amount?: string;
+    new_balance?: string;
+    external_user_id?: string;
+    players?: { player_id: string; external_user_id: string; display_name: string }[];
+  };
   admin_users?: { email?: string; display_name?: string };
 }
 
@@ -62,6 +78,72 @@ function fmt(ts: string | null): string {
   }
 }
 
+/** Say what an audit row actually was.
+ *
+ * Every row used to be rendered as "generated {count} token(s) on {entity_id}",
+ * which is true only for test_token.generate. An expire has no `count` and its
+ * entity_id is the tester, so it read as "generated ? token(s) on uitest-3f2a" —
+ * the reason the log looked like it was missing entries it had all along. */
+function auditSentence(a: AuditRow): React.ReactNode {
+  const v = a.new_value || {};
+  const who = v.external_user_id || a.entity_id;
+  switch (a.action) {
+    case "test_token.add_funds":
+      return (
+        <>
+          added{" "}
+          <strong style={{ color: "#6ee7b7" }}>
+            ₱{Number(v.amount ?? 0).toLocaleString()}
+          </strong>{" "}
+          to <span style={{ color: "#e5e7eb" }}>{who}</span>
+          {v.new_balance
+            ? ` · new balance ₱${Number(v.new_balance).toLocaleString()}`
+            : ""}
+        </>
+      );
+    case "test_token.expire":
+      return (
+        <>
+          expired the token for{" "}
+          <span style={{ color: "#fca5a5" }}>{who}</span>
+        </>
+      );
+    case "test_token.generate":
+      return (
+        <>
+          generated <strong style={{ color: "#e5e7eb" }}>{v.count ?? "?"}</strong>{" "}
+          token(s) on <span style={{ color: "#e5e7eb" }}>{a.entity_id}</span>
+          {v.balance ? ` · ₱${Number(v.balance).toLocaleString()} each` : ""}
+          {v.testers?.length ? ` · ${v.testers.join(", ")}` : ""}
+        </>
+      );
+    default:
+      /* An action we don't have a sentence for is shown as itself rather than
+         silently mislabelled as something else. That mislabelling is the bug
+         this function exists to fix. */
+      return (
+        <>
+          <span style={{ color: "#e5e7eb" }}>{a.action}</span> on{" "}
+          <span style={{ color: "#e5e7eb" }}>{who}</span>
+        </>
+      );
+  }
+}
+
+/** Hold a value still until typing stops.
+ *
+ * The audit filters are part of the request URL, so without this every
+ * keystroke would be its own fetch — and every backend request costs an Upstash
+ * command via the rate limiter. */
+function useDebounced<T>(value: T, ms = 350): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(id);
+  }, [value, ms]);
+  return settled;
+}
+
 export default function TestTokensPage() {
   const { toast } = useToast();
   const [tables, setTables] = useState<string[]>([]);
@@ -77,10 +159,28 @@ export default function TestTokensPage() {
   const [tokens, setTokens] = useState<GeneratedToken[]>([]);
   const [meta, setMeta] = useState<{ operator?: string; operator_scoped?: boolean } | null>(null);
 
+  /* Audit filters. They go to the BACKEND rather than filtering the 30 rows
+     that happened to arrive, so "show me every expire" means every expire, not
+     every expire in the most recent page. */
+  const [auditAction, setAuditAction] = useState("");
+  const [auditTester, setAuditTester] = useState("");
+  const [auditBy, setAuditBy] = useState("");
+  const [auditOrder, setAuditOrder] = useState<"asc" | "desc">("desc");
+  /** Which token's activity panel is open. */
+  const [activityFor, setActivityFor] = useState<HistoryRow | null>(null);
+
+  const debouncedTester = useDebounced(auditTester);
+  const debouncedBy = useDebounced(auditBy);
+
+  const auditQuery = new URLSearchParams({ order: auditOrder });
+  if (auditAction) auditQuery.set("action", auditAction);
+  if (debouncedTester.trim()) auditQuery.set("tester", debouncedTester.trim());
+  if (debouncedBy.trim()) auditQuery.set("by", debouncedBy.trim());
+
   const { data: tokenData, refreshing, refetch } = useAdminQuery<{
     tokens: HistoryRow[];
     audit: AuditRow[];
-  }>("/api/admin/test-token");
+  }>(`/api/admin/test-token?${auditQuery.toString()}`);
   const history = tokenData?.tokens ?? [];
   const audit = tokenData?.audit ?? [];
 
@@ -230,6 +330,29 @@ export default function TestTokensPage() {
   /* Cells shared by the table and the mobile cards, so the two cannot drift.
      The touch-height bumps are all behind max-md, where the card is the only
      thing on screen. */
+  /* Who last used this token. The allowlist label answers the question people
+     actually ask ("was that the studio or someone else?"); the raw IP is the
+     honest fallback, and an unnamed address is itself worth noticing. */
+  const ipCell = (h: HistoryRow) =>
+    h.last_seen_ip ? (
+      <span title={h.last_seen_ip}>
+        {h.last_seen_ip_label ? (
+          <>
+            <span style={{ color: "#e5e7eb" }}>{h.last_seen_ip_label}</span>
+            <span className="font-mono ml-1" style={{ color: "#6b7280" }}>
+              {h.last_seen_ip}
+            </span>
+          </>
+        ) : (
+          <span className="font-mono" style={{ color: "#9ca3af" }}>
+            {h.last_seen_ip}
+          </span>
+        )}
+      </span>
+    ) : (
+      <span style={{ color: "#4b5563" }}>—</span>
+    );
+
   const statusCell = (h: HistoryRow) => (
     <span style={{ color: STATUS_COLOR[h.status] || "#9ca3af" }}>● {h.status}</span>
   );
@@ -288,7 +411,17 @@ export default function TestTokensPage() {
      actions at the far right — the one thing an operator came here to tap. */
   const historyCards: MobileCardItem[] = history.map((h, i) => ({
     id: h.id ?? i,
-    title: <span className="font-mono break-all">{h.display_name}</span>,
+    title: h.player_id ? (
+      <button
+        onClick={() => setActivityFor(h)}
+        className="font-mono break-all underline underline-offset-2 text-left"
+        style={{ color: "#93c5fd" }}
+      >
+        {h.display_name}
+      </button>
+    ) : (
+      <span className="font-mono break-all">{h.display_name}</span>
+    ),
     rows: [
       {
         label: "Token",
@@ -305,6 +438,7 @@ export default function TestTokensPage() {
       { label: "Created", value: fmt(h.created_at) },
       { label: "Expires", value: fmt(h.expires_at) },
       { label: "Last seen", value: fmt(h.last_seen_at) },
+      { label: "Last used from", value: ipCell(h) },
       { label: "Actions", value: rowActions(h) },
     ],
   }));
@@ -462,13 +596,27 @@ export default function TestTokensPage() {
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Created</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Expires</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap">Last seen</th>
+                  <th className="px-3 py-2 font-medium whitespace-nowrap">Last used from</th>
                   <th className="px-3 py-2 font-medium whitespace-nowrap"></th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((h, i) => (
                   <tr key={i} style={{ borderTop: "1px solid #1a1a1a" }}>
-                    <td className="px-3 py-2 font-mono whitespace-nowrap">{h.display_name}</td>
+                    <td className="px-3 py-2 font-mono whitespace-nowrap">
+                      {h.player_id ? (
+                        <button
+                          onClick={() => setActivityFor(h)}
+                          className="underline underline-offset-2"
+                          style={{ color: "#93c5fd" }}
+                          title="See everything that happened to this token"
+                        >
+                          {h.display_name}
+                        </button>
+                      ) : (
+                        h.display_name
+                      )}
+                    </td>
                     <td className="px-3 py-2 font-mono whitespace-nowrap" style={{ color: "#9ca3af" }}>{h.token_preview || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{h.table || "—"}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{statusCell(h)}</td>
@@ -477,6 +625,7 @@ export default function TestTokensPage() {
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.created_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.expires_at)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmt(h.last_seen_at)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{ipCell(h)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{rowActions(h)}</td>
                   </tr>
                 ))}
@@ -486,25 +635,67 @@ export default function TestTokensPage() {
         </div>
       )}
 
-      {/* Audit log — who generated what, when */}
-      {audit.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold text-white mt-4">Audit log</h2>
-          <div className="space-y-1">
-            {audit.map((a, i) => (
-              <div key={i} className="text-xs px-3 py-2 rounded" style={{ backgroundColor: "#0d0d0d", border: "1px solid #1a1a1a", color: "#9ca3af" }}>
-                <span style={{ color: "#d1d5db" }}>{fmt(a.created_at)}</span>
-                {" — "}
-                <span style={{ color: "#93c5fd" }}>{a.new_value?.by || a.admin_users?.email || "admin"}</span>
-                {" generated "}
-                <strong style={{ color: "#e5e7eb" }}>{a.new_value?.count ?? "?"}</strong>
-                {" token(s) on "}
-                <span style={{ color: "#e5e7eb" }}>{a.entity_id}</span>
-                {a.new_value?.balance ? ` · ₱${Number(a.new_value.balance).toLocaleString()} each` : ""}
-              </div>
-            ))}
-          </div>
+      {/* Audit log — every action, said plainly. */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 mt-4">
+          <h2 className="text-lg font-semibold text-white mr-auto">Audit log</h2>
+          <select
+            value={auditAction}
+            onChange={(e) => setAuditAction(e.target.value)}
+            className="text-xs rounded px-2 py-1 max-md:min-h-[44px]"
+            style={{ backgroundColor: "#0d0d0d", color: "#e5e7eb", border: "1px solid #1f2937" }}
+          >
+            <option value="">All actions</option>
+            <option value="test_token.generate">Generated</option>
+            <option value="test_token.add_funds">Added funds</option>
+            <option value="test_token.expire">Expired</option>
+          </select>
+          <input
+            value={auditTester}
+            onChange={(e) => setAuditTester(e.target.value)}
+            placeholder="Filter by tester…"
+            className="text-xs rounded px-2 py-1 max-md:min-h-[44px]"
+            style={{ backgroundColor: "#0d0d0d", color: "#e5e7eb", border: "1px solid #1f2937" }}
+          />
+          <input
+            value={auditBy}
+            onChange={(e) => setAuditBy(e.target.value)}
+            placeholder="Filter by admin…"
+            className="text-xs rounded px-2 py-1 max-md:min-h-[44px]"
+            style={{ backgroundColor: "#0d0d0d", color: "#e5e7eb", border: "1px solid #1f2937" }}
+          />
+          <button
+            onClick={() => setAuditOrder(auditOrder === "desc" ? "asc" : "desc")}
+            className="text-xs rounded px-2 py-1 max-md:min-h-[44px]"
+            style={{ backgroundColor: "#1f2937", color: "#e5e7eb" }}
+            title="Toggle newest/oldest first"
+          >
+            {auditOrder === "desc" ? "Newest first ↓" : "Oldest first ↑"}
+          </button>
         </div>
+        <div className="space-y-1">
+          {audit.length === 0 && (
+            <div className="text-xs px-3 py-2 rounded" style={{ backgroundColor: "#0d0d0d", border: "1px solid #1a1a1a", color: "#6b7280" }}>
+              No matching activity.
+            </div>
+          )}
+          {audit.map((a, i) => (
+            <div key={i} className="text-xs px-3 py-2 rounded" style={{ backgroundColor: "#0d0d0d", border: "1px solid #1a1a1a", color: "#9ca3af" }}>
+              <span style={{ color: "#d1d5db" }}>{fmt(a.created_at)}</span>
+              {" — "}
+              <span style={{ color: "#93c5fd" }}>{a.new_value?.by || a.admin_users?.email || "admin"}</span>{" "}
+              {auditSentence(a)}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {activityFor?.player_id && (
+        <TestTokenActivity
+          playerId={activityFor.player_id}
+          title={activityFor.display_name}
+          onClose={() => setActivityFor(null)}
+        />
       )}
     </div>
   );

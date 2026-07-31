@@ -32,8 +32,13 @@ export async function POST(req: NextRequest) {
 }
 
 // History + statuses of generated tokens (+ audit log).
+// The audit log's filter/sort controls ride through as query params; forwarding
+// the whole search string keeps this proxy from needing to know their names.
 export async function GET(req: NextRequest) {
-  const res = await fetch(`${API_URL}/internal/admin/test-tokens`, { headers: headers(req) });
+  const qs = req.nextUrl.search;
+  const res = await fetch(`${API_URL}/internal/admin/test-tokens${qs}`, {
+    headers: headers(req),
+  });
   const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }
