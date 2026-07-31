@@ -8,6 +8,7 @@ import DataTable, { type Column } from "@/components/admin/ui/DataTable";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
 import FormDialog from "@/components/admin/ui/FormDialog";
 import { useToast } from "@/lib/toast-context";
+import { useAdmin } from "@/lib/admin-context";
 
 interface Table {
   id: string;
@@ -25,6 +26,11 @@ interface Table {
 }
 
 export default function TablesPage() {
+  /* Read-only roles (viewer, game_provider) see the list and nothing to press.
+     The backend refuses these writes regardless; this stops offering a button
+     whose only outcome is a 403. */
+  const { canWrite } = useAdmin();
+  const mayEdit = canWrite("tables");
   const router = useRouter();
   const { toast } = useToast();
 
@@ -168,11 +174,11 @@ export default function TablesPage() {
         <StatusBadge status={row.is_active ? "active" : "inactive"} />
       ),
     },
-    {
+    ...(mayEdit ? [{
       key: "_actions",
       label: "",
-      mobile: "hide",
-      render: (row) => (
+      mobile: "hide" as const,
+      render: (row: Table) => (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -197,20 +203,22 @@ export default function TablesPage() {
               : "Open"}
         </button>
       ),
-    },
+    }] : []),
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
         <h1 className="text-2xl font-bold text-white">Tables</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
-          style={{ backgroundColor: "#f0b100" }}
-        >
-          Create Table
-        </button>
+        {mayEdit && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-black max-md:w-full max-md:min-h-[44px]"
+            style={{ backgroundColor: "#f0b100" }}
+          >
+            Create Table
+          </button>
+        )}
       </div>
 
       <RefreshingHint show={refreshing && !loading} />

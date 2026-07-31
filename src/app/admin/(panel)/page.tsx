@@ -3,6 +3,7 @@
 import StatCard from "@/components/admin/ui/StatCard";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery } from "@/lib/admin-query";
+import { useAdmin } from "@/lib/admin-context";
 
 interface DashboardStats {
   active_tables: number;
@@ -19,6 +20,11 @@ export default function AdminDashboard() {
   const { data: stats, loading, refreshing } = useAdminQuery<DashboardStats>(
     "/api/admin/stats",
   );
+  /* The stats route aggregates several endpoints and swallows the ones it is
+     refused, so a role without `operators` would be shown a confident "0"
+     rather than a denial. A number that is wrong is worse than a tile that
+     isn't there. */
+  const { canRead } = useAdmin();
 
   return (
     <div className="space-y-6">
@@ -59,6 +65,7 @@ export default function AdminDashboard() {
             </svg>
           }
         />
+        {canRead("operators") && (
         <StatCard
           label="Active System Providers"
           value={loading ? "..." : stats?.active_operators ?? 0}
@@ -69,6 +76,7 @@ export default function AdminDashboard() {
             </svg>
           }
         />
+        )}
       </div>
 
       {/* Recent activity placeholder */}

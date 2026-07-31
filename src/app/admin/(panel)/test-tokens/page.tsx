@@ -115,9 +115,12 @@ export default function TestTokensPage() {
         setTable(ids[0] || "");
       })
       .catch(() => undefined);
-    loadHistory();
+    // NOT loadHistory() — useAdminQuery already fetches on mount. Calling it
+    // here, with `loadHistory` in the dep array, looped forever: the function
+    // identity changes every render, so the effect re-ran, dropped the cache
+    // entry (blanking both tables), refetched, re-rendered, and went again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prod, loadHistory]);
+  }, [prod]);
 
   async function generate() {
     if (!table) {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
+import { useAdmin } from "@/lib/admin-context";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import StatusBadge from "@/components/admin/ui/StatusBadge";
@@ -30,6 +31,10 @@ interface TableDetail {
 }
 
 export default function TableDetailPage() {
+  /* Read-only roles reach this page (they may read `tables`) but every control
+     on it is a write the backend would refuse. Show the record, not the levers. */
+  const { canWrite } = useAdmin();
+  const mayEdit = canWrite("tables");
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -228,7 +233,8 @@ export default function TableDetailPage() {
           </div>
         </div>
 
-        {/* Open/Close toggle */}
+        {/* Open/Close toggle — write-only control. */}
+        {mayEdit && (
         <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(208,135,0,0.1)" }}>
           <button
             onClick={handleToggle}
@@ -246,9 +252,11 @@ export default function TableDetailPage() {
             {table.is_active ? "Close Table" : "Open Table"}
           </button>
         </div>
+        )}
       </div>
 
-      {/* Edit form */}
+      {/* Edit form — the whole card, since every field in it is an edit. */}
+      {mayEdit && (
       <div
         className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
@@ -399,8 +407,10 @@ export default function TableDetailPage() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Danger zone */}
+      {mayEdit && (
       <div
         className="rounded-xl p-6 space-y-4 max-md:p-4"
         style={{
@@ -427,6 +437,7 @@ export default function TableDetailPage() {
           Deactivate Table
         </button>
       </div>
+      )}
 
       <ConfirmDialog
         open={showDeactivate}

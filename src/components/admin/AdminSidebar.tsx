@@ -16,12 +16,18 @@ interface NavItem {
   icon: React.ReactNode;
   /** Hidden on production (test-only surfaces). */
   stagingOnly?: boolean;
+  /** Permission section this page belongs to — must match a section name in
+   *  the backend's app/permissions.py. An item is shown only if the signed-in
+   *  account can READ it. This is presentation, not protection: the API gates
+   *  every one of these endpoints itself. */
+  section: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   {
     label: "Dashboard",
     href: "/admin",
+    section: "dashboard",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -34,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "IP Allowlist",
     href: "/admin/ip-allowlist",
+    section: "ip_allowlist",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="11" width="18" height="10" rx="2" />
@@ -44,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "System Providers",
     href: "/admin/operators",
+    section: "operators",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 7h-9" /><path d="M14 17H5" />
@@ -54,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Tables",
     href: "/admin/tables",
+    section: "tables",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -64,6 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Players",
     href: "/admin/players",
+    section: "players",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -75,6 +85,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Rounds",
     href: "/admin/rounds",
+    section: "rounds",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -85,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Reports",
     href: "/admin/reports",
+    section: "reports",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -96,6 +108,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Monitoring",
     href: "/admin/monitoring",
+    section: "monitoring",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -105,6 +118,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Audit Log",
     href: "/admin/audit",
+    section: "audit",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -118,6 +132,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Users",
     href: "/admin/users",
+    section: "users",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -129,6 +144,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Pitch links",
     href: "/admin/pitch-links",
+    section: "pitch_links",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -139,6 +155,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Test tokens",
     href: "/admin/test-tokens",
+    section: "test_tokens",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3" />
@@ -149,6 +166,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Settings",
     href: "/admin/settings",
+    section: "settings",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -165,8 +183,13 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, setMobileNavOpen } =
-    useAdmin();
+  const {
+    sidebarCollapsed,
+    setSidebarCollapsed,
+    mobileNavOpen,
+    setMobileNavOpen,
+    canRead,
+  } = useAdmin();
   // Test-only nav items are hidden on production.
   const prodEnv = isProdEnv();
 
@@ -334,7 +357,9 @@ export default function AdminSidebar() {
 
         {/* Nav items */}
         <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.filter((item) => !(item.stagingOnly && prodEnv)).map((item) => {
+          {NAV_ITEMS.filter(
+            (item) => !(item.stagingOnly && prodEnv) && canRead(item.section),
+          ).map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <Link

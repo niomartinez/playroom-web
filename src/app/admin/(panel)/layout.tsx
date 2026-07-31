@@ -5,6 +5,7 @@ import { ToastProvider } from "@/lib/toast-context";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import ToastContainer from "@/components/admin/ui/Toast";
+import SectionGuard from "@/components/admin/SectionGuard";
 
 export default function AdminLayout({
   children,
@@ -34,7 +35,7 @@ export default function AdminLayout({
                   "linear-gradient(to right, #000000, #171717, #000000)",
               }}
             >
-              {children}
+              <SectionGuard>{children}</SectionGuard>
             </main>
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
   betStatusBadge,
 } from "@/components/round/round-display";
 import { useToast } from "@/lib/toast-context";
+import { useAdmin } from "@/lib/admin-context";
 
 interface Bet {
   id: string;
@@ -55,6 +56,8 @@ interface RoundDetail {
 }
 
 export default function RoundDetailPage() {
+  /* Voiding a round moves money. Read-only roles see the round, not the button. */
+  const { canWrite } = useAdmin();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -112,7 +115,9 @@ export default function RoundDetailPage() {
     );
   }
 
-  const canVoid = !["settled", "settling", "voided"].includes(round.status);
+  const canVoid =
+    canWrite("rounds") &&
+    !["settled", "settling", "voided"].includes(round.status);
 
   const money = (v: number) =>
     Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 });

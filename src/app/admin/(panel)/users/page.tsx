@@ -23,6 +23,9 @@ const ROLE_COLORS: Record<string, string> = {
   superadmin: "#fb2c36",
   operator_admin: "#f0b100",
   viewer: "#2b7fff",
+  // External game-provider (studio team) contacts: reports, rounds and tables,
+  // read-only. Green so it reads as the least-privileged badge on the page.
+  game_provider: "#00c951",
 };
 
 export default function UsersPage() {
@@ -325,6 +328,7 @@ export default function UsersPage() {
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Role</label>
           <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle}>
+            <option value="game_provider">Game Provider</option>
             <option value="viewer">Viewer</option>
             <option value="operator_admin">Operator Admin</option>
             <option value="superadmin">Super Admin</option>
@@ -349,6 +353,7 @@ export default function UsersPage() {
           <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>Role</label>
           <select value={editRole} onChange={(e) => setEditRole(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none max-md:min-h-[44px]" style={inputStyle}>
+            <option value="game_provider">Game Provider</option>
             <option value="viewer">Viewer</option>
             <option value="operator_admin">Operator Admin</option>
             <option value="superadmin">Super Admin</option>
