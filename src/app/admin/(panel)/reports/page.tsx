@@ -15,6 +15,9 @@ interface Summary {
   ggr: number;
   bet_count: number;
   round_count: number;
+  unique_players: number;
+  new_players: number;
+  returning_players: number;
 }
 
 interface BreakdownEntry {
@@ -27,6 +30,17 @@ interface BreakdownEntry {
   total_payout: number;
   ggr: number;
   bet_count: number;
+  unique_players?: number;
+}
+
+/* The breakdown endpoints wrap their rows so they can also report whether the
+   aggregation hit its row cap. Per-group unique-player counts are derived from
+   those same paged rows, so a truncated response means the headcounts are low
+   too — worth saying out loud rather than rendering as fact. */
+interface BreakdownResponse {
+  operators?: BreakdownEntry[];
+  tables?: BreakdownEntry[];
+  truncated?: boolean;
 }
 
 /* Date preset helpers.
@@ -87,11 +101,12 @@ function ReportsPageInner() {
   const activeTab: "operator" | "table" = values.tab === "table" ? "table" : "operator";
 
   const params = new URLSearchParams();
-  // "2026-07-27" alone parses as UTC midnight = 08:00 in Manila, which
-  // silently dropped the first 8 hours of the day from every report. The
-  // explicit time makes it parse as LOCAL midnight, matching date_to below.
-  if (dateFrom) params.set("date_from", new Date(dateFrom + "T00:00:00").toISOString());
-  if (dateTo) params.set("date_to", new Date(dateTo + "T23:59:59").toISOString());
+  // Send the bare date and let the backend resolve the day in Manila time.
+  // This used to convert to the BROWSER's local midnight, which meant the same
+  // picked date produced different rows for an admin in a different timezone,
+  // and UTC days (an 8-hour shift) for any server-side or scheduled caller.
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
   const qs = params.toString();
 
   // Three independent cache keys rather than one combined fetch: switching the
@@ -99,12 +114,14 @@ function ReportsPageInner() {
   // cached for this period), and a slow aggregation no longer holds up the two
   // that finished.
   const summaryQ = useAdminQuery<Summary>(`/api/admin/reports/summary?${qs}`);
-  const operatorQ = useAdminQuery<BreakdownEntry[]>(`/api/admin/reports/by-operator?${qs}`);
-  const tableQ = useAdminQuery<BreakdownEntry[]>(`/api/admin/reports/by-table?${qs}`);
+  const operatorQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-operator?${qs}`);
+  const tableQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-table?${qs}`);
 
   const summary = summaryQ.data ?? null;
-  const byOperator = operatorQ.data ?? [];
-  const byTable = tableQ.data ?? [];
+  const byOperator = operatorQ.data?.operators ?? [];
+  const byTable = tableQ.data?.tables ?? [];
+  const truncated =
+    Boolean(operatorQ.data?.truncated) || Boolean(tableQ.data?.truncated);
   const loading = summaryQ.loading || operatorQ.loading || tableQ.loading;
   const refreshing = summaryQ.refreshing || operatorQ.refreshing || tableQ.refreshing;
 
@@ -126,18 +143,26 @@ function ReportsPageInner() {
       ["Period", `${dateFrom} to ${dateTo}`],
       [],
       ["Summary"],
-      ["Total Wagered", "Total Payout", "GGR", "Bets", "Rounds"],
+      [
+        "Total Wagered", "Total Payout", "GGR", "Bets", "Rounds",
+        "Unique Players", "New Players", "Returning Players",
+      ],
       summary
-        ? [summary.total_wagered, summary.total_payout, summary.ggr, summary.bet_count, summary.round_count]
-        : ["-", "-", "-", "-", "-"],
+        ? [
+            summary.total_wagered, summary.total_payout, summary.ggr,
+            summary.bet_count, summary.round_count,
+            summary.unique_players ?? 0, summary.new_players ?? 0,
+            summary.returning_players ?? 0,
+          ]
+        : ["-", "-", "-", "-", "-", "-", "-", "-"],
       [],
       ["By System Provider"],
-      ["System Provider", "Wagered", "Payout", "GGR", "Bets"],
-      ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count]),
+      ["System Provider", "Wagered", "Payout", "GGR", "Bets", "Players"],
+      ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count, r.unique_players ?? 0]),
       [],
       ["By Table"],
-      ["Table", "Wagered", "Payout", "GGR", "Bets"],
-      ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count]),
+      ["Table", "Wagered", "Payout", "GGR", "Bets", "Players"],
+      ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count, r.unique_players ?? 0]),
     ];
     downloadCsv(`ggr-report_${dateFrom}_${dateTo}.csv`, rows);
   }
@@ -183,6 +208,14 @@ function ReportsPageInner() {
               </span>
             ),
           },
+          {
+            label: "Players",
+            value: (
+              <span className="font-mono" style={{ color: "#99a1af" }}>
+                {(row.unique_players ?? 0).toLocaleString()}
+              </span>
+            ),
+          },
         ],
       };
     }),
@@ -208,6 +241,17 @@ function ReportsPageInner() {
           value: (
             <span className="font-mono" style={{ color: "#99a1af" }}>
               {totalBets.toLocaleString()}
+            </span>
+          ),
+        },
+        {
+          /* Deliberately NOT the sum of the column above: one person playing
+             two tables is one player, and adding the per-group counts would
+             double-count them. This is the de-duplicated figure. */
+          label: "Players",
+          value: (
+            <span className="font-mono" style={{ color: "#99a1af" }}>
+              {(summary?.unique_players ?? 0).toLocaleString()}
             </span>
           ),
         },
@@ -307,7 +351,7 @@ function ReportsPageInner() {
         </div>
       ) : summary ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
             <StatCard label="Total Wagered" value={fmt(summary.total_wagered)} />
             <StatCard label="Total Payout" value={fmt(summary.total_payout)} />
             <StatCard
@@ -317,7 +361,30 @@ function ReportsPageInner() {
             />
             <StatCard label="Bets" value={summary.bet_count.toLocaleString()} />
             <StatCard label="Rounds" value={summary.round_count.toLocaleString()} />
+            <StatCard
+              label="Players"
+              value={(summary.unique_players ?? 0).toLocaleString()}
+              hint={`${summary.new_players ?? 0} new · ${
+                summary.returning_players ?? 0
+              } returning`}
+            />
           </div>
+
+          {truncated && (
+            <p
+              className="text-xs rounded-lg px-3 py-2"
+              style={{
+                color: "#d08700",
+                border: "1px solid rgba(208,135,0,0.3)",
+                backgroundColor: "rgba(208,135,0,0.06)",
+              }}
+            >
+              This period has more bets than the breakdown aggregates in one
+              pass. The per-row Wagered / Payout / GGR / Bets / Players figures
+              below are partial — narrow the date range for exact numbers. The
+              summary tiles above are unaffected.
+            </p>
+          )}
 
           {/* Breakdown tabs */}
           <div
@@ -371,7 +438,7 @@ function ReportsPageInner() {
                       >
                         {activeTab === "operator" ? "System Provider" : "Table"}
                       </th>
-                      {["Wagered", "Payout", "GGR", "Bets"].map((h) => (
+                      {["Wagered", "Payout", "GGR", "Bets", "Players"].map((h) => (
                         <th
                           key={h}
                           className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
@@ -418,6 +485,12 @@ function ReportsPageInner() {
                           >
                             {row.bet_count.toLocaleString()}
                           </td>
+                          <td
+                            className="px-4 py-3 text-right font-mono"
+                            style={{ color: "#99a1af" }}
+                          >
+                            {(row.unique_players ?? 0).toLocaleString()}
+                          </td>
                         </tr>
                       );
                     })}
@@ -454,6 +527,14 @@ function ReportsPageInner() {
                         style={{ color: "#99a1af" }}
                       >
                         {totalBets.toLocaleString()}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-right font-mono font-semibold"
+                        style={{ color: "#99a1af" }}
+                      >
+                        {/* De-duplicated across groups, not a column sum —
+                            one person on two tables is one player. */}
+                        {(summary.unique_players ?? 0).toLocaleString()}
                       </td>
                     </tr>
                   </tbody>

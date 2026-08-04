@@ -16,17 +16,26 @@ export async function GET(req: NextRequest) {
   if (backendToken) headers["X-Admin-Token"] = backendToken;
 
   // Aggregate stats from multiple endpoints
-  const [tablesRes, operatorsRes] = await Promise.allSettled([
+  const [tablesRes, operatorsRes, dashboardRes] = await Promise.allSettled([
     // env_scoped: the "active tables" tile counts what /admin/tables shows,
     // so prod must not inflate the number with TEST-* fixtures.
     fetch(`${API_URL}/internal/tables?env_scoped=true`, { headers }),
     fetch(`${API_URL}/internal/operators`, { headers }),
+    // Manila-day round count + exact unique-player figures.
+    fetch(`${API_URL}/internal/admin/dashboard/stats`, { headers }),
   ]);
 
   let activeTables = 0;
   let todayRounds = 0;
   let activeOperators = 0;
   let onlinePlayers = 0;
+  let uniqueLifetime = 0;
+  let uniqueToday = 0;
+  let unique7d = 0;
+  let unique30d = 0;
+  let new30d = 0;
+  let returning30d = 0;
+  let playerStatsAvailable = false;
 
   if (tablesRes.status === "fulfilled" && tablesRes.value.ok) {
     const data = await tablesRes.value.json();
@@ -42,12 +51,6 @@ export async function GET(req: NextRequest) {
         sum + (Number(t.player_count) || 0),
       0
     );
-    // Sum up rounds from today if available
-    todayRounds = tables.reduce(
-      (sum: number, t: Record<string, unknown>) =>
-        sum + (Number(t.round_count) || 0),
-      0
-    );
   }
 
   if (operatorsRes.status === "fulfilled" && operatorsRes.value.ok) {
@@ -60,10 +63,36 @@ export async function GET(req: NextRequest) {
     ).length;
   }
 
+  // Rounds and player counts come from the backend, which resolves Manila days
+  // server-side. They used to be derived here: today_rounds summed a
+  // `round_count` field that does not exist on games and was never selected, so
+  // the tile was permanently 0.
+  if (dashboardRes.status === "fulfilled" && dashboardRes.value.ok) {
+    const body = await dashboardRes.value.json();
+    const d = body.data ?? body;
+    todayRounds = Number(d.today_rounds) || 0;
+    uniqueLifetime = Number(d.unique_players_lifetime) || 0;
+    uniqueToday = Number(d.unique_players_today) || 0;
+    unique7d = Number(d.unique_players_7d) || 0;
+    unique30d = Number(d.unique_players_30d) || 0;
+    new30d = Number(d.new_players_30d) || 0;
+    returning30d = Number(d.returning_players_30d) || 0;
+    playerStatsAvailable = d.player_stats_available !== false;
+  }
+
   return NextResponse.json({
     active_tables: activeTables,
     online_players: onlinePlayers,
     today_rounds: todayRounds,
     active_operators: activeOperators,
+    unique_players_lifetime: uniqueLifetime,
+    unique_players_today: uniqueToday,
+    unique_players_7d: unique7d,
+    unique_players_30d: unique30d,
+    new_players_30d: new30d,
+    returning_players_30d: returning30d,
+    // False => the backend could not produce player figures. The dashboard
+    // hides those tiles rather than showing a confident, wrong zero.
+    player_stats_available: playerStatsAvailable,
   });
 }

@@ -10,6 +10,13 @@ interface DashboardStats {
   online_players: number;
   today_rounds: number;
   active_operators: number;
+  unique_players_lifetime: number;
+  unique_players_today: number;
+  unique_players_7d: number;
+  unique_players_30d: number;
+  new_players_30d: number;
+  returning_players_30d: number;
+  player_stats_available: boolean;
 }
 
 export default function AdminDashboard() {
@@ -57,6 +64,7 @@ export default function AdminDashboard() {
         />
         <StatCard
           label="Today's Rounds"
+          hint="Settled rounds since midnight Manila time"
           value={loading ? "..." : stats?.today_rounds ?? 0}
           icon={
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -78,6 +86,54 @@ export default function AdminDashboard() {
         />
         )}
       </div>
+
+      {/* Player reach. Separated from the live tiles above on purpose: those
+          answer "what is happening right now", these answer "how many real
+          people have played", which is a different question read at a different
+          cadence. Hidden entirely when the backend could not produce them —
+          a wrong zero here reads as "nobody has ever played". */}
+      {stats?.player_stats_available !== false && (
+        <div className="space-y-3">
+          <h2
+            className="text-sm font-semibold uppercase tracking-wider"
+            style={{ color: "#d08700" }}
+          >
+            Unique Players
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="All Time"
+              hint="Distinct players who have ever placed a bet"
+              value={loading ? "..." : stats?.unique_players_lifetime ?? 0}
+            />
+            <StatCard
+              label="Today"
+              hint="Since midnight Manila time"
+              value={loading ? "..." : stats?.unique_players_today ?? 0}
+            />
+            <StatCard
+              label="Last 7 Days"
+              value={loading ? "..." : stats?.unique_players_7d ?? 0}
+            />
+            <StatCard
+              label="Last 30 Days"
+              hint={
+                loading
+                  ? undefined
+                  : `${stats?.new_players_30d ?? 0} new · ${
+                      stats?.returning_players_30d ?? 0
+                    } returning`
+              }
+              value={loading ? "..." : stats?.unique_players_30d ?? 0}
+            />
+          </div>
+          <p className="text-xs" style={{ color: "#6a7282" }}>
+            Counts distinct players with a placed bet, excluding internal test
+            accounts. &ldquo;New&rdquo; means their first-ever bet falls inside
+            the window.
+          </p>
+        </div>
+      )}
 
       {/* Recent activity placeholder */}
       <div
