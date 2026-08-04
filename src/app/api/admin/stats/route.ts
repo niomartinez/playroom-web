@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
   let activeTables = 0;
   let todayRounds = 0;
   let activeOperators = 0;
+  let onlinePlayers = 0;
 
   if (tablesRes.status === "fulfilled" && tablesRes.value.ok) {
     const data = await tablesRes.value.json();
@@ -33,6 +34,14 @@ export async function GET(req: NextRequest) {
     activeTables = tables.filter(
       (t: Record<string, unknown>) => t.status === "open" || t.is_active
     ).length;
+    // player_count is computed live by the backend from stream_sessions
+    // heartbeats. This tile was hardcoded to 0 and never asked for a real
+    // number, so it read empty even with players seated on the table.
+    onlinePlayers = tables.reduce(
+      (sum: number, t: Record<string, unknown>) =>
+        sum + (Number(t.player_count) || 0),
+      0
+    );
     // Sum up rounds from today if available
     todayRounds = tables.reduce(
       (sum: number, t: Record<string, unknown>) =>
@@ -53,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     active_tables: activeTables,
-    online_players: 0, // placeholder
+    online_players: onlinePlayers,
     today_rounds: todayRounds,
     active_operators: activeOperators,
   });
