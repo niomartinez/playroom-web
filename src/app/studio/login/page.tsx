@@ -35,7 +35,11 @@ function StudioLoginForm() {
     const res = await fetch("/api/studio/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      // Trim the username: autofill and touch keyboards pad it with a
+      // space, which the backend lookup would otherwise treat as part of
+      // the name and reject as "Invalid username or password". The
+      // password is sent verbatim — spaces there may be deliberate.
+      body: JSON.stringify({ username: username.trim(), password }),
     });
 
     if (res.ok) {
@@ -96,6 +100,10 @@ function StudioLoginForm() {
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="username"
           className="w-full px-4 py-3 bg-[var(--bg-panel-inner)] border border-[var(--text-dim)] rounded-lg text-white placeholder:text-[var(--text-dim)] focus:border-[var(--gold-text)] focus:outline-none"
           required
         />
