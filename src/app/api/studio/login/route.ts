@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeJwt } from "jose";
-import { validateCredentials, createSession, isIpAllowed } from "@/lib/auth";
+import { validateCredentials, createSession } from "@/lib/auth";
 import { requireEnv } from "@/lib/server-env";
 
 const API_BASE =
@@ -25,17 +25,15 @@ const DEFAULT_MAX_AGE = 60 * 60 * 12; // 12h fallback
  * TODO: F-08 burn-down — remove the legacy fallback after ~2026-05-07.
  */
 export async function POST(req: NextRequest) {
-  // IP check. Prefer Vercel's trusted header over the spoofable left-most XFF.
-  const clientIp =
-    req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip")?.trim() ||
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "";
-
-  if (!isIpAllowed(clientIp)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+  // NO IP CHECK HERE — deliberately.
+  //
+  // `proxy.ts` already gates every /api/studio/ path at the edge, and it is
+  // the only copy that reads BOTH the env allowlist and the managed
+  // `ip_allowlist` table. This route used to run its own `isIpAllowed()` on
+  // top, which read env vars alone. So on 2026-08-05 a dealer's rotated IP was
+  // added to the managed list, the edge let him through — and this second,
+  // blind copy of the same policy 403'd him anyway, with a bare "Forbidden".
+  // One policy, one place. If you need to gate this route, change ipGateSurface().
   const { username, password } = await req.json();
 
   // ── Step 1: backend per-dealer login ────────────────────────────────
