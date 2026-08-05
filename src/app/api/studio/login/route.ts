@@ -143,11 +143,16 @@ export async function POST(req: NextRequest) {
 
   // Both paths failed — return the backend's error if we have one,
   // otherwise a generic 401.
+  // `upstream_status` is the status the BACKEND gave us (0 = never
+  // reached). Without it a dealer staring at a red box cannot tell a
+  // rejected password from a backend that timed out, and neither can
+  // whoever they report it to.
   return NextResponse.json(
     {
       error:
         backendError?.message || "Invalid credentials",
       error_code: backendError?.error_code,
+      upstream_status: backendStatus,
     },
     { status: backendStatus === 403 ? 403 : 401 },
   );

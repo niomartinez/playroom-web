@@ -68,12 +68,20 @@ function StudioLoginForm() {
       // non-string error object as a React child throws React error #31
       // and crashes the whole login page (seen in prod on failed logins).
       const raw = data?.error ?? data?.message;
+      // NEVER fall back to a credentials message. This branch also runs
+      // when the response has no JSON body at all — a function timeout, a
+      // 5xx HTML page — and telling a dealer their password is wrong when
+      // the request never got an answer costs an hour of the wrong
+      // debugging. Show the status code instead so it can be reported.
+      const fallback = `Sign-in failed (code ${res.status}${
+        typeof data?.upstream_status === "number" ? `/${data.upstream_status}` : ""
+      }). This may not be your password — report this code.`;
       const msg =
         typeof raw === "string"
           ? raw
           : typeof raw?.message === "string"
             ? raw.message
-            : "Invalid username or password";
+            : fallback;
       setError(msg);
     }
     setLoading(false);
