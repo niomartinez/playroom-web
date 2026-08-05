@@ -143,6 +143,56 @@ function resolveClientIp(req: NextRequest): string {
   );
 }
 
+/** The 403 an IP-gated surface returns.
+ *
+ *  This used to be `new NextResponse("Forbidden")` — a plain-text body with
+ *  nothing identifying in it. Two things went wrong with that, both of which
+ *  cost a live shift an hour on 2026-08-05:
+ *
+ *  1. A plain-text body is not JSON, so the studio login page's `res.json()`
+ *     threw and it fell through to its catch-all "Invalid username or
+ *     password". A dealer whose IP had rotated was told, repeatedly and with
+ *     total confidence, that his password was wrong. He then swapped networks
+ *     — which of course only handed him more non-allowlisted IPs.
+ *  2. Nothing logged the blocked IP, so neither Vercel's logs nor the backend's
+ *     showed the attempt at all. From the backend side it looked like the
+ *     dealer had simply never tried to log in.
+ *
+ *  So: answer in JSON on API paths, say plainly what happened on page loads,
+ *  echo the caller's own IP back (it is already theirs — it is not a leak, and
+ *  it is the one thing whoever fixes the allowlist needs), and log it.
+ */
+function ipBlockedResponse(
+  clientIp: string,
+  surface: "admin" | "studio",
+  pathname: string,
+): NextResponse {
+  const ip = clientIp || "unknown";
+  console.warn(
+    `[ip-gate] blocked ${surface} request from ${ip} to ${pathname}`,
+  );
+  const message =
+    `This device's IP (${ip}) is not on the ${surface} allowlist. ` +
+    `This is not a password problem — send this IP to the dev team to be added.`;
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json(
+      { error: message, error_code: "1403", ip, surface },
+      { status: 403 },
+    );
+  }
+  return new NextResponse(
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+      `<title>Access blocked</title>` +
+      `<div style="font:16px/1.6 system-ui,sans-serif;max-width:34rem;margin:15vh auto;padding:0 1.5rem;color:#eee;background:#111">` +
+      `<h1 style="font-size:1.25rem;color:#e5b567">Access blocked</h1>` +
+      `<p>${message}</p>` +
+      `<p style="opacity:.7;font-size:.9rem">IP: <code>${ip}</code> &middot; surface: <code>${surface}</code></p>` +
+      `</div>`,
+    { status: 403, headers: { "content-type": "text/html; charset=utf-8" } },
+  );
+}
+
 /** Which IP-gated surface this path belongs to, if any.
  *
  *  `admin`  — the internal back office (/admin + /api/admin/).
@@ -228,7 +278,7 @@ export async function proxy(req: NextRequest) {
         allowed = Boolean(managed?.[ipSurface].has(clientIp));
       }
       if (!allowed) {
-        return new NextResponse("Forbidden", { status: 403 });
+        return ipBlockedResponse(clientIp, ipSurface, pathname);
       }
     }
   }
