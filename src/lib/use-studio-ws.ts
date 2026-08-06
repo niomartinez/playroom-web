@@ -8,6 +8,13 @@ import type { RoundStatus, CurrentRound, Roads, RoadEntry } from "./game-context
 
 const MAX_DELAY = 30_000;
 
+/* Matches NO_TABLE_SENTINEL in app/api/internal/lobby_ticket.py.
+ *
+ * An ABSENT table scope means "every table" server-side, so "I have not picked
+ * a table" needs a value of its own — otherwise a studio account that has only
+ * just logged in receives whichever dealer is mid-round. */
+const NO_TABLE = "__none__";
+
 type RoundSetter = (r: SetStateAction<CurrentRound | null>) => void;
 type RoadsSetter = (r: SetStateAction<Roads>) => void;
 type StatusSetter = (s: SetStateAction<RoundStatus>) => void;
@@ -44,7 +51,16 @@ export function useStudioWs() {
       // mint 401s and this hook stops reconnecting FOREVER while the studio
       // session is still valid — the dealer then never receives RoundClosed
       // and the UI sticks at SETTLING after every round.
-      const result = await fetchLobbyTicket({ role: "studio" });
+      // Scope the ticket to THIS studio's table. The lobby WS is one shared
+      // channel across every table, so an unscoped ticket is a firehose: a
+      // dealer (or anyone logged into the studio) received Table 1's whole
+      // round cycle — betting, dealing, result, settlement — while sitting on
+      // Table 2 or on no table at all. The client-side filter below was the
+      // only thing hiding it, and it failed open when no table was selected.
+      const result = await fetchLobbyTicket({
+        role: "studio",
+        tableId: settersRef.current.tableId || NO_TABLE,
+      });
       if (!mounted) return;
       if ("error" in result) {
         if (result.error === "unauthorized") {
@@ -79,6 +95,10 @@ export function useStudioWs() {
           const eventTableId = (data.tableId ?? data.table_id) as string | undefined;
           const eventTableUuid = (data.tableUuid ?? data.table_uuid) as string | undefined;
           const myId = s.tableId;
+          // No table selected → drop anything belonging to a table. This used
+          // to fall through to `handleStudioMessage`, so a studio session with
+          // no table ran another dealer's round cycle on screen.
+          if (!myId && (eventTableId || eventTableUuid)) return;
           if (myId && (eventTableId || eventTableUuid)) {
             // Backend emits both forms (external_game_id + UUID) so we accept on
             // either match. The studio context stores UUID; the player context
@@ -115,7 +135,11 @@ export function useStudioWs() {
       if (retryTimer) clearTimeout(retryTimer);
       ws?.close();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    /* Reconnect when the dealer changes table. The ticket now carries the table
+       scope, so a connection minted before the change is scoped to the OLD
+       table (or to nothing) and would deliver no round events at all — the
+       socket would look alive and the studio would sit silent. */
+  }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /* ------------------------------------------------------------------ */

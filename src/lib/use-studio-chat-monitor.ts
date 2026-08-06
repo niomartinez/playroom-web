@@ -80,7 +80,11 @@ export function useStudioChatMonitor(
       // browser must not win the auto-detect). Any failure just backs off:
       // this is a passive read surface, so we keep retrying rather than
       // freezing the view.
-      const result = await fetchLobbyTicket({ role: "studio" });
+      // The table also goes on the ticket. /ws/chat-monitor takes its table
+      // from the URL, so this changes nothing here — it keeps studio tickets
+      // uniformly scoped, so an unscoped one stays a real signal that some
+      // caller is on an old build.
+      const result = await fetchLobbyTicket({ role: "studio", tableId });
       if (!mounted) return;
       if ("error" in result) {
         const delay = Math.min(1000 * 2 ** retry, MAX_DELAY);
