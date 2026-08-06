@@ -17,6 +17,7 @@ interface Player {
   balance: number;
   currency_code: string;
   is_active: boolean;
+  is_test: boolean;
   operator_id: string;
   operator_name: string;
   created_at: string;
@@ -42,6 +43,7 @@ function PlayersPageInner() {
     is_active: "",
     balance_min: "",
     balance_max: "",
+    include_test: "",
     sort_by: "created_at",
     sort_dir: "desc",
   });
@@ -76,7 +78,8 @@ function PlayersPageInner() {
     !!values.search ||
     !!values.is_active ||
     values.balance_min !== "" ||
-    values.balance_max !== "";
+    values.balance_max !== "" ||
+    values.include_test === "true";
 
   const query = new URLSearchParams({
     page: String(page),
@@ -91,6 +94,11 @@ function PlayersPageInner() {
   // filter out every player with no balance.
   if (values.balance_min !== "") query.set("balance_min", values.balance_min);
   if (values.balance_max !== "") query.set("balance_max", values.balance_max);
+  /* Internal QA accounts (uitest-*, one per generated test link) are hidden by
+     the BACKEND unless asked for, so the param is only ever sent to opt back
+     IN — sending include_test=false would just be the default spelled out and
+     would fragment the query cache for no gain. */
+  if (values.include_test === "true") query.set("include_test", "true");
 
   const {
     data: playersData,
@@ -144,6 +152,26 @@ function PlayersPageInner() {
       label: "Username",
       header: <SortHeader label="Username" {...sortProps("username", "asc")} />,
       mobile: "title",
+      /* Only reachable with the test filter switched on, and then it is the
+         thing you need to see: these rows carry play money on the real tables,
+         so an unlabelled one reads as a customer. */
+      render: (row) => (
+        <span className="inline-flex items-center gap-2">
+          {row.username}
+          {row.is_test && (
+            <span
+              className="rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+              style={{
+                backgroundColor: "rgba(208,135,0,0.15)",
+                color: "#f0b100",
+                border: "1px solid rgba(240,177,0,0.35)",
+              }}
+            >
+              TEST
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: "external_user_id",
@@ -272,6 +300,29 @@ function PlayersPageInner() {
             </select>
           </div>
 
+          {/* Test accounts. Hidden by default because they are ours, not the
+              operator's: every generated test link mints its own uitest-*
+              player, so on a quiet week they are most of what "Joined" sorts to
+              the top. QA still needs to find the one they just minted, hence a
+              switch rather than a permanent exclusion. */}
+          <div className="max-md:w-full">
+            <label
+              className="block text-xs font-medium mb-1"
+              style={{ color: "#99a1af" }}
+            >
+              Test accounts
+            </label>
+            <select
+              value={values.include_test}
+              onChange={(e) => setFilter({ include_test: e.target.value })}
+              className={controlClass}
+              style={inputStyle}
+            >
+              <option value="">Hidden</option>
+              <option value="true">Shown</option>
+            </select>
+          </div>
+
           {/* Balance range. Two bounds rather than a preset list because the
               useful question changes constantly — "who is over 100k", "who is
               sitting at zero" — and a dropdown of guesses would never have the
@@ -321,6 +372,7 @@ function PlayersPageInner() {
                   is_active: "",
                   balance_min: "",
                   balance_max: "",
+                  include_test: "",
                 });
               }}
               className="rounded-lg px-3 py-2 text-sm max-md:w-full max-md:min-h-[44px]"

@@ -19,6 +19,7 @@ interface PlayerDetail {
   balance: number;
   currency_code: string;
   is_active: boolean;
+  is_test: boolean;
   operator_id: string;
   operator_name: string;
   operator_client_id: string;
@@ -189,6 +190,20 @@ export default function PlayerDetailPage() {
         <h1 className="text-2xl font-bold text-white">{player.username}</h1>
         <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={player.is_active ? "active" : "inactive"} />
+        {/* Reachable by direct link even while the list hides testers, and the
+            stats below are then play money on a real table — say so. */}
+        {player.is_test && (
+          <span
+            className="rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+            style={{
+              backgroundColor: "rgba(208,135,0,0.15)",
+              color: "#f0b100",
+              border: "1px solid rgba(240,177,0,0.35)",
+            }}
+          >
+            TEST ACCOUNT
+          </span>
+        )}
       </div>
 
       {/* Kick result */}
