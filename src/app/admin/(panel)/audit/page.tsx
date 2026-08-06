@@ -32,6 +32,10 @@ const ACTION_COLORS: Record<string, string> = {
   regenerate_api_key: "#f0b100",
   update_config: "#2b7fff",
   force_close_all_tables: "#fb2c36",
+  /* Closing pulls a live table out of the lobby — it reads as destructive
+     because it is. Opening is the recovery, so it reads as safe. */
+  close_table: "#fb2c36",
+  open_table: "#00bc7d",
   create_admin_user: "#00bc7d",
   update_admin_user: "#f0b100",
   deactivate_admin_user: "#fb2c36",
