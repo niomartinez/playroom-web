@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,9 @@ interface Table {
   min_bet: number;
   max_bet: number;
   dealer_name: string | null;
+  /** Live presence, computed per request from stream_sessions (150s window) —
+      NOT the dead games.player_count column, which is always 0. */
+  player_count: number | null;
   [key: string]: unknown;
 }
 
@@ -61,6 +64,17 @@ export default function TablesPage() {
     invalidateAdminQuery("/api/admin/tables");
     refetch();
   };
+
+  /* The Players column is live presence with a 150s window, so a cached list
+     left open would quietly become a count of who WAS here. Through a ref with
+     an empty dep list: useAdminQuery returns a new `refetch` each render, and
+     depending on it directly would restart the countdown every re-render. */
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+  useEffect(() => {
+    const t = setInterval(() => refetchRef.current(), 20_000);
+    return () => clearInterval(t);
+  }, []);
 
   async function handleCreate() {
     if (!newName.trim() || !newGameId.trim()) return;
@@ -165,6 +179,31 @@ export default function TablesPage() {
           {row.dealer_name || "\u2014"}
         </span>
       ),
+    },
+    {
+      /* Live presence, already in the payload \u2014 the list just never showed it,
+         so "how busy is table 2 right now" meant opening each table in turn.
+         Sortable client-side is honest here: this list is the whole set, not
+         one page of it. Click through for the names behind the number. */
+      key: "player_count",
+      label: "Players",
+      sortable: true,
+      mobile: "row",
+      mobileLabel: "Players now",
+      render: (row) => {
+        const n = Number(row.player_count ?? 0);
+        return n > 0 ? (
+          <span className="inline-flex items-center gap-1.5" style={{ color: "#05df72" }}>
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 6, height: 6, backgroundColor: "#05df72" }}
+            />
+            {n}
+          </span>
+        ) : (
+          <span style={{ color: "#6a7282" }}>0</span>
+        );
+      },
     },
     {
       key: "is_active",

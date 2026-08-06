@@ -16,6 +16,8 @@ interface PlayerDetail {
   id: string;
   external_user_id: string;
   username: string;
+  display_name: string | null;
+  display_name_set: boolean;
   balance: number;
   currency_code: string;
   is_active: boolean;
@@ -187,7 +189,19 @@ export default function PlayerDetailPage() {
       </button>
 
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-white">{player.username}</h1>
+        {/* Lead with the screen name — it is what the player is called
+            everywhere they are visible. The operator's username stays right
+            beside it, since that is the id the partner will quote back. */}
+        <h1 className="text-2xl font-bold text-white">
+          {player.display_name_set && player.display_name
+            ? player.display_name
+            : player.username}
+        </h1>
+        {player.display_name_set && player.display_name && (
+          <span className="font-mono text-sm" style={{ color: "#6a7282" }}>
+            {player.username}
+          </span>
+        )}
         <RefreshingHint show={refreshing && !loading} />
         <StatusBadge status={player.is_active ? "active" : "inactive"} />
         {/* Reachable by direct link even while the list hides testers, and the

@@ -14,6 +14,10 @@ interface Player {
   id: string;
   external_user_id: string;
   username: string;
+  /** The name the player chose and everyone at the table sees. */
+  display_name: string | null;
+  /** False = display_name is still the auto pre-fill, not their choice. */
+  display_name_set: boolean;
   balance: number;
   currency_code: string;
   is_active: boolean;
@@ -184,6 +188,27 @@ function PlayersPageInner() {
       ),
     },
     {
+      /* The name the room sees. `username` is the operator's identifier and
+         appears nowhere a player can read it, so a report ("Boi is stuck at
+         the table") could not be matched to a row from this list at all. */
+      key: "display_name",
+      label: "Screen Name",
+      header: <SortHeader label="Screen Name" {...sortProps("display_name", "asc")} />,
+      mobile: "row",
+      mobileLabel: "Screen name",
+      render: (row) =>
+        row.display_name_set && row.display_name ? (
+          <span>{row.display_name}</span>
+        ) : (
+          /* Not their name yet — it is the auto casino pre-fill shown until
+             they choose on first login. Printing it plain would invent an
+             identity nobody in the room has ever seen. */
+          <span style={{ color: "#6a7282" }} title="Auto pre-fill — the player has not chosen a name yet">
+            {row.display_name ? `${row.display_name} (not chosen)` : "—"}
+          </span>
+        ),
+    },
+    {
       key: "external_user_id",
       label: "External ID",
       header: (
@@ -333,7 +358,7 @@ function PlayersPageInner() {
                 what blows the row out on a 390px phone, so it is dropped there. */}
             <input
               type="text"
-              placeholder="Username or external ID..."
+              placeholder="Screen name, username or external ID..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className={`${controlClass} min-w-[220px] max-md:min-w-0`}

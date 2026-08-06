@@ -35,6 +35,7 @@ interface TablePlayer {
   external_user_id: string;
   username: string;
   display_name: string | null;
+  display_name_set: boolean;
   balance: number;
   currency_code: string;
   is_active: boolean;
@@ -350,7 +351,9 @@ export default function TableDetailPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-white truncate">
-                      {p.display_name || p.username}
+                      {p.display_name_set && p.display_name
+                        ? p.display_name
+                        : p.username}
                     </span>
                     {p.is_test && (
                       <span
