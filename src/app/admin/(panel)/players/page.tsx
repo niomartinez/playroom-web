@@ -18,6 +18,10 @@ interface Player {
   currency_code: string;
   is_active: boolean;
   is_test: boolean;
+  /* Live presence, from the same 150s stream_sessions window the dashboard's
+     Online Players tile counts — NOT the is_active account flag. */
+  is_online: boolean;
+  online_table: string | null;
   operator_id: string;
   operator_name: string;
   created_at: string;
@@ -41,6 +45,7 @@ function PlayersPageInner() {
     operator_id: "",
     search: "",
     is_active: "",
+    playing_now: "",
     balance_min: "",
     balance_max: "",
     include_test: "",
@@ -77,6 +82,7 @@ function PlayersPageInner() {
     !!values.operator_id ||
     !!values.search ||
     !!values.is_active ||
+    values.playing_now === "true" ||
     values.balance_min !== "" ||
     values.balance_max !== "" ||
     values.include_test === "true";
@@ -90,6 +96,7 @@ function PlayersPageInner() {
   if (values.operator_id) query.set("operator_id", values.operator_id);
   if (values.search) query.set("search", values.search);
   if (values.is_active) query.set("is_active", values.is_active);
+  if (values.playing_now === "true") query.set("playing_now", "true");
   // Blank means "no bound" — an empty string would be parsed as 0 and silently
   // filter out every player with no balance.
   if (values.balance_min !== "") query.set("balance_min", values.balance_min);
@@ -104,11 +111,14 @@ function PlayersPageInner() {
     data: playersData,
     loading,
     refreshing,
-  } = useAdminQuery<{ players: Player[]; total: number }>(
-    `/api/admin/players?${query.toString()}`,
-  );
+  } = useAdminQuery<{
+    players: Player[];
+    total: number;
+    online_total: number;
+  }>(`/api/admin/players?${query.toString()}`);
   const players = playersData?.players ?? [];
   const total = playersData?.total ?? 0;
+  const onlineTotal = playersData?.online_total ?? 0;
 
   // The operator list barely changes and is shared with other pages, so it is
   // cached under its own key and costs nothing after the first visit anywhere.
@@ -208,12 +218,36 @@ function PlayersPageInner() {
       ),
     },
     {
+      /* Not sortable: presence is computed live per request, not a column
+         Postgres can order by — a header that promised otherwise would sort
+         the twenty rows on screen and call it the answer. */
+      key: "is_online",
+      label: "Now",
+      mobile: "row",
+      mobileLabel: "Playing now",
+      render: (row) =>
+        row.is_online ? (
+          <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: "#05df72" }}>
+            <span
+              className="inline-block rounded-full"
+              style={{ width: 6, height: 6, backgroundColor: "#05df72" }}
+            />
+            {row.online_table || "At a table"}
+          </span>
+        ) : (
+          <span style={{ color: "#6a7282" }}>—</span>
+        ),
+    },
+    {
       key: "is_active",
-      label: "Status",
-      header: <SortHeader label="Status" {...sortProps("is_active")} />,
+      label: "Account",
+      header: <SortHeader label="Account" {...sortProps("is_active")} />,
       mobile: "row",
       render: (row) => (
-        <StatusBadge status={row.is_active ? "active" : "inactive"} />
+        <StatusBadge
+          status={row.is_active ? "active" : "inactive"}
+          label={row.is_active ? "Enabled" : "Disabled"}
+        />
       ),
     },
     {
@@ -230,7 +264,33 @@ function PlayersPageInner() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Players</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold text-white">Players</h1>
+        {/* The dashboard's Online Players figure, repeated here against the same
+            presence read, so "3 online" and this list can be reconciled instead
+            of looking like two different systems. Clicking it filters. */}
+        <button
+          onClick={() =>
+            setFilter({ playing_now: values.playing_now === "true" ? "" : "true" })
+          }
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+          style={{
+            backgroundColor:
+              values.playing_now === "true" ? "rgba(5,223,114,0.22)" : "rgba(5,223,114,0.12)",
+            color: "#05df72",
+            border:
+              values.playing_now === "true"
+                ? "1px solid rgba(5,223,114,0.5)"
+                : "1px solid transparent",
+          }}
+        >
+          <span
+            className="inline-block rounded-full"
+            style={{ width: 6, height: 6, backgroundColor: "#05df72" }}
+          />
+          {onlineTotal} playing now
+        </button>
+      </div>
 
       {/* Filter bar */}
       <div
@@ -281,12 +341,16 @@ function PlayersPageInner() {
             />
           </div>
 
+          {/* Two different questions, two controls. "Active" used to be the
+              only one here and it is the ACCOUNT flag — whether the person may
+              play at all — so it read as "playing now" and answered with every
+              dormant zero-balance account we have ever created. */}
           <div className="max-md:w-full">
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
             >
-              Status
+              Account
             </label>
             <select
               value={values.is_active}
@@ -295,8 +359,26 @@ function PlayersPageInner() {
               style={inputStyle}
             >
               <option value="">Any</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+          </div>
+
+          <div className="max-md:w-full">
+            <label
+              className="block text-xs font-medium mb-1"
+              style={{ color: "#99a1af" }}
+            >
+              Presence
+            </label>
+            <select
+              value={values.playing_now}
+              onChange={(e) => setFilter({ playing_now: e.target.value })}
+              className={controlClass}
+              style={inputStyle}
+            >
+              <option value="">Any</option>
+              <option value="true">At a table now</option>
             </select>
           </div>
 
@@ -370,6 +452,7 @@ function PlayersPageInner() {
                   operator_id: "",
                   search: "",
                   is_active: "",
+                  playing_now: "",
                   balance_min: "",
                   balance_max: "",
                   include_test: "",

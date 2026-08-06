@@ -30,6 +30,22 @@ interface TableDetail {
   [key: string]: unknown;
 }
 
+interface TablePlayer {
+  id: string;
+  external_user_id: string;
+  username: string;
+  display_name: string | null;
+  balance: number;
+  currency_code: string;
+  is_active: boolean;
+  is_test: boolean;
+  operator_name: string;
+  last_seen_at: string | null;
+  session_started_at: string | null;
+  idle_rounds: number;
+  stream_revoked: boolean;
+}
+
 export default function TableDetailPage() {
   /* Read-only roles reach this page (they may read `tables`) but every control
      on it is a write the backend would refuse. Show the record, not the levers. */
@@ -54,6 +70,10 @@ export default function TableDetailPage() {
 
   /* Confirm dialogs */
   const [showDeactivate, setShowDeactivate] = useState(false);
+  /* Closing is the same write as deactivating — is_active = false, table out of
+     the lobby, everyone watching disconnected — and it used to fire on a single
+     click while Deactivate, doing the identical thing, asked first. */
+  const [showClose, setShowClose] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -63,6 +83,36 @@ export default function TableDetailPage() {
     refetch,
   } = useAdminQuery<TableDetail>(`/api/admin/tables/${id}`);
   const table = tableData ?? null;
+
+  /* Who is behind "Players Online". The number alone could not be checked or
+     acted on — same presence window, listed instead of tallied. */
+  const {
+    data: playersData,
+    loading: playersLoading,
+    refetch: refetchPlayers,
+  } = useAdminQuery<{
+    players: TablePlayer[];
+    total: number;
+  }>(`/api/admin/tables/${id}/players`);
+  const tablePlayers = playersData?.players ?? [];
+
+  /* Presence expires after 150s, so a card left open would quietly become a
+     list of who WAS here. Refreshed well inside that window — and the table
+     record with it, since its Players Online reads the same presence.
+
+     Through a ref with an empty dep list: useAdminQuery hands back a fresh
+     `refetch` closure on every render, so depending on it directly would tear
+     the interval down and restart the 20s countdown each time the page
+     re-rendered — a timer that resets often enough never fires. */
+  const pollRef = useRef({ refetchPlayers, refetch });
+  pollRef.current = { refetchPlayers, refetch };
+  useEffect(() => {
+    const t = setInterval(() => {
+      pollRef.current.refetchPlayers();
+      pollRef.current.refetch();
+    }, 20_000);
+    return () => clearInterval(t);
+  }, []);
 
   /* Seed the form ONCE per record, not on every data change.
    *
@@ -126,6 +176,7 @@ export default function TableDetailPage() {
   async function handleToggle() {
     if (!table) return;
     const action = table.is_active ? "close" : "open";
+    setShowClose(false);
     try {
       const res = await fetch(`/api/admin/tables/${id}/${action}`, {
         method: "POST",
@@ -236,8 +287,10 @@ export default function TableDetailPage() {
         {/* Open/Close toggle — write-only control. */}
         {mayEdit && (
         <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(208,135,0,0.1)" }}>
+          {/* Opening is harmless and stays one click. Closing asks — it pulls a
+              live table out of the lobby and cuts whoever is watching. */}
           <button
-            onClick={handleToggle}
+            onClick={() => (table.is_active ? setShowClose(true) : handleToggle())}
             className="rounded-lg px-4 py-2 text-sm font-medium transition-colors max-md:w-full max-md:min-h-[44px]"
             style={{
               backgroundColor: table.is_active
@@ -252,6 +305,102 @@ export default function TableDetailPage() {
             {table.is_active ? "Close Table" : "Open Table"}
           </button>
         </div>
+        )}
+      </div>
+
+      {/* Who is at the table. Read-only, so it renders for viewer roles too —
+          the same `tables` permission that opened this page. */}
+      <div
+        className="rounded-xl p-6 max-md:p-4"
+        style={{
+          backgroundColor: "#171717",
+          border: "1px solid rgba(208,135,0,0.2)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2
+            className="text-sm font-semibold uppercase tracking-wider"
+            style={{ color: "#d08700" }}
+          >
+            Players at this table
+          </h2>
+          <span className="text-xs" style={{ color: "#6a7282" }}>
+            live · last 150s
+          </span>
+        </div>
+
+        {playersLoading ? (
+          <p className="text-sm" style={{ color: "#6a7282" }}>Loading…</p>
+        ) : tablePlayers.length === 0 ? (
+          <p className="text-sm" style={{ color: "#6a7282" }}>
+            Nobody is at this table right now.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {tablePlayers.map((p) => (
+              <Link
+                key={p.id}
+                href={`/admin/players/${p.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 max-md:flex-col max-md:items-start"
+                style={{
+                  backgroundColor: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(208,135,0,0.12)",
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-white truncate">
+                      {p.display_name || p.username}
+                    </span>
+                    {p.is_test && (
+                      <span
+                        className="rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide"
+                        style={{
+                          backgroundColor: "rgba(208,135,0,0.15)",
+                          color: "#f0b100",
+                          border: "1px solid rgba(240,177,0,0.35)",
+                        }}
+                      >
+                        TEST
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs font-mono truncate" style={{ color: "#6a7282" }}>
+                    {p.external_user_id}
+                    {p.operator_name ? ` · ${p.operator_name}` : ""}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 max-md:w-full max-md:justify-between">
+                  {/* Idle state is the reason to open this list: a seat that is
+                      watching but never betting looks identical to a player
+                      until you can see the counter. */}
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: p.stream_revoked
+                        ? "#fb2c36"
+                        : p.idle_rounds > 0
+                          ? "#f0b100"
+                          : "#05df72",
+                    }}
+                  >
+                    {p.stream_revoked
+                      ? "Feed cut"
+                      : p.idle_rounds > 0
+                        ? `Idle ${p.idle_rounds}`
+                        : "Betting"}
+                  </span>
+                  <span className="font-mono text-sm text-white">
+                    {Number(p.balance).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    <span style={{ color: "#6a7282" }}>{p.currency_code}</span>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
 
@@ -438,6 +587,24 @@ export default function TableDetailPage() {
         </button>
       </div>
       )}
+
+      <ConfirmDialog
+        open={showClose}
+        onClose={() => setShowClose(false)}
+        onConfirm={handleToggle}
+        title="Close Table"
+        /* Names the cost in the moment, using the live count — "3 players are
+           at this table" is a decision; "are you sure?" is a speed bump. */
+        message={
+          `${table.name} will be removed from the lobby and everyone watching will be disconnected.` +
+          (table.player_count
+            ? ` ${table.player_count} player${table.player_count === 1 ? " is" : "s are"} at this table right now.`
+            : " Nobody is at the table right now.") +
+          " Betting stops until you open it again. Reopening is one click."
+        }
+        confirmLabel="Close Table"
+        danger
+      />
 
       <ConfirmDialog
         open={showDeactivate}
