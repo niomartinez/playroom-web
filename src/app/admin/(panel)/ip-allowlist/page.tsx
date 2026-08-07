@@ -249,14 +249,16 @@ export default function IPAllowlistPage() {
           value={ip}
           onChange={(e) => setIp(e.target.value)}
           disabled={Boolean(editing)}
-          placeholder="112.201.70.116"
+          placeholder="112.201.70.116 or 138.84.139.0/24"
           className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none disabled:opacity-50 max-md:min-h-[44px]"
           style={{ ...inputStyle, fontFamily: "ui-monospace, monospace" }}
         />
         {!editing && (
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
-            A single address. CIDR ranges are not supported — the gate matches
-            addresses exactly, so a range would never match.
+            A single address, or a CIDR range for an uplink that rotates within
+            its own block (e.g. <code>138.84.139.0/24</code>). Max /16 — anything
+            wider is not a lock, it just looks like one. A range will not help
+            with mobile data or a VPN: those move between unrelated networks.
           </p>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, type JWTPayload } from "jose";
+import { makeIpMatcher, type IpMatcher } from "@/lib/ip-match";
 
 function getJwtSecret(envVar: string, name: string): Uint8Array {
   const secret = process.env[envVar];
@@ -64,8 +65,11 @@ const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116"
 //
 // BREAK_GLASS_IPS is honoured on both, so a bad allowlist edit can't lock the
 // office out of either surface.
-const ADMIN_IP_ALLOWLIST = new Set([...PANEL_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
-const STUDIO_IP_ALLOWLIST = new Set([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
+// Entries may be bare addresses or CIDR ranges (see makeIpMatcher). A bare
+// entry still matches by string equality, so every existing allowlist value
+// behaves exactly as it did before ranges were supported.
+const ADMIN_IP_ALLOWLIST = makeIpMatcher([...PANEL_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
+const STUDIO_IP_ALLOWLIST = makeIpMatcher([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
 
 // ── Managed allowlist (DB-backed, edited in /admin) ─────────────────────────
 //
@@ -83,7 +87,7 @@ const STUDIO_IP_ALLOWLIST = new Set([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS])
 // swallowed and the previous snapshot is kept (stale-if-error) — a backend blip
 // must never turn into a 403 storm on the back office.
 const MANAGED_TTL_MS = 60_000;
-type ManagedLists = { admin: Set<string>; studio: Set<string> };
+type ManagedLists = { admin: IpMatcher; studio: IpMatcher };
 let managedCache: ManagedLists | null = null;
 let managedFetchedAt = 0;
 let managedInFlight: Promise<ManagedLists | null> | null = null;
@@ -101,9 +105,10 @@ async function fetchManagedLists(): Promise<ManagedLists | null> {
     if (!res.ok) return null;
     const json = await res.json();
     const data = json?.data ?? json ?? {};
+    // Parsed once per refresh (every MANAGED_TTL_MS), not per request.
     return {
-      admin: new Set<string>(Array.isArray(data.admin) ? data.admin : []),
-      studio: new Set<string>(Array.isArray(data.studio) ? data.studio : []),
+      admin: makeIpMatcher(Array.isArray(data.admin) ? data.admin : []),
+      studio: makeIpMatcher(Array.isArray(data.studio) ? data.studio : []),
     };
   } catch {
     return null;
@@ -270,12 +275,12 @@ export async function proxy(req: NextRequest) {
       const envList =
         ipSurface === "admin" ? ADMIN_IP_ALLOWLIST : STUDIO_IP_ALLOWLIST;
       const clientIp = resolveClientIp(req);
-      let allowed = Boolean(clientIp) && envList.has(clientIp);
+      let allowed = envList.test(clientIp);
       if (!allowed && clientIp) {
         // Only consult the managed list when the env list already said no, so
         // the common allowed case costs nothing.
         const managed = await getManagedLists();
-        allowed = Boolean(managed?.[ipSurface].has(clientIp));
+        allowed = Boolean(managed?.[ipSurface].test(clientIp));
       }
       if (!allowed) {
         return ipBlockedResponse(clientIp, ipSurface, pathname);
