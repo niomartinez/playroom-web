@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, type JWTPayload } from "jose";
 import { makeIpMatcher, type IpMatcher } from "@/lib/ip-match";
+import { BYPASS_COOKIE, verifyBypass } from "@/lib/break-glass";
+
+/** Break-glass paths — exempt from the IP gate, see ipGateSurface(). */
+const UNLOCK_PAGE = "/admin/unlock";
+const UNLOCK_API = "/api/admin/unlock";
 
 function getJwtSecret(envVar: string, name: string): Uint8Array {
   const secret = process.env[envVar];
@@ -192,6 +197,9 @@ function ipBlockedResponse(
       `<div style="font:16px/1.6 system-ui,sans-serif;max-width:34rem;margin:15vh auto;padding:0 1.5rem;color:#eee;background:#111">` +
       `<h1 style="font-size:1.25rem;color:#e5b567">Access blocked</h1>` +
       `<p>${message}</p>` +
+      // The person reading this is locked out and has no other channel open.
+      // Naming the way back in is the whole point of the page.
+      `<p>If you have the break-glass code, <a href="${UNLOCK_PAGE}" style="color:#e5b567">unlock this device</a>, then add this IP in the panel so the next person does not hit this.</p>` +
       `<p style="opacity:.7;font-size:.9rem">IP: <code>${ip}</code> &middot; surface: <code>${surface}</code></p>` +
       `</div>`,
     { status: 403, headers: { "content-type": "text/html; charset=utf-8" } },
@@ -213,6 +221,12 @@ function ipGateSurface(pathname: string): "admin" | "studio" | null {
     pathname.startsWith("/admin-ocms") ||
     pathname.startsWith("/api/admin-ocms")
   ) {
+    return null;
+  }
+  // Break-glass must be reachable from the very place the gate is refusing,
+  // or it is not a break-glass. These two paths hold no data: one renders a
+  // form, the other checks a secret. Everything behind them is still gated.
+  if (pathname === UNLOCK_PAGE || pathname === UNLOCK_API) {
     return null;
   }
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin/")) {
@@ -281,6 +295,16 @@ export async function proxy(req: NextRequest) {
         // the common allowed case costs nothing.
         const managed = await getManagedLists();
         allowed = Boolean(managed?.[ipSurface].test(clientIp));
+      }
+      if (!allowed && clientIp) {
+        // Break-glass, checked LAST so it costs nothing on the normal path and
+        // can never widen an allowlist decision that already said yes. The
+        // cookie is bound to this IP, so it is not a portable credential.
+        const secret = process.env.ADMIN_JWT_SECRET;
+        const cookie = req.cookies.get(BYPASS_COOKIE)?.value;
+        if (secret && cookie) {
+          allowed = await verifyBypass(secret, cookie, clientIp);
+        }
       }
       if (!allowed) {
         return ipBlockedResponse(clientIp, ipSurface, pathname);

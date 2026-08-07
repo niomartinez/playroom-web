@@ -36,6 +36,10 @@ const ACTION_COLORS: Record<string, string> = {
      because it is. Opening is the recovery, so it reads as safe. */
   close_table: "#fb2c36",
   open_table: "#00bc7d",
+  /* The network check was deliberately skipped. Both outcomes are worth
+     spotting in a scan of the log — the rejected one especially. */
+  break_glass_used: "#f0b100",
+  break_glass_rejected: "#fb2c36",
   create_admin_user: "#00bc7d",
   update_admin_user: "#f0b100",
   deactivate_admin_user: "#fb2c36",
