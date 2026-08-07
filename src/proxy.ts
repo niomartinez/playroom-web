@@ -395,6 +395,11 @@ export async function proxy(req: NextRequest) {
     if (pathname === "/api/admin/login" || pathname === "/api/admin/logout") {
       return NextResponse.next();
     }
+    // Break-glass, same reasoning as the login route: the caller has no session
+    // yet and cannot get one until they are through the network gate. Requiring
+    // a session here would send a locked-out person to a login page they are
+    // still blocked from — which is the loop this exists to break.
+    if (pathname === UNLOCK_API) return NextResponse.next();
 
     const token = req.cookies.get("admin_session")?.value;
     if (!token) {
@@ -433,6 +438,10 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/admin")) {
     // Allow the login page without auth
     if (pathname === "/admin/login") return NextResponse.next();
+    // …and the break-glass form, for the same reason: it runs BEFORE any
+    // session exists. Redirecting it to /admin/login would bounce a
+    // locked-out person straight back into the 403 they came from.
+    if (pathname === UNLOCK_PAGE) return NextResponse.next();
 
     const token = req.cookies.get("admin_session")?.value;
     if (!token) {
