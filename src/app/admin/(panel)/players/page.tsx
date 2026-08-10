@@ -604,7 +604,10 @@ function PlayersPageInner() {
         data={players}
         loading={loading}
         emptyMessage="No players found"
-        searchPlaceholder="Search in results..."
+        /* The filter bar's Search queries the SERVER across every player. The
+           built-in box would only filter the twenty rows on screen, which is a
+           different question wearing the same clothes. */
+        hideSearch
         onRowClick={(row) => router.push(`/admin/players/${row.id}`)}
         pageSize={pageSize}
         disablePagination

@@ -290,7 +290,7 @@ function RoundsPageInner() {
         data={rounds}
         loading={loading}
         emptyMessage="No rounds found"
-        searchPlaceholder="Search rounds..."
+        searchPlaceholder="Filter the rounds on this page..."
         onRowClick={(row) => router.push(`/admin/rounds/${row.id}`)}
         pageSize={pageSize}
         disablePagination

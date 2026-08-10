@@ -43,6 +43,12 @@ interface DataTableProps<T> {
   onSort?: (key: string, dir: "asc" | "desc") => void;
   searchPlaceholder?: string;
   onSearch?: (query: string) => void;
+  /**
+   * Drop the built-in search box. Set this when the page already has its own
+   * search that queries the SERVER — two boxes that look alike but search
+   * different sets (all rows vs the twenty on screen) is worse than one.
+   */
+  hideSearch?: boolean;
   onRowClick?: (row: T) => void;
   pageSize?: number;
   disablePagination?: boolean;
@@ -61,6 +67,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   emptyMessage = "No data found",
   onSort,
   searchPlaceholder = "Search...",
+  hideSearch = false,
   onSearch,
   onRowClick,
   pageSize = 10,
@@ -203,8 +210,11 @@ export default function DataTable<T extends Record<string, unknown>>({
         border: "1px solid rgba(208,135,0,0.2)",
       }}
     >
-      {/* Search bar */}
-      {(onSearch || true) && (
+      {/* Search bar.
+          The condition used to be `(onSearch || true)` — always true — so the
+          box rendered even on pages that already had their own server-side
+          search, giving two lookalike inputs that searched different sets. */}
+      {!hideSearch && (
         <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}>
           <input
             type="text"
