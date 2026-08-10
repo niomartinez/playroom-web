@@ -657,11 +657,17 @@ function ReportsPageInner() {
                         activeTab === "operator"
                           ? row.operator_name
                           : row.table_name;
+                      /* A site with players but no bets in the window is listed
+                         idle rather than omitted — an absent row cannot be told
+                         apart from a site that does not exist. Dimmed so it
+                         reads as quiet rather than as data. */
+                      const idle = activeTab === "site" && row.bet_count === 0;
                       return (
                         <tr
                           key={i}
                           style={{
                             borderBottom: "1px solid rgba(255,255,255,0.04)",
+                            opacity: idle ? 0.5 : 1,
                           }}
                         >
                           <td className="px-4 py-3 text-white font-medium">
