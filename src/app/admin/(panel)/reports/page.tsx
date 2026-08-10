@@ -149,6 +149,15 @@ function ReportsPageInner() {
   const operatorQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-operator?${qs}`);
   const tableQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-table?${qs}`);
   /* Date range only — see the `site` comment above. */
+  /* The first day that has any settled bet, for the All time preset. An empty
+     date_from cannot mean "everything" — every report defaults an absent
+     date_from to the last 30 days — so the preset resolves a real date and the
+     URL stays a shareable, honest range. */
+  const rangeQ = useAdminQuery<{ first_date: string | null; last_date: string | null }>(
+    "/api/admin/reports/data-range",
+  );
+  const firstDataDate = rangeQ.data?.first_date ?? null;
+
   const siteQ = useAdminQuery<SiteBreakdownResponse>(
     `/api/admin/reports/by-site?${dateFrom ? `date_from=${dateFrom}&` : ""}${dateTo ? `date_to=${dateTo}` : ""}`,
   );
@@ -395,7 +404,13 @@ function ReportsPageInner() {
               type="date"
               value={dateFrom}
               onChange={(e) => setValues({ date_from: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
+              /* Chrome only opens the native calendar from the tiny icon, so
+                 clicking the field looked broken. showPicker() opens it from
+                 anywhere in the control; the optional call keeps browsers that
+                 lack it on their default behaviour rather than throwing. */
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              onFocus={(e) => e.currentTarget.showPicker?.()}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -407,7 +422,9 @@ function ReportsPageInner() {
               type="date"
               value={dateTo}
               onChange={(e) => setValues({ date_to: e.target.value })}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              onFocus={(e) => e.currentTarget.showPicker?.()}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
@@ -428,36 +445,50 @@ function ReportsPageInner() {
             />
           </div>
 
-          {/* Preset buttons */}
+          {/* Preset buttons.
+
+              The active preset is highlighted: with five of them and a pair of
+              date fields, "which range am I looking at" was otherwise only
+              answerable by reading the two dates and doing the arithmetic. */}
           <div className="flex gap-2 max-md:grid max-md:w-full max-md:grid-cols-2">
-            <button
-              onClick={() => setRange(todayISO(), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
-              style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              Today
-            </button>
-            <button
-              onClick={() => setRange(daysAgoISO(7), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
-              style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              7 Days
-            </button>
-            <button
-              onClick={() => setRange(daysAgoISO(30), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
-              style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              30 Days
-            </button>
-            <button
-              onClick={() => setRange(monthStartISO(), todayISO())}
-              className="rounded-lg px-3 py-2 text-xs font-medium hover:bg-white/5 transition-colors max-md:min-h-[44px]"
-              style={{ color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }}
-            >
-              This Month
-            </button>
+            {[
+              { label: "Today", from: todayISO(), to: todayISO() },
+              { label: "7 Days", from: daysAgoISO(7), to: todayISO() },
+              { label: "30 Days", from: daysAgoISO(30), to: todayISO() },
+              { label: "This Month", from: monthStartISO(), to: todayISO() },
+              /* Only offered once we know the first day that has data — a
+                 preset that resolved to an empty range would be worse than no
+                 preset. */
+              ...(firstDataDate
+                ? [{ label: "All Time", from: firstDataDate, to: todayISO() }]
+                : []),
+            ].map((p) => {
+              const active = dateFrom === p.from && dateTo === p.to;
+              return (
+                <button
+                  key={p.label}
+                  onClick={() => setRange(p.from, p.to)}
+                  aria-pressed={active}
+                  title={
+                    p.label === "All Time"
+                      ? `Everything since the first settled bet (${p.from})`
+                      : undefined
+                  }
+                  className="rounded-lg px-3 py-2 text-xs font-medium transition-colors max-md:min-h-[44px]"
+                  style={
+                    active
+                      ? {
+                          color: "#f0b100",
+                          border: "1px solid rgba(240,177,0,0.5)",
+                          backgroundColor: "rgba(240,177,0,0.1)",
+                        }
+                      : { color: "#99a1af", border: "1px solid rgba(255,255,255,0.1)" }
+                  }
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
 
           <button
