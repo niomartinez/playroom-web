@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { SITE_HINT } from "@/components/admin/SiteFilter";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
@@ -24,6 +26,9 @@ interface PlayerDetail {
   is_test: boolean;
   operator_id: string;
   operator_name: string;
+  /* Derived from the username prefix; null = prefix is not a known site. */
+  site_code: string | null;
+  site_label: string | null;
   operator_client_id: string;
   created_at: string;
   updated_at: string;
@@ -254,6 +259,24 @@ export default function PlayerDetailPage() {
           <div>
             <span style={{ color: "#6a7282" }}>System Provider</span>
             <p className="text-white mt-0.5">{player.operator_name}</p>
+          </div>
+          <div>
+            <span style={{ color: "#6a7282" }} title={SITE_HINT}>
+              Site
+            </span>
+            <p className="mt-0.5">
+              {player.site_code ? (
+                <Link
+                  href={`/admin/players?site=${encodeURIComponent(player.site_code)}`}
+                  className="font-mono font-semibold"
+                  style={{ color: "#f0b100" }}
+                >
+                  {player.site_label || player.site_code}
+                </Link>
+              ) : (
+                <span style={{ color: "#6a7282" }}>Unassigned</span>
+              )}
+            </p>
           </div>
           <div>
             <span style={{ color: "#6a7282" }}>Balance</span>

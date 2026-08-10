@@ -8,6 +8,7 @@ import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
 import { useUrlFilters } from "@/lib/use-url-filters";
+import SiteFilter, { SITE_HINT } from "@/components/admin/SiteFilter";
 
 interface Summary {
   total_wagered: number;
@@ -41,6 +42,31 @@ interface BreakdownResponse {
   operators?: BreakdownEntry[];
   tables?: BreakdownEntry[];
   truncated?: boolean;
+}
+
+/* The site breakdown carries three figures the other two cannot: hold, spend
+   per ACTIVE player, and how much of a site's registered base actually plays.
+   Every one of them can be unanswerable (a dormant site divides by zero), so
+   they are nullable rather than silently zero — 0% reads as "performing
+   badly", which is a different claim from "nothing to measure". */
+interface SiteEntry {
+  site_code: string | null;
+  site_label: string;
+  bet_count: number;
+  unique_players: number;
+  registered_players: number | null;
+  total_wagered: number;
+  total_payout: number;
+  ggr: number;
+  hold_pct: number | null;
+  wagered_per_player: number | null;
+  active_ratio: number | null;
+}
+
+/* No `truncated` key: by-site aggregates in SQL and has no row cap, unlike
+   by-operator and by-table which page 10,000 rows into Python. */
+interface SiteBreakdownResponse {
+  sites?: SiteEntry[];
 }
 
 /* Date preset helpers.
@@ -95,10 +121,12 @@ function ReportsPageInner() {
     date_from: daysAgoISO(7),
     date_to: todayISO(),
     tab: "operator",
+    site: "",
   });
   const dateFrom = values.date_from;
   const dateTo = values.date_to;
-  const activeTab: "operator" | "table" = values.tab === "table" ? "table" : "operator";
+  const activeTab: "operator" | "table" | "site" =
+    values.tab === "table" ? "table" : values.tab === "site" ? "site" : "operator";
 
   const params = new URLSearchParams();
   // Send the bare date and let the backend resolve the day in Manila time.
@@ -107,6 +135,10 @@ function ReportsPageInner() {
   // and UTC days (an 8-hour shift) for any server-side or scheduled caller.
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
+  /* Scopes the summary tiles and the By Table tab — this is what makes "GSP's
+     numbers on Table 1" answerable. By Site deliberately ignores it: a per-site
+     breakdown filtered to one site is a one-row table. */
+  if (values.site) params.set("site", values.site);
   const qs = params.toString();
 
   // Three independent cache keys rather than one combined fetch: switching the
@@ -116,14 +148,24 @@ function ReportsPageInner() {
   const summaryQ = useAdminQuery<Summary>(`/api/admin/reports/summary?${qs}`);
   const operatorQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-operator?${qs}`);
   const tableQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-table?${qs}`);
+  /* Date range only — see the `site` comment above. */
+  const siteQ = useAdminQuery<SiteBreakdownResponse>(
+    `/api/admin/reports/by-site?${dateFrom ? `date_from=${dateFrom}&` : ""}${dateTo ? `date_to=${dateTo}` : ""}`,
+  );
 
   const summary = summaryQ.data ?? null;
   const byOperator = operatorQ.data?.operators ?? [];
   const byTable = tableQ.data?.tables ?? [];
+  const bySite = siteQ.data?.sites ?? [];
   const truncated =
     Boolean(operatorQ.data?.truncated) || Boolean(tableQ.data?.truncated);
-  const loading = summaryQ.loading || operatorQ.loading || tableQ.loading;
-  const refreshing = summaryQ.refreshing || operatorQ.refreshing || tableQ.refreshing;
+  const loading =
+    summaryQ.loading || operatorQ.loading || tableQ.loading || siteQ.loading;
+  const refreshing =
+    summaryQ.refreshing ||
+    operatorQ.refreshing ||
+    tableQ.refreshing ||
+    siteQ.refreshing;
 
   const setRange = (from: string, to: string) =>
     setValues({ date_from: from, date_to: to });
@@ -163,11 +205,44 @@ function ReportsPageInner() {
       ["By Table"],
       ["Table", "Wagered", "Payout", "GGR", "Bets", "Players"],
       ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count, r.unique_players ?? 0]),
+      [],
+      ["By Site"],
+      ["Site is derived from the first 3 characters of the player's username (the OCMS site prefix)"],
+      ["Hold % is the PERIOD ACTUAL, not an expected rate"],
+      [
+        "Site", "Wagered", "Payout", "GGR", "Hold %", "Bets",
+        "Active Players", "Registered Players", "Wagered/Active Player",
+      ],
+      ...bySite.map((r) => [
+        r.site_label, r.total_wagered, r.total_payout, r.ggr,
+        r.hold_pct ?? "-", r.bet_count, r.unique_players,
+        r.registered_players ?? "-", r.wagered_per_player ?? "-",
+      ]),
     ];
     downloadCsv(`ggr-report_${dateFrom}_${dateTo}.csv`, rows);
   }
 
-  const breakdownData = activeTab === "operator" ? byOperator : byTable;
+  /* Site rows are projected into the shared breakdown shape so the table, the
+     mobile cards and the totals row all keep working unchanged. The three
+     site-only figures ride along on `extra` and render as extra columns. */
+  const breakdownData: (BreakdownEntry & { extra?: SiteEntry })[] =
+    activeTab === "operator"
+      ? byOperator
+      : activeTab === "table"
+        ? byTable
+        : bySite.map((r) => ({
+            operator_name: r.site_label,
+            table_name: r.site_label,
+            total_wagered: r.total_wagered,
+            total_payout: r.total_payout,
+            ggr: r.ggr,
+            bet_count: r.bet_count,
+            unique_players: r.unique_players,
+            extra: r,
+          }));
+
+  const pct = (v: number | null, digits = 2) =>
+    v === null ? "\u2014" : `${v.toFixed(digits)}%`;
 
   const totalWagered = breakdownData.reduce((s, r) => s + r.total_wagered, 0);
   const totalPayout = breakdownData.reduce((s, r) => s + r.total_payout, 0);
@@ -186,7 +261,8 @@ function ReportsPageInner() {
 
   const breakdownCards: MobileCardItem[] = [
     ...breakdownData.map((row, i) => {
-      const name = activeTab === "operator" ? row.operator_name : row.table_name;
+      const name =
+        activeTab === "operator" ? row.operator_name : row.table_name;
       return {
         id: i,
         title: name || "Unknown",
@@ -216,6 +292,43 @@ function ReportsPageInner() {
               </span>
             ),
           },
+          /* The site-only figures. Dropped entirely on the other two tabs
+             rather than shown empty — a card of dashes reads as missing data
+             rather than as a column that does not apply here. */
+          ...(activeTab === "site" && row.extra
+            ? [
+                {
+                  label: "Hold % (actual)",
+                  value: (
+                    <span className="font-mono" style={{ color: "#99a1af" }}>
+                      {pct(row.extra.hold_pct)}
+                    </span>
+                  ),
+                },
+                {
+                  label: "Active / Registered",
+                  value: (
+                    <span className="font-mono" style={{ color: "#99a1af" }}>
+                      {row.extra.active_ratio == null
+                        ? "\u2014"
+                        : `${(row.extra.active_ratio * 100).toFixed(1)}% of ${
+                            row.extra.registered_players ?? "?"
+                          }`}
+                    </span>
+                  ),
+                },
+                {
+                  label: "Wagered / Player",
+                  value: (
+                    <span className="font-mono" style={{ color: "#99a1af" }}>
+                      {row.extra.wagered_per_player == null
+                        ? "\u2014"
+                        : fmt(row.extra.wagered_per_player)}
+                    </span>
+                  ),
+                },
+              ]
+            : []),
         ],
       };
     }),
@@ -294,6 +407,22 @@ function ReportsPageInner() {
               type="date"
               value={dateTo}
               onChange={(e) => setValues({ date_to: e.target.value })}
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
+              style={inputStyle}
+            />
+          </div>
+
+          <div className="max-md:flex-1 max-md:min-w-[9rem]">
+            <label
+              className="block text-xs font-medium mb-1"
+              style={{ color: "#99a1af" }}
+              title={SITE_HINT}
+            >
+              Site
+            </label>
+            <SiteFilter
+              value={values.site}
+              onChange={(site) => setValues({ site })}
               className="rounded-lg px-3 py-2 text-sm text-white outline-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
@@ -399,7 +528,7 @@ function ReportsPageInner() {
               className="flex"
               style={{ borderBottom: "1px solid rgba(208,135,0,0.15)" }}
             >
-              {(["operator", "table"] as const).map((tab) => (
+              {(["operator", "table", "site"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setValues({ tab })}
@@ -412,7 +541,12 @@ function ReportsPageInner() {
                         : "2px solid transparent",
                   }}
                 >
-                  By {tab === "operator" ? "System Provider" : "Table"}
+                  By{" "}
+                  {tab === "operator"
+                    ? "System Provider"
+                    : tab === "table"
+                      ? "Table"
+                      : "Site"}
                 </button>
               ))}
             </div>
@@ -436,7 +570,11 @@ function ReportsPageInner() {
                         className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider"
                         style={{ color: "#d08700" }}
                       >
-                        {activeTab === "operator" ? "System Provider" : "Table"}
+                        {activeTab === "operator"
+                          ? "System Provider"
+                          : activeTab === "table"
+                            ? "Table"
+                            : "Site"}
                       </th>
                       {["Wagered", "Payout", "GGR", "Bets", "Players"].map((h) => (
                         <th
@@ -447,6 +585,36 @@ function ReportsPageInner() {
                           {h}
                         </th>
                       ))}
+                      {activeTab === "site" && (
+                        <>
+                          {/* Period ACTUAL, not an expected rate. At current
+                              volumes this runs well above baccarat's
+                              theoretical 1-2% of turnover — variance and
+                              side-bet mix on a few thousand bets. Unlabelled,
+                              someone forecasts on it. */}
+                          <th
+                            className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
+                            style={{ color: "#d08700" }}
+                            title="Period actual (GGR / wagered) — not an expected rate"
+                          >
+                            Hold %
+                          </th>
+                          <th
+                            className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
+                            style={{ color: "#d08700" }}
+                            title="Players who bet this period, over players ever registered to this site"
+                          >
+                            Active / Reg
+                          </th>
+                          <th
+                            className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
+                            style={{ color: "#d08700" }}
+                            title="Wagered divided by ACTIVE players, not registered ones"
+                          >
+                            Wagered / Player
+                          </th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -491,6 +659,34 @@ function ReportsPageInner() {
                           >
                             {(row.unique_players ?? 0).toLocaleString()}
                           </td>
+                          {activeTab === "site" && (
+                            <>
+                              <td
+                                className="px-4 py-3 text-right font-mono"
+                                style={{ color: "#99a1af" }}
+                              >
+                                {pct(row.extra?.hold_pct ?? null)}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-right font-mono"
+                                style={{ color: "#99a1af" }}
+                              >
+                                {row.extra?.active_ratio == null
+                                  ? "\u2014"
+                                  : `${(row.extra.active_ratio * 100).toFixed(1)}% of ${
+                                      row.extra.registered_players ?? "?"
+                                    }`}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-right font-mono"
+                                style={{ color: "#99a1af" }}
+                              >
+                                {row.extra?.wagered_per_player == null
+                                  ? "\u2014"
+                                  : fmt(row.extra.wagered_per_player)}
+                              </td>
+                            </>
+                          )}
                         </tr>
                       );
                     })}
@@ -536,6 +732,17 @@ function ReportsPageInner() {
                             one person on two tables is one player. */}
                         {(summary.unique_players ?? 0).toLocaleString()}
                       </td>
+                      {/* Deliberately blank: a hold rate, an activity ratio and
+                          a per-player average are not column sums, and a
+                          plausible-looking total here would be a made-up
+                          number. */}
+                      {activeTab === "site" && (
+                        <>
+                          <td className="px-4 py-3" />
+                          <td className="px-4 py-3" />
+                          <td className="px-4 py-3" />
+                        </>
+                      )}
                     </tr>
                   </tbody>
                 </table>

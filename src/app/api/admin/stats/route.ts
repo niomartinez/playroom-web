@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
   let new30d = 0;
   let returning30d = 0;
   let playerStatsAvailable = false;
+  let topSites: unknown[] = [];
 
   if (tablesRes.status === "fulfilled" && tablesRes.value.ok) {
     const data = await tablesRes.value.json();
@@ -78,6 +79,9 @@ export async function GET(req: NextRequest) {
     new30d = Number(d.new_players_30d) || 0;
     returning30d = Number(d.returning_players_30d) || 0;
     playerStatsAvailable = d.player_stats_available !== false;
+    // Best-effort on the backend too — an empty array means the breakdown
+    // failed or there is nothing to show, and the tile hides itself either way.
+    topSites = Array.isArray(d.top_sites) ? d.top_sites : [];
   }
 
   return NextResponse.json({
@@ -85,6 +89,7 @@ export async function GET(req: NextRequest) {
     online_players: onlinePlayers,
     today_rounds: todayRounds,
     active_operators: activeOperators,
+    top_sites: topSites,
     unique_players_lifetime: uniqueLifetime,
     unique_players_today: uniqueToday,
     unique_players_7d: unique7d,

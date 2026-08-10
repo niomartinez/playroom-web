@@ -9,6 +9,7 @@ import { useAdminQuery } from "@/lib/admin-query";
 import Pagination from "@/components/admin/ui/Pagination";
 import SortHeader, { type SortDir } from "@/components/admin/ui/SortHeader";
 import { useUrlFilters } from "@/lib/use-url-filters";
+import SiteFilter, { SITE_HINT } from "@/components/admin/SiteFilter";
 
 interface Player {
   id: string;
@@ -28,6 +29,12 @@ interface Player {
   online_table: string | null;
   operator_id: string;
   operator_name: string;
+  /* Derived from the username prefix, resolved through site_overrides.
+     null = the prefix is not a known site (Unassigned). */
+  site_code: string | null;
+  site_label: string | null;
+  /** Lifetime settled turnover, summed in the database. */
+  total_wagered: number;
   created_at: string;
   [key: string]: unknown;
 }
@@ -47,6 +54,7 @@ function PlayersPageInner() {
     page: "1",
     page_size: "20",
     operator_id: "",
+    site: "",
     search: "",
     is_active: "",
     playing_now: "",
@@ -84,6 +92,7 @@ function PlayersPageInner() {
 
   const hasFilters =
     !!values.operator_id ||
+    !!values.site ||
     !!values.search ||
     !!values.is_active ||
     values.playing_now === "true" ||
@@ -98,6 +107,7 @@ function PlayersPageInner() {
     sort_dir: sortDir,
   });
   if (values.operator_id) query.set("operator_id", values.operator_id);
+  if (values.site) query.set("site", values.site);
   if (values.search) query.set("search", values.search);
   if (values.is_active) query.set("is_active", values.is_active);
   if (values.playing_now === "true") query.set("playing_now", "true");
@@ -229,6 +239,43 @@ function PlayersPageInner() {
       ),
     },
     {
+      /* A subdivision of the provider, so it reads left-to-right as
+         provider -> site. Derived from the username prefix, not a field OCMS
+         sends — hence the tooltip. Clicking it filters, matching how the
+         Online count above behaves. */
+      key: "site_code",
+      label: "Site",
+      header: <SortHeader label="Site" {...sortProps("site_code", "asc")} />,
+      mobile: "row",
+      mobileLabel: "Site",
+      render: (row) =>
+        row.site_code ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFilter({ site: row.site_code as string });
+            }}
+            className="rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold"
+            style={{
+              backgroundColor: "rgba(208,135,0,0.12)",
+              color: "#f0b100",
+              border: "1px solid rgba(240,177,0,0.3)",
+            }}
+            title={SITE_HINT}
+          >
+            {row.site_label || row.site_code}
+          </button>
+        ) : (
+          <span
+            style={{ color: "#6a7282" }}
+            title="Username prefix is not a known site"
+          >
+            Unassigned
+          </span>
+        ),
+    },
+    {
       key: "balance",
       label: "Balance",
       header: <SortHeader label="Balance" {...sortProps("balance")} />,
@@ -239,6 +286,27 @@ function PlayersPageInner() {
             minimumFractionDigits: 2,
           })}{" "}
           <span style={{ color: "#6a7282" }}>{row.currency_code}</span>
+        </span>
+      ),
+    },
+    {
+      /* LIFETIME settled turnover, ordered in the DATABASE. Sorting the twenty
+         rows on screen would answer "highest on this page", which is a
+         different question than the header implies. Defaults to descending
+         because the question this column exists for is "who are our biggest
+         players". */
+      key: "total_wagered",
+      label: "Wagered",
+      header: <SortHeader label="Wagered" {...sortProps("total_wagered", "desc")} />,
+      mobile: "row",
+      mobileLabel: "Wagered",
+      render: (row) => (
+        <span className="font-mono">
+          {"\u20B1"}
+          {Number(row.total_wagered ?? 0).toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </span>
       ),
     },
@@ -374,6 +442,22 @@ function PlayersPageInner() {
             <label
               className="block text-xs font-medium mb-1"
               style={{ color: "#99a1af" }}
+              title={SITE_HINT}
+            >
+              Site
+            </label>
+            <SiteFilter
+              value={values.site}
+              onChange={(site) => setFilter({ site })}
+              className={controlClass}
+              style={inputStyle}
+            />
+          </div>
+
+          <div className="max-md:w-full">
+            <label
+              className="block text-xs font-medium mb-1"
+              style={{ color: "#99a1af" }}
             >
               Account
             </label>
@@ -475,6 +559,7 @@ function PlayersPageInner() {
                 setValues({
                   page: "1",
                   operator_id: "",
+                  site: "",
                   search: "",
                   is_active: "",
                   playing_now: "",

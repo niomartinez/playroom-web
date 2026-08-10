@@ -4,6 +4,7 @@ import StatCard from "@/components/admin/ui/StatCard";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery } from "@/lib/admin-query";
 import { useAdmin } from "@/lib/admin-context";
+import { SITE_HINT } from "@/components/admin/SiteFilter";
 
 interface DashboardStats {
   active_tables: number;
@@ -17,6 +18,15 @@ interface DashboardStats {
   new_players_30d: number;
   returning_players_30d: number;
   player_stats_available: boolean;
+  top_sites: TopSite[];
+}
+
+interface TopSite {
+  site_code: string | null;
+  site_label: string;
+  ggr: number;
+  total_wagered: number;
+  unique_players: number;
 }
 
 export default function AdminDashboard() {
@@ -131,6 +141,69 @@ export default function AdminDashboard() {
             Counts distinct players with a placed bet, excluding internal test
             accounts. &ldquo;New&rdquo; means their first-ever bet falls inside
             the window.
+          </p>
+        </div>
+      )}
+
+      {/* Top sites. Hidden entirely when empty rather than shown as a heading
+          over nothing — top_sites is best-effort on the backend, so an empty
+          array means "could not tell you", not "no sites". */}
+      {(stats?.top_sites?.length ?? 0) > 0 && (
+        <div
+          className="rounded-xl p-6 max-md:p-4"
+          style={{
+            backgroundColor: "#171717",
+            border: "1px solid rgba(208,135,0,0.2)",
+          }}
+        >
+          <h2
+            className="text-sm font-semibold uppercase tracking-wider mb-4"
+            style={{ color: "#d08700" }}
+            title={SITE_HINT}
+          >
+            Top Sites · Last 30 Days
+          </h2>
+          <div className="space-y-2">
+            {stats?.top_sites.map((site) => (
+              <div
+                key={site.site_code ?? "unassigned"}
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg px-3 py-2"
+                style={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+              >
+                <span className="font-mono text-sm font-semibold text-white">
+                  {site.site_label}
+                </span>
+                <span className="flex flex-wrap items-baseline gap-x-4 text-xs">
+                  <span
+                    className="font-mono font-semibold"
+                    style={{ color: site.ggr >= 0 ? "#00bc7d" : "#fb2c36" }}
+                  >
+                    {"\u20B1"}
+                    {site.ggr.toLocaleString("en-PH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    GGR
+                  </span>
+                  <span className="font-mono" style={{ color: "#99a1af" }}>
+                    {"\u20B1"}
+                    {site.total_wagered.toLocaleString("en-PH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    wagered
+                  </span>
+                  <span className="font-mono" style={{ color: "#99a1af" }}>
+                    {site.unique_players} active
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs mt-3" style={{ color: "#6a7282" }}>
+            Site is derived from the player&rsquo;s username prefix. Round counts
+            are not shown per site &mdash; a round is a table event every
+            site&rsquo;s players bet into.
           </p>
         </div>
       )}
