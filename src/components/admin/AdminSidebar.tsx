@@ -164,6 +164,21 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    /* Naming and correcting the DERIVED site dimension. Under `settings`
+       because a merge changes what the money reports attribute to each site —
+       the same weight as editing bet limits, not a cosmetic preference. */
+    label: "Sites",
+    href: "/admin/sites",
+    section: "settings",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <ellipse cx="12" cy="12" rx="4" ry="10" />
+        <path d="M2 12h20" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
     href: "/admin/settings",
     section: "settings",
