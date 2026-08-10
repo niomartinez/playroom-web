@@ -69,3 +69,34 @@ body {
   }
 }
 
+
+/* Native date inputs on a dark theme.
+ *
+ * Chrome paints ::-webkit-calendar-picker-indicator as a near-black glyph. On
+ * the back office's near-black fields that makes it effectively invisible —
+ * the control looked like it had no calendar at all, and the one part of the
+ * field that DOES open the picker natively was the part nobody could see.
+ *
+ * invert(1) turns the black glyph white; the gold tint and hover match the
+ * panel's other controls. The indicator is stretched over the field's right
+ * edge and given a pointer so it reads as a button rather than decoration. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(1) saturate(4) hue-rotate(5deg);
+  opacity: 0.65;
+  cursor: pointer;
+  padding: 2px;
+  transition: opacity 0.15s ease;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Firefox has no picker indicator to style and no showPicker() on older
+ * builds, so the field is typed rather than clicked there. Nothing to do but
+ * keep the text legible, which the inline colour already handles. */
