@@ -480,7 +480,10 @@ function ReportsPageInner() {
         </div>
       ) : summary ? (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+          {/* Six across only once there is genuinely room for six. At sm the
+              cards were ~90px wide and a peso total could not fit at any
+              legible size, so it overflowed the border rather than wrapped. */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <StatCard label="Total Wagered" value={fmt(summary.total_wagered)} />
             <StatCard label="Total Payout" value={fmt(summary.total_payout)} />
             <StatCard
