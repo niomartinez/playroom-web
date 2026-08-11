@@ -13,7 +13,7 @@
  * these switches write no audit_log row, by design.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
 
@@ -83,14 +83,26 @@ function Toggle({
 export default function MockDataSettings() {
   const { toast } = useToast();
   // useAdminQuery already unwraps BaseResponse.data, so this is the ViewState.
-  const { data: view } = useAdminQuery<ViewState>(VIEW_STATE_URL);
+  const { data } = useAdminQuery<ViewState>(VIEW_STATE_URL);
+
+  // Persist the view locally. We must NOT invalidate the view-state cache on a
+  // toggle: that deletes the entry, `data` goes undefined, the component returns
+  // null and unmounts itself, and — now unmounted — nothing refetches, so the
+  // card vanished until a manual refresh. Instead we hold the last-known view,
+  // apply each change optimistically, and revert only if the PATCH fails.
+  const [view, setView] = useState<ViewState | null>(null);
+  useEffect(() => {
+    if (data) setView(data);
+  }, [data]);
   const [busy, setBusy] = useState(false);
 
   // Hidden for everyone who is not a manager. This is the whole privacy model:
   // the control simply is not in the DOM.
   if (!view || !view.can_manage) return null;
 
-  async function patch(url: string, body: Record<string, unknown>) {
+  async function apply(url: string, body: Record<string, unknown>, next: ViewState) {
+    const prev = view;
+    setView(next); // optimistic — the card stays put and updates instantly
     setBusy(true);
     try {
       const res = await fetch(url, {
@@ -99,14 +111,13 @@ export default function MockDataSettings() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(String(res.status));
-      invalidateAdminQuery(VIEW_STATE_URL);
-      // Reports/players/sites all change shape when mock toggles; drop their
-      // caches so the panel reflects it without a manual refresh.
+      // Reports/players/sites change shape when mock toggles; drop their caches
+      // so those pages reflect it on next view. (Not view-state — see above.)
       invalidateAdminQuery("/api/admin/reports");
       invalidateAdminQuery("/api/admin/players");
       invalidateAdminQuery("/api/admin/sites");
-      toast({ type: "success", message: "Updated" });
     } catch {
+      setView(prev); // roll back the optimistic change
       toast({ type: "error", message: "Could not update mock settings" });
     } finally {
       setBusy(false);
@@ -114,6 +125,10 @@ export default function MockDataSettings() {
   }
 
   const wayne = view.wayne;
+  const setWayne = (patch: Partial<WayneState>): ViewState => ({
+    ...view,
+    wayne: { ...(wayne ?? { exists: true }), ...patch },
+  });
 
   return (
     <div
@@ -136,14 +151,26 @@ export default function MockDataSettings() {
       <Toggle
         on={view.visible}
         disabled={busy}
-        onToggle={() => patch("/api/admin/mock/prefs", { visible: !view.visible })}
+        onToggle={() =>
+          apply(
+            "/api/admin/mock/prefs",
+            { visible: !view.visible },
+            { ...view, visible: !view.visible },
+          )
+        }
         label="Show mock data"
         hint="Off = your reports read real-only, as if the mock site did not exist."
       />
       <Toggle
         on={view.labeled}
         disabled={busy || !view.visible}
-        onToggle={() => patch("/api/admin/mock/prefs", { labeled: !view.labeled })}
+        onToggle={() =>
+          apply(
+            "/api/admin/mock/prefs",
+            { labeled: !view.labeled },
+            { ...view, labeled: !view.labeled },
+          )
+        }
         label="Label as mock"
         hint="Off = the mock site reads as an ordinary site, unlabelled."
       />
@@ -167,7 +194,11 @@ export default function MockDataSettings() {
               disabled={busy}
               onToggle={() => {
                 const next = !wayne?.visible;
-                patch("/api/admin/mock/wayne", { can_view: next, visible: next });
+                apply(
+                  "/api/admin/mock/wayne",
+                  { can_view: next, visible: next },
+                  setWayne({ can_view: next, visible: next }),
+                );
               }}
               label="Show mock data to Wayne"
               hint="Off = Wayne's reports read real-only."
@@ -176,7 +207,11 @@ export default function MockDataSettings() {
               on={!!wayne?.labeled}
               disabled={busy || !wayne?.visible}
               onToggle={() =>
-                patch("/api/admin/mock/wayne", { labeled: !wayne?.labeled })
+                apply(
+                  "/api/admin/mock/wayne",
+                  { labeled: !wayne?.labeled },
+                  setWayne({ labeled: !wayne?.labeled }),
+                )
               }
               label="Label as mock for Wayne"
             />
