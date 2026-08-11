@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import ConfirmDialog from "@/components/admin/ui/ConfirmDialog";
+import MockDataSettings from "@/components/admin/MockDataSettings";
 import { useToast } from "@/lib/toast-context";
 
 interface ConfigEntry {
@@ -803,6 +804,9 @@ export default function SettingsPage() {
           {saving === "baccarat_odds" ? "Saving..." : "Save Odds"}
         </button>
       </div>
+
+      {/* Mock data — renders only for managers (Nio/Heins); null for everyone else. */}
+      <MockDataSettings />
 
       {/* Danger Zone */}
       <div

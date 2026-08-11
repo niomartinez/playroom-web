@@ -162,6 +162,17 @@ function ReportsPageInner() {
     `/api/admin/reports/by-site?${dateFrom ? `date_from=${dateFrom}&` : ""}${dateTo ? `date_to=${dateTo}` : ""}`,
   );
 
+  // Mock-site labelling. Only a viewer who sees mock AND has labelling on gets a
+  // tag; for everyone else these rows are already filtered out server-side, so
+  // this is purely cosmetic and safe to query for all callers.
+  const mockViewQ = useAdminQuery<{ labeled: boolean; mock_site_codes: string[] }>(
+    "/api/admin/mock/view-state",
+  );
+  const mockLabeled = Boolean(mockViewQ.data?.labeled);
+  const mockCodes = mockViewQ.data?.mock_site_codes ?? [];
+  const siteLabel = (code: string | null, label: string) =>
+    mockLabeled && code && mockCodes.includes(code) ? `${label} · mock` : label;
+
   const summary = summaryQ.data ?? null;
   const byOperator = operatorQ.data?.operators ?? [];
   const byTable = tableQ.data?.tables ?? [];
@@ -223,7 +234,7 @@ function ReportsPageInner() {
         "Active Players", "Registered Players", "Wagered/Active Player",
       ],
       ...bySite.map((r) => [
-        r.site_label, r.total_wagered, r.total_payout, r.ggr,
+        siteLabel(r.site_code, r.site_label), r.total_wagered, r.total_payout, r.ggr,
         r.hold_pct ?? "-", r.bet_count, r.unique_players,
         r.registered_players ?? "-", r.wagered_per_player ?? "-",
       ]),
@@ -240,8 +251,8 @@ function ReportsPageInner() {
       : activeTab === "table"
         ? byTable
         : bySite.map((r) => ({
-            operator_name: r.site_label,
-            table_name: r.site_label,
+            operator_name: siteLabel(r.site_code, r.site_label),
+            table_name: siteLabel(r.site_code, r.site_label),
             total_wagered: r.total_wagered,
             total_payout: r.total_payout,
             ggr: r.ggr,
