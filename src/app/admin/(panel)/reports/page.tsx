@@ -405,9 +405,11 @@ function ReportsPageInner() {
         }}
       >
         <div className="flex flex-wrap gap-3 items-end">
-          {/* The two date inputs share a row below md; the presets become a
-              2-up grid and the export button its own full-width row. */}
-          <div className="max-md:flex-1 max-md:min-w-[9rem]">
+          {/* On mobile each date input takes its own full-width row: iOS renders
+              type=date at a fixed intrinsic width, so squeezing two into one row
+              left them cramped with a stray focus sliver. Stacked = big, tappable,
+              aligned. Presets stay a 2-up grid; export is its own full-width row. */}
+          <div className="max-md:basis-full max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               From
             </label>
@@ -421,11 +423,11 @@ function ReportsPageInner() {
                  lack it on their default behaviour rather than throwing. */
               onClick={(e) => e.currentTarget.showPicker?.()}
               onFocus={(e) => e.currentTarget.showPicker?.()}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer max-md:w-full max-md:min-h-[44px]"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer appearance-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
-          <div className="max-md:flex-1 max-md:min-w-[9rem]">
+          <div className="max-md:basis-full max-md:w-full">
             <label className="block text-xs font-medium mb-1" style={{ color: "#99a1af" }}>
               To
             </label>
@@ -435,7 +437,7 @@ function ReportsPageInner() {
               onChange={(e) => setValues({ date_to: e.target.value })}
               onClick={(e) => e.currentTarget.showPicker?.()}
               onFocus={(e) => e.currentTarget.showPicker?.()}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer max-md:w-full max-md:min-h-[44px]"
+              className="rounded-lg px-3 py-2 text-sm text-white outline-none cursor-pointer appearance-none max-md:w-full max-md:min-h-[44px]"
               style={inputStyle}
             />
           </div>
