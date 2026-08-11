@@ -159,25 +159,22 @@ export default function MockDataSettings() {
           </p>
         ) : (
           <>
-            <Toggle
-              on={!!wayne?.can_view}
-              disabled={busy}
-              onToggle={() =>
-                patch("/api/admin/mock/wayne", { can_view: !wayne?.can_view })
-              }
-              label="Wayne may see mock data"
-            />
+            {/* One switch, not two: "may see" and "show" were the same decision
+                from a manager's side. On = Wayne is in and sees mock; off = he
+                doesn't. */}
             <Toggle
               on={!!wayne?.visible}
-              disabled={busy || !wayne?.can_view}
-              onToggle={() =>
-                patch("/api/admin/mock/wayne", { visible: !wayne?.visible })
-              }
+              disabled={busy}
+              onToggle={() => {
+                const next = !wayne?.visible;
+                patch("/api/admin/mock/wayne", { can_view: next, visible: next });
+              }}
               label="Show mock data to Wayne"
+              hint="Off = Wayne's reports read real-only."
             />
             <Toggle
               on={!!wayne?.labeled}
-              disabled={busy || !wayne?.can_view || !wayne?.visible}
+              disabled={busy || !wayne?.visible}
               onToggle={() =>
                 patch("/api/admin/mock/wayne", { labeled: !wayne?.labeled })
               }

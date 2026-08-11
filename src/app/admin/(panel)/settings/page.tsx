@@ -42,6 +42,25 @@ const BET_CODE_LABELS: Record<string, string> = {
   BAC_SmallTiger: "Small Tiger",
 };
 
+/** Friendly name for a bet code. The config mixes casings — CamelCase
+ *  (BAC_PerfectPair) and UPPER_SNAKE (BAC_BANKER_PAIR) — so the static map above
+ *  missed most, leaving raw codes that overflowed the label column on mobile.
+ *  This prettifies any casing: strip the BAC_ prefix, break on underscores,
+ *  case changes and digits, then Title Case. BAC_BANKER_PAIR -> "Banker Pair". */
+function prettyBetCode(code: string): string {
+  if (BET_CODE_LABELS[code]) return BET_CODE_LABELS[code];
+  const s = code
+    .replace(/^BAC_/i, "")
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Za-z])(\d)/g, "$1 $2");
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const [saving, setSaving] = useState<string | null>(null);
@@ -774,8 +793,8 @@ export default function SettingsPage() {
         <div className="space-y-2">
           {Object.entries(odds).map(([code, val]) => (
             <div key={code} className="flex items-center gap-3">
-              <span className="text-sm text-white w-36 shrink-0 max-md:w-24">
-                {BET_CODE_LABELS[code] || code}
+              <span className="text-sm text-white w-36 shrink-0 max-md:w-28 truncate">
+                {prettyBetCode(code)}
               </span>
               <input
                 type="number" step="0.01" min="0"
