@@ -17,7 +17,7 @@ function adminHeaders(req: NextRequest): Record<string, string> {
 
 /** GET /api/admin/mock/view-state — the caller's mock-data controls, if any.
  *
- * Any panel role may ask; a non-manager gets can_manage:false and no wayne
+ * Any panel role may ask; a non-manager gets can_manage:false and no studio
  * block, so the settings page renders no mock UI for them. */
 export async function GET(req: NextRequest) {
   const res = await fetch(`${API_URL}/internal/admin/mock/view-state`, {

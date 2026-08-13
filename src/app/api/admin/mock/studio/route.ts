@@ -15,12 +15,13 @@ function adminHeaders(req: NextRequest): Record<string, string> {
   return h;
 }
 
-/** PATCH /api/admin/mock/wayne — a manager sets Wayne's mock view (in/out,
- *  show/hide, label). Wayne can never call this himself — his row is always
- *  can_manage:false on the backend. Unaudited by design. */
+/** PATCH /api/admin/mock/studio — a manager sets the whole studio team's mock
+ *  view (in/out, show/hide, label) in one move. No studio account can call this
+ *  itself: the shared setting never carries can_manage on the backend.
+ *  Unaudited by design. Replaced the Wayne-specific route. */
 export async function PATCH(req: NextRequest) {
   const body = await req.text();
-  const res = await fetch(`${API_URL}/internal/admin/mock/wayne`, {
+  const res = await fetch(`${API_URL}/internal/admin/mock/studio`, {
     method: "PATCH",
     headers: adminHeaders(req),
     body,

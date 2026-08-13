@@ -58,22 +58,37 @@ const PANEL_ALLOWED_IPS = parseIps(process.env.PANEL_ALLOWED_IPS);
 const STUDIO_ALLOWED_IPS = parseIps(process.env.STUDIO_ALLOWED_IPS);
 const BREAK_GLASS_IPS = parseIps(process.env.BREAK_GLASS_IPS || "103.66.223.116");
 
-// The two surfaces gate INDEPENDENTLY.
+// The two surfaces gate independently, but STUDIO ACCESS IMPLIES ADMIN ACCESS.
 //
-// They used to share one unioned allowlist, which meant setting PANEL_ALLOWED_IPS
-// to lock the back office ALSO gated /studio — and allowed only the office IPs
-// there, locking out dealers at the studio. The back office and the studio are
-// different places with different IPs, so each gets its own list and each
-// activates only when its OWN var is set. Setting PANEL_ALLOWED_IPS alone now
-// locks the back office and leaves the studio (and all player traffic) open,
-// which is the operational intent.
+// Each list activates only when its OWN var is set: setting PANEL_ALLOWED_IPS
+// locks the back office and leaves the studio (and all player traffic) open.
+// They briefly shared one unioned list in both directions, which meant locking
+// the back office also gated /studio and allowed only the office IPs there —
+// locking out dealers at the studio. That symmetry is what was wrong.
+//
+// The implication runs ONE WAY only, and deliberately:
+//
+//   studio IP -> may reach /admin   (the studio team has back-office accounts —
+//                                    raffi, roy, Wayne — and needs to sign in
+//                                    from the studio uplinks without someone
+//                                    adding an allowlist row per address)
+//   admin IP  -> NOT /studio        (an office address is not a licence to deal)
+//
+// Note this widens the network gate, not the permission gate: reaching
+// /admin/login from the studio still gets you nothing without an account, and
+// those accounts are read-only game_provider. Dealer credentials remain refused
+// by /admin entirely (dealer is not in the backend's PANEL_ROLES).
 //
 // BREAK_GLASS_IPS is honoured on both, so a bad allowlist edit can't lock the
 // office out of either surface.
 // Entries may be bare addresses or CIDR ranges (see makeIpMatcher). A bare
 // entry still matches by string equality, so every existing allowlist value
 // behaves exactly as it did before ranges were supported.
-const ADMIN_IP_ALLOWLIST = makeIpMatcher([...PANEL_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
+const ADMIN_IP_ALLOWLIST = makeIpMatcher([
+  ...PANEL_ALLOWED_IPS,
+  ...STUDIO_ALLOWED_IPS,
+  ...BREAK_GLASS_IPS,
+]);
 const STUDIO_IP_ALLOWLIST = makeIpMatcher([...STUDIO_ALLOWED_IPS, ...BREAK_GLASS_IPS]);
 
 // ── Managed allowlist (DB-backed, edited in /admin) ─────────────────────────
@@ -111,9 +126,14 @@ async function fetchManagedLists(): Promise<ManagedLists | null> {
     const json = await res.json();
     const data = json?.data ?? json ?? {};
     // Parsed once per refresh (every MANAGED_TTL_MS), not per request.
+    const admin = Array.isArray(data.admin) ? data.admin : [];
+    const studio = Array.isArray(data.studio) ? data.studio : [];
     return {
-      admin: makeIpMatcher(Array.isArray(data.admin) ? data.admin : []),
-      studio: makeIpMatcher(Array.isArray(data.studio) ? data.studio : []),
+      // Same one-way implication as the env lists above: a row whose surfaces
+      // are ['studio'] also opens /admin, so the studio uplinks need no second
+      // entry. The reverse does not hold.
+      admin: makeIpMatcher([...admin, ...studio]),
+      studio: makeIpMatcher(studio),
     };
   } catch {
     return null;

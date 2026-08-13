@@ -4,24 +4,27 @@
  * Mock-data controls — the hidden settings for the HWN / HappyWin88 QA site.
  *
  * Renders NOTHING unless the caller is a manager (Nio / Heins). A non-manager —
- * every other admin, Wayne included — gets `can_manage: false` from the backend
- * and this component returns null, so there is no dimmed switch, no greyed
- * label, nothing to notice: the feature does not exist for them.
+ * every other admin, the studio team included — gets `can_manage: false` from
+ * the backend and this component returns null, so there is no dimmed switch, no
+ * greyed label, nothing to notice: the feature does not exist for them.
  *
  * Managers get two switches for their own view (show/hide, label/unlabel) and
- * the same two for Wayne. None of it is audited — the PATCH endpoints behind
- * these switches write no audit_log row, by design.
+ * the same two for the studio team, applied to all of them at once. None of it
+ * is audited — the PATCH endpoints behind these switches write no audit_log
+ * row, by design.
  */
 
 import { useEffect, useState } from "react";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useToast } from "@/lib/toast-context";
 
-interface WayneState {
-  exists: boolean;
+interface StudioState {
   can_view?: boolean;
   visible?: boolean;
   labeled?: boolean;
+  /** Active accounts this one setting governs — shown so the blast radius of
+   *  the toggle is visible rather than implied by the word "team". */
+  member_count?: number;
 }
 interface ViewState {
   can_view: boolean;
@@ -29,7 +32,7 @@ interface ViewState {
   visible: boolean;
   labeled: boolean;
   mock_site_codes: string[];
-  wayne?: WayneState;
+  studio?: StudioState;
 }
 
 const VIEW_STATE_URL = "/api/admin/mock/view-state";
@@ -124,10 +127,10 @@ export default function MockDataSettings() {
     }
   }
 
-  const wayne = view.wayne;
-  const setWayne = (patch: Partial<WayneState>): ViewState => ({
+  const studio = view.studio;
+  const setStudio = (patch: Partial<StudioState>): ViewState => ({
     ...view,
-    wayne: { ...(wayne ?? { exists: true }), ...patch },
+    studio: { ...(studio ?? {}), ...patch },
   });
 
   return (
@@ -175,48 +178,47 @@ export default function MockDataSettings() {
         hint="Off = the mock site reads as an ordinary site, unlabelled."
       />
 
-      {/* Wayne — managed by Nio/Heins only; he can never change these himself. */}
+      {/* Studio team — one setting for every external studio account (Wayne,
+          raffi, roy, …). Managed by Nio/Heins only; they can never change it
+          themselves. Dealers are not here: they cannot reach /admin at all. */}
       <div className="pt-3 mt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <p className="text-xs font-semibold" style={{ color: "#99a1af" }}>
-          Wayne
+          Studio team
         </p>
-        {wayne?.exists === false ? (
-          <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
-            Wayne account not found on this environment.
-          </p>
-        ) : (
-          <>
-            {/* One switch, not two: "may see" and "show" were the same decision
-                from a manager's side. On = Wayne is in and sees mock; off = he
-                doesn't. */}
-            <Toggle
-              on={!!wayne?.visible}
-              disabled={busy}
-              onToggle={() => {
-                const next = !wayne?.visible;
-                apply(
-                  "/api/admin/mock/wayne",
-                  { can_view: next, visible: next },
-                  setWayne({ can_view: next, visible: next }),
-                );
-              }}
-              label="Show mock data to Wayne"
-              hint="Off = Wayne's reports read real-only."
-            />
-            <Toggle
-              on={!!wayne?.labeled}
-              disabled={busy || !wayne?.visible}
-              onToggle={() =>
-                apply(
-                  "/api/admin/mock/wayne",
-                  { labeled: !wayne?.labeled },
-                  setWayne({ labeled: !wayne?.labeled }),
-                )
-              }
-              label="Label as mock for Wayne"
-            />
-          </>
-        )}
+        <p className="text-xs mt-0.5" style={{ color: "#6a7282" }}>
+          {studio?.member_count
+            ? `One setting for all ${studio.member_count} studio accounts.`
+            : "One setting for every studio account."}
+        </p>
+        {/* One switch, not two: "may see" and "show" were the same decision
+            from a manager's side. On = the studio team is in and sees mock;
+            off = they don't. */}
+        <Toggle
+          on={!!studio?.visible}
+          disabled={busy}
+          onToggle={() => {
+            const next = !studio?.visible;
+            apply(
+              "/api/admin/mock/studio",
+              { can_view: next, visible: next },
+              setStudio({ can_view: next, visible: next }),
+            );
+          }}
+          label="Show mock data to studio team"
+          hint="Off = their reports read real-only."
+        />
+        <Toggle
+          on={!!studio?.labeled}
+          disabled={busy || !studio?.visible}
+          onToggle={() =>
+            apply(
+              "/api/admin/mock/studio",
+              { labeled: !studio?.labeled },
+              setStudio({ labeled: !studio?.labeled }),
+            )
+          }
+          label="Label as mock for studio team"
+        />
       </div>
     </div>
   );

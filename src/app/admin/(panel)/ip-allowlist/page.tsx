@@ -11,10 +11,14 @@ import { isApiOk, apiErrorMessage } from "@/lib/api-result";
 
 /** Gate names the backend accepts. Must match proxy.ts ipGateSurface() and the
  *  ip_allowlist_surfaces_valid CHECK constraint. The OCMS partner portal is
- *  deliberately absent — its partner IPs rotate, so it is never IP-gated. */
+ *  deliberately absent — its partner IPs rotate, so it is never IP-gated.
+ *
+ *  Ticking Studio also opens the back office (see proxy.ts: the studio team
+ *  holds /admin accounts and signs in from the studio uplinks). The reverse is
+ *  not true — a back-office IP does not reach /studio. */
 const SURFACES = [
   { key: "admin", label: "Back office (/admin)" },
-  { key: "studio", label: "Studio (/studio)" },
+  { key: "studio", label: "Studio (/studio) — also opens /admin" },
 ] as const;
 
 interface IPEntry extends Record<string, unknown> {
@@ -329,8 +333,9 @@ export default function IPAllowlistPage() {
           <p className="text-xs mt-1" style={{ color: "#6a7282" }}>
             Restricts who can reach the internal surfaces, enforced at the edge
             where the real browser IP is visible. Player traffic and the OCMS
-            partner portal are never affected. Changes take up to a minute to
-            propagate.
+            partner portal are never affected. A Studio entry also reaches the
+            back office; a back-office entry does not reach the studio. Changes
+            take up to a minute to propagate.
           </p>
         </div>
         <button
