@@ -19,6 +19,10 @@ interface Summary {
   unique_players: number;
   new_players: number;
   returning_players: number;
+  /* Revenue share over the window, summed from PER-SITE figures each floored
+     at zero. Not `rate * ggr` — see the reports API. */
+  ngr?: number;
+  ngr_rate?: number;
 }
 
 interface BreakdownEntry {
@@ -30,6 +34,10 @@ interface BreakdownEntry {
   total_wagered: number;
   total_payout: number;
   ggr: number;
+  /* Provider revenue share on this row's GGR, floored at zero: a row that
+     lost money pays no share, not a negative one. Computed server-side so the
+     rate lives in exactly one place (system_config.ngr_rate). */
+  ngr: number;
   bet_count: number;
   unique_players?: number;
 }
@@ -58,6 +66,7 @@ interface SiteEntry {
   total_wagered: number;
   total_payout: number;
   ggr: number;
+  ngr: number;
   hold_pct: number | null;
   wagered_per_player: number | null;
   active_ratio: number | null;
@@ -206,35 +215,38 @@ function ReportsPageInner() {
       [],
       ["Summary"],
       [
-        "Total Wagered", "Total Payout", "GGR", "Bets", "Rounds",
+        "Total Wagered", "Total Payout", "GGR", "NGR", "Bets", "Rounds",
         "Unique Players", "New Players", "Returning Players",
       ],
       summary
         ? [
             summary.total_wagered, summary.total_payout, summary.ggr,
+            summary.ngr ?? 0,
             summary.bet_count, summary.round_count,
             summary.unique_players ?? 0, summary.new_players ?? 0,
             summary.returning_players ?? 0,
           ]
-        : ["-", "-", "-", "-", "-", "-", "-", "-"],
+        : ["-", "-", "-", "-", "-", "-", "-", "-", "-"],
       [],
       ["By System Provider"],
-      ["System Provider", "Wagered", "Payout", "GGR", "Bets", "Players"],
-      ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count, r.unique_players ?? 0]),
+      ["System Provider", "Wagered", "Payout", "GGR", "NGR", "Bets", "Players"],
+      ...byOperator.map((r) => [r.operator_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.ngr ?? 0, r.bet_count, r.unique_players ?? 0]),
       [],
       ["By Table"],
-      ["Table", "Wagered", "Payout", "GGR", "Bets", "Players"],
-      ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.bet_count, r.unique_players ?? 0]),
+      ["Table", "Wagered", "Payout", "GGR", "NGR", "Bets", "Players"],
+      ...byTable.map((r) => [r.table_name || "Unknown", r.total_wagered, r.total_payout, r.ggr, r.ngr ?? 0, r.bet_count, r.unique_players ?? 0]),
       [],
       ["By Site"],
       ["Site is derived from the first 3 characters of the player's username (the OCMS site prefix)"],
       ["Hold % is the PERIOD ACTUAL, not an expected rate"],
+      ["NGR is our revenue share of GGR, floored at zero per row — a losing row contributes 0, not a negative. It is therefore NOT a fixed percentage of the GGR column, and NOT additive across periods."],
       [
-        "Site", "Wagered", "Payout", "GGR", "Hold %", "Bets",
+        "Site", "Wagered", "Payout", "GGR", "NGR", "Hold %", "Bets",
         "Active Players", "Registered Players", "Wagered/Active Player",
       ],
       ...bySite.map((r) => [
         siteLabel(r.site_code, r.site_label), r.total_wagered, r.total_payout, r.ggr,
+        r.ngr ?? 0,
         r.hold_pct ?? "-", r.bet_count, r.unique_players,
         r.registered_players ?? "-", r.wagered_per_player ?? "-",
       ]),
@@ -256,6 +268,7 @@ function ReportsPageInner() {
             total_wagered: r.total_wagered,
             total_payout: r.total_payout,
             ggr: r.ggr,
+            ngr: r.ngr,
             bet_count: r.bet_count,
             unique_players: r.unique_players,
             extra: r,
@@ -267,6 +280,12 @@ function ReportsPageInner() {
   const totalWagered = breakdownData.reduce((s, r) => s + r.total_wagered, 0);
   const totalPayout = breakdownData.reduce((s, r) => s + r.total_payout, 0);
   const totalGgr = breakdownData.reduce((s, r) => s + r.ggr, 0);
+  /* Sum of the per-row figures, each ALREADY floored at zero server-side.
+     Deliberately not `rate * totalGgr`: that nets a losing row off against a
+     winning one and understates the share actually earned. Because the floor
+     applies per row, this total is also tab-dependent — By Site is the
+     contractual grain, and the header tile follows that one. */
+  const totalNgr = breakdownData.reduce((s, r) => s + (r.ngr ?? 0), 0);
   const totalBets = breakdownData.reduce((s, r) => s + r.bet_count, 0);
 
   /* Below md the five-column breakdown becomes one card per row, with the
@@ -295,6 +314,10 @@ function ReportsPageInner() {
               color: row.ggr >= 0 ? "#00bc7d" : "#fb2c36",
               fontWeight: 600,
             }),
+          },
+          {
+            label: "NGR",
+            value: money(row.ngr ?? 0, { color: "#f0b100", fontWeight: 600 }),
           },
           {
             label: "Bets",
@@ -524,16 +547,32 @@ function ReportsPageInner() {
         </div>
       ) : summary ? (
         <>
-          {/* Six across only once there is genuinely room for six. At sm the
-              cards were ~90px wide and a peso total could not fit at any
-              legible size, so it overflowed the border rather than wrapped. */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+          {/* Wide only once there is genuinely room for it. At sm the cards
+              were ~90px wide and a peso total could not fit at any legible
+              size, so it overflowed the border rather than wrapped. */}
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
             <StatCard label="Total Wagered" value={fmt(summary.total_wagered)} />
             <StatCard label="Total Payout" value={fmt(summary.total_payout)} />
             <StatCard
               label="GGR"
               value={fmt(summary.ggr)}
               color={summary.ggr >= 0 ? "#00bc7d" : "#fb2c36"}
+            />
+            {/* Sits next to GGR because that is the comparison people want,
+                but it is NOT a percentage of the tile beside it: the share is
+                taken per site and floored at zero, so a period with a losing
+                site shows an NGR above `rate x GGR`. The hint says the rate
+                out loud so nobody divides the two and concludes the number is
+                wrong. */}
+            <StatCard
+              label="NGR"
+              value={fmt(summary.ngr ?? 0)}
+              color="#f0b100"
+              hint={
+                summary.ngr_rate != null
+                  ? `${(summary.ngr_rate * 100).toFixed(0)}% share, per site`
+                  : undefined
+              }
             />
             <StatCard label="Bets" value={summary.bet_count.toLocaleString()} />
             <StatCard label="Rounds" value={summary.round_count.toLocaleString()} />
@@ -623,7 +662,29 @@ function ReportsPageInner() {
                             ? "Table"
                             : "Site"}
                       </th>
-                      {["Wagered", "Payout", "GGR", "Bets", "Players"].map((h) => (
+                      {["Wagered", "Payout", "GGR"].map((h) => (
+                        <th
+                          key={h}
+                          className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
+                          style={{ color: "#d08700" }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                      {/* Our cut, not theirs. GGR is what the site won from
+                          its players; NGR is the revenue share we take on it.
+                          It floors at zero — a losing row contributes nothing
+                          rather than a negative — which is why the Total below
+                          is a sum of these cells and never a percentage of the
+                          GGR total. */}
+                      <th
+                        className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
+                        style={{ color: "#d08700" }}
+                        title="Our revenue share of this row's GGR. Floors at zero: a losing row contributes nothing rather than a negative."
+                      >
+                        NGR
+                      </th>
+                      {["Bets", "Players"].map((h) => (
                         <th
                           key={h}
                           className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wider"
@@ -701,6 +762,12 @@ function ReportsPageInner() {
                             {fmt(row.ggr)}
                           </td>
                           <td
+                            className="px-4 py-3 text-right font-mono font-semibold"
+                            style={{ color: "#f0b100" }}
+                          >
+                            {fmt(row.ngr ?? 0)}
+                          </td>
+                          <td
                             className="px-4 py-3 text-right font-mono"
                             style={{ color: "#99a1af" }}
                           >
@@ -770,6 +837,12 @@ function ReportsPageInner() {
                         }}
                       >
                         {fmt(totalGgr)}
+                      </td>
+                      <td
+                        className="px-4 py-3 text-right font-mono font-bold"
+                        style={{ color: "#f0b100" }}
+                      >
+                        {fmt(totalNgr)}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-semibold"

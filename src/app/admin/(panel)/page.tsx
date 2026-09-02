@@ -19,14 +19,31 @@ interface DashboardStats {
   returning_players_30d: number;
   player_stats_available: boolean;
   top_sites: TopSite[];
+  /* Our revenue share of GGR over the Manila day and the trailing 30 days.
+     Each is computed per site and floored at zero before summing, so the two
+     are separately floored periods — 30 of `ngr_today` would not add up to
+     `ngr_30d`, and neither is a fixed percentage of any GGR figure. */
+  ngr_today: number;
+  ngr_30d: number;
+  ngr_rate: number | null;
 }
 
 interface TopSite {
   site_code: string | null;
   site_label: string;
   ggr: number;
+  ngr: number;
   total_wagered: number;
   unique_players: number;
+}
+
+/** Peso figure for the tiles. Matches the formatting the reports page uses so
+ *  the same number reads identically in both places. */
+function peso(v: number): string {
+  return `\u20B1${v.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export default function AdminDashboard() {
@@ -69,6 +86,35 @@ export default function AdminDashboard() {
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          }
+        />
+        {/* Sits with the live tiles because it is read at the same cadence
+            as them — "how did today go" — not with the 30-day player reach
+            block below. */}
+        <StatCard
+          label="NGR Today"
+          hint={
+            stats?.ngr_rate != null
+              ? `Our ${(stats.ngr_rate * 100).toFixed(0)}% share since midnight Manila time, taken per site`
+              : "Our revenue share since midnight Manila time, taken per site"
+          }
+          value={loading ? "..." : peso(stats?.ngr_today ?? 0)}
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="NGR · 30 Days"
+          hint="Floored per site over the whole window, so this is not 30 daily figures added up"
+          value={loading ? "..." : peso(stats?.ngr_30d ?? 0)}
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
             </svg>
           }
         />
@@ -184,6 +230,17 @@ export default function AdminDashboard() {
                       maximumFractionDigits: 2,
                     })}{" "}
                     GGR
+                  </span>
+                  <span
+                    className="font-mono font-semibold"
+                    style={{ color: "#f0b100" }}
+                  >
+                    {"\u20B1"}
+                    {(site.ngr ?? 0).toLocaleString("en-PH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    NGR
                   </span>
                   <span className="font-mono" style={{ color: "#99a1af" }}>
                     {"\u20B1"}

@@ -37,6 +37,9 @@ export async function GET(req: NextRequest) {
   let returning30d = 0;
   let playerStatsAvailable = false;
   let topSites: unknown[] = [];
+  let ngrToday = 0;
+  let ngr30d = 0;
+  let ngrRate: number | null = null;
 
   if (tablesRes.status === "fulfilled" && tablesRes.value.ok) {
     const data = await tablesRes.value.json();
@@ -82,6 +85,12 @@ export async function GET(req: NextRequest) {
     // Best-effort on the backend too — an empty array means the breakdown
     // failed or there is nothing to show, and the tile hides itself either way.
     topSites = Array.isArray(d.top_sites) ? d.top_sites : [];
+    // Our revenue share. Computed backend-side per SITE and floored at zero
+    // there, so this is a pass-through: deriving it here from a GGR figure
+    // would net losing sites off against winning ones and understate it.
+    ngrToday = Number(d.ngr_today) || 0;
+    ngr30d = Number(d.ngr_30d) || 0;
+    ngrRate = d.ngr_rate == null ? null : Number(d.ngr_rate);
   }
 
   return NextResponse.json({
@@ -90,6 +99,9 @@ export async function GET(req: NextRequest) {
     today_rounds: todayRounds,
     active_operators: activeOperators,
     top_sites: topSites,
+    ngr_today: ngrToday,
+    ngr_30d: ngr30d,
+    ngr_rate: ngrRate,
     unique_players_lifetime: uniqueLifetime,
     unique_players_today: uniqueToday,
     unique_players_7d: unique7d,
