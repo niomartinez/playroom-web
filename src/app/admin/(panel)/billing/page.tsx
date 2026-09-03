@@ -26,6 +26,8 @@ interface Invoice {
   usage_players: number;
   usage_rounds: number;
   usage_stream_hours: number;
+  usage_stream_gb: number;
+  usage_stream_bitrate_kbps: number;
   usage_peak_hour_players: number;
   show_usage: boolean;
   status: "issued" | "paid" | "cancelled";
@@ -226,14 +228,26 @@ export default function BillingPage() {
                 }}
               >
                 {[
-                  [inv.usage_players.toLocaleString(), "Players served"],
-                  [inv.usage_rounds.toLocaleString(), "Rounds dealt"],
-                  [`${Number(inv.usage_stream_hours).toLocaleString()} h`, "Streaming delivered"],
-                  [inv.usage_peak_hour_players.toLocaleString(), "Players, busiest hour"],
-                ].map(([value, label]) => (
+                  [inv.usage_players.toLocaleString(), "Players served", null],
+                  [inv.usage_rounds.toLocaleString(), "Rounds dealt", null],
+                  [
+                    `${Number(inv.usage_stream_hours).toLocaleString()} h`,
+                    "Streaming delivered",
+                    // Derived from viewer-hours x the snapshotted encoder rate,
+                    // not metered — nothing measures egress off the streaming
+                    // VPS. Shown with the rate so it can be checked.
+                    inv.usage_stream_gb
+                      ? `(~${Math.round(inv.usage_stream_gb).toLocaleString()} GB at ${
+                          inv.usage_stream_bitrate_kbps / 1000
+                        } Mbps)`
+                      : null,
+                  ],
+                  [inv.usage_peak_hour_players.toLocaleString(), "Players, busiest hour", null],
+                ].map(([value, label, sub]) => (
                   <div key={label}>
                     <div style={{ color: GOLD, fontSize: 16, fontWeight: 600 }}>{value}</div>
                     <div style={{ color: DIM, fontSize: 11 }}>{label}</div>
+                    {sub && <div style={{ color: DIM, fontSize: 10, opacity: 0.75 }}>{sub}</div>}
                   </div>
                 ))}
               </div>
