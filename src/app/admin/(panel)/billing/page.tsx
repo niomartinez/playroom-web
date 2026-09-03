@@ -9,6 +9,13 @@ import { useToast } from "@/lib/toast-context";
 interface LineItem {
   label: string;
   amount: number;
+  // Present on metered invoices; absent on the flat ones issued earlier,
+  // which are never rewritten and so must keep rendering.
+  driver?: string;
+  unit?: string | null;
+  quantity?: number;
+  unit_rate?: number;
+  base?: number;
 }
 
 interface Invoice {
@@ -30,6 +37,8 @@ interface Invoice {
   usage_stream_bitrate_kbps: number;
   usage_peak_hour_players: number;
   show_usage: boolean;
+  computed_amount: number | null;
+  minimum_applied: boolean;
   status: "issued" | "paid" | "cancelled";
   issued_at: string;
   due_date: string;
@@ -252,6 +261,48 @@ export default function BillingPage() {
                 ))}
               </div>
             )}
+
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 14,
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              {inv.line_items.map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: "3px 0",
+                  }}
+                >
+                  <div>
+                    <span style={{ color: "#d1d5db", fontSize: 13 }}>{item.label}</span>
+                    {item.unit_rate ? (
+                      <span style={{ color: DIM, fontSize: 11, marginLeft: 8 }}>
+                        {Number(item.quantity).toLocaleString()} {item.unit}
+                        {item.unit && !item.unit.endsWith("B") && item.quantity !== 1 ? "s" : ""}
+                        {" at "}
+                        {money(item.unit_rate, inv.currency)}
+                        {item.base ? ` + ${money(item.base, inv.currency)} base` : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span style={{ color: MUTED, fontSize: 13, whiteSpace: "nowrap" }}>
+                    {money(item.amount, inv.currency)}
+                  </span>
+                </div>
+              ))}
+              {inv.minimum_applied && inv.computed_amount !== null && (
+                <div style={{ color: DIM, fontSize: 11, marginTop: 8 }}>
+                  Usage subtotal {money(inv.computed_amount, inv.currency)} — minimum
+                  monthly commitment applied.
+                </div>
+              )}
+            </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
               <a
