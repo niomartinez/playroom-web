@@ -79,9 +79,10 @@ export interface AdminQueryResult<T> {
 
 export function useAdminQuery<T = unknown>(
   url: string | null,
-  opts: { enabled?: boolean } = {},
+  opts: { enabled?: boolean; keepPrevious?: boolean } = {},
 ): AdminQueryResult<T> {
   const enabled = opts.enabled !== false && !!url;
+  const keepPrevious = opts.keepPrevious === true;
   const cached = url ? cache.get(url) : undefined;
 
   const [, forceRender] = useState(0);
@@ -141,12 +142,47 @@ export function useAdminQuery<T = unknown>(
   }, [run]);
 
   const entry = url ? cache.get(url) : undefined;
+
+  /* `keepPrevious` — stale-while-revalidate ACROSS a key change, not just on a
+     revisit.
+     
+     The cache is keyed by URL, so "loading" was true for any key with no data
+     yet. That is right for a revisit (you have been here, the data is warm) but
+     wrong for a FILTER change, which always mints a brand-new key. Every date
+     preset on the reports page therefore made all four queries "loading" at
+     once, and the page's `{loading ? spinner : content}` gate unmounted the
+     tiles, the tab bar and the table until the slowest aggregation came back.
+     
+     Measured on production: 1,627ms with the tab bar absent from the DOM.
+     Click a tab in that window and there is no button to receive it — the
+     content returns on the old tab and it reads as "I clicked and nothing
+     happened". Two people reported exactly that, on two different controls,
+     before anyone worked out the control was never there.
+     
+     Holding the last resolved value means the numbers stay on screen and go
+     stale for a moment instead of vanishing, which is what this hook's own
+     docblock promises ("without ever blanking the screen") and what
+     `refreshing` + RefreshingHint already exist to communicate. `loading` then
+     means what it should: nothing has EVER been shown here. */
+  const previousRef = useRef<unknown>(undefined);
+  useEffect(() => {
+    if (entry?.data !== undefined) previousRef.current = entry.data;
+  }, [entry?.data]);
+
+  const fresh = entry?.data;
+  const fallback = keepPrevious ? previousRef.current : undefined;
+  const data = fresh !== undefined ? fresh : fallback;
+  // Serving a previous value while a new key loads is a REFRESH, not a load —
+  // otherwise the hint never appears for the case it was built for.
+  const servingStale = enabled && fresh === undefined && data !== undefined && !error;
+
   return {
-    data: entry?.data as T | undefined,
-    // Only a key with NO cached data is "loading" — that is what keeps a
-    // revisit instant instead of flashing a skeleton over data we already have.
-    loading: enabled && entry?.data === undefined && !error,
-    refreshing,
+    data: data as T | undefined,
+    // Only a key with nothing to show at all is "loading" — that is what keeps
+    // a revisit instant instead of flashing a skeleton over data we already
+    // have, and now also keeps a filter change from blanking the page.
+    loading: enabled && data === undefined && !error,
+    refreshing: refreshing || servingStale,
     error,
     refetch: () => void run(true),
   };

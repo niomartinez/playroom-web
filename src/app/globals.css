@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+/* Tailwind v4 removed `cursor: pointer` from buttons in Preflight — v4 matches
+   the raw browser default (`cursor: default`) instead. Nothing in this app
+   asked for that: it arrived with the v4 upgrade and silently stripped the
+   click affordance from ~224 of the 242 buttons across the admin panel, the
+   studio and the player UI. Only the handful that happened to set
+   `cursor-pointer` explicitly (StatCard, a few inputs) kept it.
+   
+   It reads as a broken page rather than a styling nit. Two people reported the
+   reports tabs and the date presets as "not clickable" / "mahirap pindotin"
+   before anyone worked out that the control was fine and only the cursor had
+   gone — with no pointer and no hover state, there is nothing to tell you the
+   thing is a control at all, so you assume your click missed.
+   
+   This is the fix Tailwind documents for it in the v4 upgrade guide. Keep it
+   at the top, before any component styles, so a single `cursor-` utility can
+   still override it per element (e.g. `cursor-not-allowed`).
+   `:not(:disabled)` matters: a disabled button must NOT look clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 :root {
   /* Figma exact colors */
   --banker-red: #fb2c36;

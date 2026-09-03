@@ -154,9 +154,16 @@ function ReportsPageInner() {
   // operator/table tab needs no request at all (both breakdowns are already
   // cached for this period), and a slow aggregation no longer holds up the two
   // that finished.
-  const summaryQ = useAdminQuery<Summary>(`/api/admin/reports/summary?${qs}`);
-  const operatorQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-operator?${qs}`);
-  const tableQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-table?${qs}`);
+  /* `keepPrevious` on all four: changing a date preset mints four new cache
+     keys at once, and without it every one of them reports `loading`, which
+     unmounts the tiles, the tab bar and the table until the slowest
+     aggregation returns (measured at 1.6s on production). The tab bar being
+     absent is what made clicks "do nothing" — there was no button there. The
+     numbers now stay on screen and go stale for a moment, with RefreshingHint
+     saying so. */
+  const summaryQ = useAdminQuery<Summary>(`/api/admin/reports/summary?${qs}`, { keepPrevious: true });
+  const operatorQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-operator?${qs}`, { keepPrevious: true });
+  const tableQ = useAdminQuery<BreakdownResponse>(`/api/admin/reports/by-table?${qs}`, { keepPrevious: true });
   /* Date range only — see the `site` comment above. */
   /* The first day that has any settled bet, for the All time preset. An empty
      date_from cannot mean "everything" — every report defaults an absent
@@ -169,6 +176,7 @@ function ReportsPageInner() {
 
   const siteQ = useAdminQuery<SiteBreakdownResponse>(
     `/api/admin/reports/by-site?${dateFrom ? `date_from=${dateFrom}&` : ""}${dateTo ? `date_to=${dateTo}` : ""}`,
+    { keepPrevious: true },
   );
 
   // Mock-site labelling. Only a viewer who sees mock AND has labelling on gets a
