@@ -5,6 +5,7 @@ import MobileCardList, {
   type MobileCardItem,
 } from "@/components/admin/ui/MobileCardList";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
+import Skeleton, { SkeletonKeyframes } from "@/components/admin/ui/Skeleton";
 import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
 import { useUrlFilters } from "@/lib/use-url-filters";
@@ -285,6 +286,15 @@ function ReportsPageInner() {
   const pct = (v: number | null, digits = 2) =>
     v === null ? "\u2014" : `${v.toFixed(digits)}%`;
 
+  /* Every figure on this page goes through one of these two while a new range
+     is loading, so none of them can show a stale value. `stat` is for the
+     tiles (which size their own text), `cell` for the table's right-aligned
+     numeric columns. */
+  const stat = (v: React.ReactNode) =>
+    refreshing ? <Skeleton height={22} width="72%" /> : v;
+  const cell = (v: React.ReactNode, w: string | number = "70%") =>
+    refreshing ? <Skeleton height={12} width={w} /> : v;
+
   const totalWagered = breakdownData.reduce((s, r) => s + r.total_wagered, 0);
   const totalPayout = breakdownData.reduce((s, r) => s + r.total_payout, 0);
   const totalGgr = breakdownData.reduce((s, r) => s + r.ggr, 0);
@@ -302,7 +312,7 @@ function ReportsPageInner() {
      bottom is worse. */
   const money = (v: number, style?: React.CSSProperties) => (
     <span className="font-mono" style={style}>
-      {fmt(v)}
+      {refreshing ? <Skeleton height={12} width={90} /> : fmt(v)}
     </span>
   );
 
@@ -331,7 +341,7 @@ function ReportsPageInner() {
             label: "Bets",
             value: (
               <span className="font-mono" style={{ color: "#99a1af" }}>
-                {row.bet_count.toLocaleString()}
+                {cell(row.bet_count.toLocaleString(), 50)}
               </span>
             ),
           },
@@ -339,7 +349,7 @@ function ReportsPageInner() {
             label: "Players",
             value: (
               <span className="font-mono" style={{ color: "#99a1af" }}>
-                {(row.unique_players ?? 0).toLocaleString()}
+                {cell((row.unique_players ?? 0).toLocaleString(), 45)}
               </span>
             ),
           },
@@ -552,36 +562,32 @@ function ReportsPageInner() {
           Loading reports...
         </div>
       ) : summary ? (
-        /* While a new range loads, the PREVIOUS numbers stay on screen (see
-           `keepPrevious` above) — which is only safe if it is obvious they are
-           the previous ones. Dimming the whole block is the signal: a manager
-           glancing at a figure needs to see at a glance that it is not the
-           answer to the question they just asked. The small "Refreshing…" hint
-           alone was not enough — it sat above the tiles in grey and read as
-           page furniture.
+        /* The block stays MOUNTED while a new range loads — unmounting it is
+           what made the tabs unclickable — but every VALUE inside is replaced
+           by a skeleton rather than left showing the previous number.
 
-           `pointer-events` is deliberately NOT disabled. Making the block inert
+           Dimming the old figures was tried first and is wrong here: a dimmed
+           number is still a number. Someone who picks a new range and reads
+           "GGR ₱8,545,100" has no reason to doubt it, and can screenshot a
+           figure that answers a question they did not ask. On a money report
+           that is worse than showing nothing. A skeleton cannot be misread,
+           and it holds the layout so nothing jumps when the real value lands.
+
+           `pointer-events` is deliberately untouched: making the block inert
            while it refreshes would reproduce, in spirit, the very bug this
-           replaced: a control that is visible but cannot be clicked. The tabs
-           stay live throughout. */
-        <div
-          className="space-y-6"
-          style={{
-            opacity: refreshing ? 0.4 : 1,
-            transition: "opacity 120ms ease-out",
-          }}
-          aria-busy={refreshing}
-        >
+           replaced. The tabs and presets stay live throughout. */
+        <div className="space-y-6" aria-busy={refreshing}>
+          <SkeletonKeyframes />
           <RefreshingHint show={refreshing} />
           {/* Wide only once there is genuinely room for it. At sm the cards
               were ~90px wide and a peso total could not fit at any legible
               size, so it overflowed the border rather than wrapped. */}
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
-            <StatCard label="Total Wagered" value={fmt(summary.total_wagered)} />
-            <StatCard label="Total Payout" value={fmt(summary.total_payout)} />
+            <StatCard label="Total Wagered" value={stat(fmt(summary.total_wagered))} />
+            <StatCard label="Total Payout" value={stat(fmt(summary.total_payout))} />
             <StatCard
               label="GGR"
-              value={fmt(summary.ggr)}
+              value={stat(fmt(summary.ggr))}
               color={summary.ggr >= 0 ? "#00bc7d" : "#fb2c36"}
             />
             {/* Sits next to GGR because that is the comparison people want,
@@ -592,7 +598,7 @@ function ReportsPageInner() {
                 wrong. */}
             <StatCard
               label="NGR"
-              value={fmt(summary.ngr ?? 0)}
+              value={stat(fmt(summary.ngr ?? 0))}
               color="#f0b100"
               hint={
                 summary.ngr_rate != null
@@ -600,14 +606,18 @@ function ReportsPageInner() {
                   : undefined
               }
             />
-            <StatCard label="Bets" value={summary.bet_count.toLocaleString()} />
-            <StatCard label="Rounds" value={summary.round_count.toLocaleString()} />
+            <StatCard label="Bets" value={stat(summary.bet_count.toLocaleString())} />
+            <StatCard label="Rounds" value={stat(summary.round_count.toLocaleString())} />
             <StatCard
               label="Players"
-              value={(summary.unique_players ?? 0).toLocaleString()}
-              hint={`${summary.new_players ?? 0} new · ${
-                summary.returning_players ?? 0
-              } returning`}
+              value={stat((summary.unique_players ?? 0).toLocaleString())}
+              hint={
+                refreshing
+                  ? undefined
+                  : `${summary.new_players ?? 0} new · ${
+                      summary.returning_players ?? 0
+                    } returning`
+              }
             />
           </div>
 
@@ -774,10 +784,10 @@ function ReportsPageInner() {
                             {name || "Unknown"}
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-white">
-                            {fmt(row.total_wagered)}
+                            {cell(fmt(row.total_wagered))}
                           </td>
                           <td className="px-4 py-3 text-right font-mono text-white">
-                            {fmt(row.total_payout)}
+                            {cell(fmt(row.total_payout))}
                           </td>
                           <td
                             className="px-4 py-3 text-right font-mono font-semibold"
@@ -785,25 +795,25 @@ function ReportsPageInner() {
                               color: row.ggr >= 0 ? "#00bc7d" : "#fb2c36",
                             }}
                           >
-                            {fmt(row.ggr)}
+                            {cell(fmt(row.ggr))}
                           </td>
                           <td
                             className="px-4 py-3 text-right font-mono font-semibold"
                             style={{ color: "#f0b100" }}
                           >
-                            {fmt(row.ngr ?? 0)}
+                            {cell(fmt(row.ngr ?? 0))}
                           </td>
                           <td
                             className="px-4 py-3 text-right font-mono"
                             style={{ color: "#99a1af" }}
                           >
-                            {row.bet_count.toLocaleString()}
+                            {cell(row.bet_count.toLocaleString(), "50%")}
                           </td>
                           <td
                             className="px-4 py-3 text-right font-mono"
                             style={{ color: "#99a1af" }}
                           >
-                            {(row.unique_players ?? 0).toLocaleString()}
+                            {cell((row.unique_players ?? 0).toLocaleString(), "45%")}
                           </td>
                           {activeTab === "site" && (
                             <>
@@ -811,25 +821,29 @@ function ReportsPageInner() {
                                 className="px-4 py-3 text-right font-mono"
                                 style={{ color: "#99a1af" }}
                               >
-                                {pct(row.extra?.hold_pct ?? null)}
+                                {cell(pct(row.extra?.hold_pct ?? null), "45%")}
                               </td>
                               <td
                                 className="px-4 py-3 text-right font-mono"
                                 style={{ color: "#99a1af" }}
                               >
-                                {row.extra?.active_ratio == null
-                                  ? "\u2014"
-                                  : `${(row.extra.active_ratio * 100).toFixed(1)}% of ${
-                                      row.extra.registered_players ?? "?"
-                                    }`}
+                                {cell(
+                                  row.extra?.active_ratio == null
+                                    ? "\u2014"
+                                    : `${(row.extra.active_ratio * 100).toFixed(1)}% of ${
+                                        row.extra.registered_players ?? "?"
+                                      }`,
+                                )}
                               </td>
                               <td
                                 className="px-4 py-3 text-right font-mono"
                                 style={{ color: "#99a1af" }}
                               >
-                                {row.extra?.wagered_per_player == null
-                                  ? "\u2014"
-                                  : fmt(row.extra.wagered_per_player)}
+                                {cell(
+                                  row.extra?.wagered_per_player == null
+                                    ? "\u2014"
+                                    : fmt(row.extra.wagered_per_player),
+                                )}
                               </td>
                             </>
                           )}
@@ -851,10 +865,10 @@ function ReportsPageInner() {
                         Total
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold text-white">
-                        {fmt(totalWagered)}
+                        {cell(fmt(totalWagered))}
                       </td>
                       <td className="px-4 py-3 text-right font-mono font-semibold text-white">
-                        {fmt(totalPayout)}
+                        {cell(fmt(totalPayout))}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-bold"
@@ -862,19 +876,19 @@ function ReportsPageInner() {
                           color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36",
                         }}
                       >
-                        {fmt(totalGgr)}
+                        {cell(fmt(totalGgr))}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-bold"
                         style={{ color: "#f0b100" }}
                       >
-                        {fmt(totalNgr)}
+                        {cell(fmt(totalNgr))}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-semibold"
                         style={{ color: "#99a1af" }}
                       >
-                        {totalBets.toLocaleString()}
+                        {cell(totalBets.toLocaleString(), "50%")}
                       </td>
                       <td
                         className="px-4 py-3 text-right font-mono font-semibold"
@@ -882,7 +896,7 @@ function ReportsPageInner() {
                       >
                         {/* De-duplicated across groups, not a column sum —
                             one person on two tables is one player. */}
-                        {(summary.unique_players ?? 0).toLocaleString()}
+                        {cell((summary.unique_players ?? 0).toLocaleString(), "45%")}
                       </td>
                       {/* Deliberately blank: a hold rate, an activity ratio and
                           a per-player average are not column sums, and a

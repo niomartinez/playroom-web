@@ -2,7 +2,10 @@
 
 interface StatCardProps {
   label: string;
-  value: string | number;
+  /** ReactNode, not just string|number, so a caller can pass a <Skeleton /> in
+   *  place of a figure that is not known yet — see Skeleton.tsx for why a
+   *  placeholder beats showing the previous value. */
+  value: React.ReactNode;
   icon?: React.ReactNode;
   trend?: "up" | "down" | "neutral";
   color?: string;
