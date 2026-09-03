@@ -31,6 +31,7 @@ const ROUTE_SECTIONS: [string, string][] = [
   ["/admin/pitch-links", "pitch_links"],
   ["/admin/test-tokens", "test_tokens"],
   ["/admin/settings", "settings"],
+  ["/admin/billing", "billing"],
   ["/admin", "dashboard"],
 ];
 

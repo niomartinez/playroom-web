@@ -189,6 +189,20 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    // Person-scoped: the permissions matrix grants `billing` to no role, so
+    // this renders only for the accounts in billing_viewers. canRead() reads
+    // the resolved map from /internal/admin/me, which already accounts for it.
+    label: "Billing",
+    href: "/admin/billing",
+    section: "billing",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 3h16v18l-3-2-2 2-2-2-2 2-2-2-3 2V3z" />
+        <path d="M8 8h8" /><path d="M8 12h8" /><path d="M8 16h5" />
+      </svg>
+    ),
+  },
 ];
 
 function isActive(pathname: string, href: string): boolean {
