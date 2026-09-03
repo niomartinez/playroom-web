@@ -546,15 +546,33 @@ function ReportsPageInner() {
         </div>
       </div>
 
-      <RefreshingHint show={refreshing && !loading} />
-
       {/* Summary cards */}
       {loading ? (
         <div className="text-center py-8" style={{ color: "#6a7282" }}>
           Loading reports...
         </div>
       ) : summary ? (
-        <>
+        /* While a new range loads, the PREVIOUS numbers stay on screen (see
+           `keepPrevious` above) — which is only safe if it is obvious they are
+           the previous ones. Dimming the whole block is the signal: a manager
+           glancing at a figure needs to see at a glance that it is not the
+           answer to the question they just asked. The small "Refreshing…" hint
+           alone was not enough — it sat above the tiles in grey and read as
+           page furniture.
+
+           `pointer-events` is deliberately NOT disabled. Making the block inert
+           while it refreshes would reproduce, in spirit, the very bug this
+           replaced: a control that is visible but cannot be clicked. The tabs
+           stay live throughout. */
+        <div
+          className="space-y-6"
+          style={{
+            opacity: refreshing ? 0.4 : 1,
+            transition: "opacity 120ms ease-out",
+          }}
+          aria-busy={refreshing}
+        >
+          <RefreshingHint show={refreshing} />
           {/* Wide only once there is genuinely room for it. At sm the cards
               were ~90px wide and a peso total could not fit at any legible
               size, so it overflowed the border rather than wrapped. */}
@@ -884,7 +902,7 @@ function ReportsPageInner() {
               </>
             )}
           </div>
-        </>
+        </div>
       ) : (
         <div className="text-center py-8" style={{ color: "#6a7282" }}>
           No report data available
