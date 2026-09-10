@@ -234,6 +234,7 @@ function DerivedStrip({
     <div
       style={{
         display: "flex",
+        width: "100%",
         gap,
         flexShrink: 0,
         height: geometry.strip ? geometry.strip * rows + (rows - 1) * GAP : undefined,
@@ -351,15 +352,13 @@ export default function RoadmapPanel() {
         />
       </div>
       <div style={{ marginTop: 4, display: "flex", minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0, display: "flex" }}>
-          <DerivedStrip
-            outcomes={outcomes}
-            geometry={geometry}
-            rows={D_STRIP_ROWS}
-            gap={D_STRIP_GAP}
-            labels={labels}
-          />
-        </div>
+        <DerivedStrip
+          outcomes={outcomes}
+          geometry={geometry}
+          rows={D_STRIP_ROWS}
+          gap={D_STRIP_GAP}
+          labels={labels}
+        />
       </div>
       <div style={{ marginTop: 4, display: "flex", justifyContent: "center", height: D_LINE_H, flexShrink: 0 }}>
         <Standings counts={counts} compact />
