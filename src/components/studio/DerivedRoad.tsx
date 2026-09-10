@@ -1,14 +1,41 @@
+"use client";
+
+import { useMemo } from "react";
+
+import { useStudio } from "@/lib/studio-context";
+import { buildDerivedRoad, type DerivedRoadKind } from "@/lib/derived-roads";
+import { DerivedRoadGrid } from "@/components/shared/DerivedRoadGrid";
+
 interface DerivedRoadProps {
   title: string;
+  kind: DerivedRoadKind;
   cols?: number;
   rows?: number;
 }
 
+/**
+ * One derived road on the studio dashboard, fed from the same Big Road the
+ * dealer is writing. Same library and renderer as the player panel, so the
+ * dealer and the players always see identical roads.
+ */
 export default function DerivedRoad({
   title,
+  kind,
   cols = 22,
   rows = 6,
 }: DerivedRoadProps) {
+  const { roads } = useStudio();
+  const { columns } = useMemo(
+    () =>
+      buildDerivedRoad(
+        roads.bigRoad.map((e) => e.result),
+        kind,
+        cols,
+        rows,
+      ),
+    [roads.bigRoad, kind, cols, rows],
+  );
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -28,27 +55,15 @@ export default function DerivedRoad({
         {title}
       </p>
 
-      <div
-        className="grid flex-1"
-        style={{
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
-          gap: "1px",
-        }}
-      >
-        {Array.from({ length: cols * rows }).map((_, i) => (
-          <div key={i} className="flex items-center justify-center">
-            <div
-              style={{
-                width: "75%",
-                aspectRatio: "1",
-                borderRadius: "9999px",
-                border: "1px solid #392c07",
-              }}
-            />
-          </div>
-        ))}
-      </div>
+      <DerivedRoadGrid
+        columns={columns}
+        kind={kind}
+        cols={cols}
+        rows={rows}
+        emptyBorderColor="#392c07"
+        gap={1}
+        label={title}
+      />
     </div>
   );
 }

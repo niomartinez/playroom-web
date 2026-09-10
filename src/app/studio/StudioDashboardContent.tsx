@@ -57,11 +57,11 @@ export default function StudioDashboardContent() {
         >
           <BigRoad />
 
-          <DerivedRoad title="BIG EYE" cols={44} rows={4} />
+          <DerivedRoad title="BIG EYE" kind="bigEye" cols={44} rows={4} />
 
           <div className="grid grid-cols-2 gap-2 min-h-0">
-            <DerivedRoad title="SMALL ROAD" cols={22} rows={4} />
-            <DerivedRoad title="COCKROACH PIG" cols={22} rows={4} />
+            <DerivedRoad title="SMALL ROAD" kind="smallRoad" cols={22} rows={4} />
+            <DerivedRoad title="COCKROACH PIG" kind="cockroach" cols={22} rows={4} />
           </div>
         </div>
 

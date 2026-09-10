@@ -1,0 +1,429 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><title>Derived Roads Prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #0b0f19;
+    --panel: #101828;
+    --panel-border: #364153;
+    --text: #d1d5dc;
+    --muted: #99a1af;
+    --faint: #6a7282;
+    --player: #2b7fff;
+    --player-edge: #51a2ff;
+    --banker: #fb2c36;
+    --banker-edge: #ff6467;
+    --tie: #00c950;
+    --tie-edge: #05df72;
+    --note: #f0b100;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --app: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 24px 64px; }
+  header h1 {
+    font-size: 22px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; text-wrap: balance;
+  }
+  header p { margin: 0; color: var(--muted); max-width: 64ch; }
+  .controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin: 18px 0 28px; padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 10px;
+  }
+  .controls .lbl { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 4px; }
+  button {
+    font: inherit; font-weight: 600; color: #fff; border: 0; border-radius: 8px;
+    padding: 6px 14px; cursor: pointer; background: #1e2939;
+  }
+  button:focus-visible { outline: 2px solid var(--note); outline-offset: 2px; }
+  button.p { background: var(--player); }
+  button.b { background: var(--banker); }
+  button.t { background: var(--tie); }
+  button.ghost { background: transparent; border: 1px solid var(--panel-border); color: var(--text); font-weight: 500; }
+  .controls .count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; margin-left: 8px; }
+  .toggle input { accent-color: var(--note); }
+
+  section { margin-bottom: 40px; }
+  section h2 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  section .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 70ch; }
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; align-items: start; }
+  .variant { min-width: 0; }
+  .variant .tag {
+    display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+  }
+  .variant .tag b { color: var(--text); font-weight: 600; }
+  .variant .tag.now b { color: var(--muted); }
+  .variant .tag.new b { color: var(--note); }
+  .variant .tag .dim { font-family: var(--mono); text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+  /* Phone frame: a slice of the mobile layout around the road slot. */
+  .phone {
+    width: 390px; margin: 0 auto; background: #000; border-radius: 22px;
+    border: 1px solid #2a3140; overflow: hidden; font-family: var(--app);
+  }
+  .phone .video { height: 60px; background: linear-gradient(180deg,#0f1a2b,#0a1220); display:flex; align-items:flex-end; justify-content:center; color: var(--faint); font-size: 11px; padding-bottom: 6px; }
+  .phone .slot { padding: 8px 19px 0; height: 208px; display: flex; box-sizing: content-box; }
+  .phone .pads { margin-top: 8px; height: 46px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 0 19px 10px; }
+  .phone .pads div { border-radius: 10px; opacity: 0.55; }
+  .phone .pads .pp { background: var(--player); } .phone .pads .tt { background: var(--tie); } .phone .pads .bb { background: var(--banker); }
+
+  .desk { width: 317px; height: 270px; margin: 0 auto; font-family: var(--app); }
+  .desk-note { text-align: center; color: var(--faint); font-family: var(--mono); font-size: 11px; margin-top: 8px; }
+
+  /* Road panel chrome, copied from RoadmapPanel */
+  .rp { width: 100%; height: 100%; min-height: 0; box-sizing: border-box; background: var(--panel); border: 0.8px solid var(--panel-border); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+  .rp.cur { padding: 8px; gap: 6px; }
+  .rp.new { padding: 6px; gap: 4px; }
+  .rp .title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px; flex-shrink: 0; }
+  .rp .gridbox { flex: 1; min-height: 0; display: flex; }
+  .rp .strip { display: flex; gap: 4px; flex-shrink: 0; }
+  .rp .strip > div { flex: 1; min-width: 0; }
+  .line { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-shrink: 0; height: 16px; }
+  .next { display: flex; align-items: center; gap: 5px; }
+  .next .k { font-size: 10px; color: var(--muted); font-weight: 500; }
+  .next .c { display: flex; align-items: center; gap: 2px; }
+  .next .ball { width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color:#fff; font-weight: 700; font-size: 8px; box-sizing: border-box; }
+  .next .pct { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .pills { display: flex; gap: 4px; }
+  .pill { border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 700; color: #fff; display: flex; gap: 3px; align-items: center; line-height: 12px; }
+  .rp.new .pill { padding: 1px 7px; }
+  .ask { display: inline-flex; align-items: center; gap: 1px; margin-left: 1px; }
+  .ask i { display: block; width: 7px; height: 7px; box-sizing: border-box; }
+  .ask i.ring { border-radius: 50%; border: 1.5px solid currentColor; }
+  .ask i.dot { border-radius: 50%; background: currentColor; }
+  .ask i.slash { width: 8px; height: 8px; background: linear-gradient(135deg, transparent 40%, currentColor 40%, currentColor 60%, transparent 60%); }
+  .ask i.none { border-radius: 50%; border: 1px solid #364153; }
+
+  /* Desktop variant chrome, copied from the desktop branch */
+  .dk { display: flex; flex-direction: column; height: 100%; gap: 4px; }
+  .dk .box { background: var(--panel); border: 0.8px solid var(--panel-border); border-radius: 8px; padding: 4px 7px; display: flex; flex-direction: column; min-height: 0; box-sizing: border-box; }
+  .dk .box .h { font-size: 10px; font-weight: 600; color: var(--text); margin-bottom: 3px; flex-shrink: 0; }
+  .dk .counters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; flex-shrink: 0; }
+  .dk .counters div { display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; padding: 4px 0; color: #fff; }
+  .dk .counters b { font-size: 16px; font-weight: 700; line-height: 1.1; }
+  .dk .counters span { font-size: 8px; opacity: 0.85; }
+  .dk .nextrow { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .dk .roadrow { display: flex; gap: 6px; flex: 1; min-height: 0; }
+  .dk .roadrow > div { min-height: 0; display: flex; }
+
+  /* Grid renderer */
+  .g { display: grid; min-height: 0; }
+  .g .cell { display: flex; align-items: center; justify-content: center; position: relative; }
+  .g .empty { width: 92%; aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(54,65,83,0.6); box-sizing: border-box; }
+  .g .ring { width: 92%; aspect-ratio: 1; border-radius: 50%; border: 2px solid currentColor; box-sizing: border-box; }
+  .g .ring.thin { border-width: 1.5px; }
+  .g .dot { width: 78%; aspect-ratio: 1; border-radius: 50%; background: currentColor; }
+  .g .slash { width: 96%; aspect-ratio: 1; background: linear-gradient(135deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%); }
+  .g .tieslash { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; }
+  .g .tieslash::before { content: ""; width: 120%; height: 2px; background: var(--tie); transform: rotate(-45deg); }
+  .g .tien { position: absolute; right: -1px; bottom: -2px; font-size: 7px; font-weight: 700; color: var(--tie); line-height: 1; }
+  .P { color: var(--player); } .B { color: var(--banker); } .T { color: var(--tie); }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 28px; margin-top: 12px; }
+  .notes h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--note); margin: 0 0 6px; font-weight: 600; }
+  .notes ul { margin: 0; padding-left: 18px; color: var(--text); }
+  .notes li { margin-bottom: 4px; }
+  .notes code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 12px; margin-top: 10px; align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; box-sizing: border-box; }
+  .legend i.ring { border-radius: 50%; border: 2px solid currentColor; }
+  .legend i.dot { border-radius: 50%; background: currentColor; }
+  .legend i.slash { background: linear-gradient(135deg, transparent 42%, currentColor 42%, currentColor 58%, transparent 58%); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Derived Roads Prototype</h1>
+    <p>Big Eye Boy, Small Road and Cockroach Pig under the player's Big Road, plus the ask-road marks. Both panels render at the exact pixel box the layout gives them today. Deal into the shoe to watch every road update.</p>
+  </header>
+
+  <div class="controls">
+    <span class="lbl">Deal</span>
+    <button class="p" data-deal="P">Player</button>
+    <button class="b" data-deal="B">Banker</button>
+    <button class="t" data-deal="T">Tie</button>
+    <button class="ghost" id="undo">Undo</button>
+    <button class="ghost" id="reset">New shoe</button>
+    <span class="count" id="count"></span>
+  </div>
+
+  <section>
+    <h2>Mobile · road slot is 208 px tall, 352 px wide</h2>
+    <p class="sub">Left is the panel as shipped. Right compacts the chrome instead of the road: the "Big Road" title goes, padding drops from 8 to 6. The Big Road shrinks proportionally to gain two columns, and the freed height carries a three-row strip of the derived roads at about 60% cell size.</p>
+    <div class="compare">
+      <div class="variant">
+        <div class="tag now"><b>Current</b><span class="dim">6 rows · 13 cols · cell 24.4</span></div>
+        <div class="phone">
+          <div class="video">video</div>
+          <div class="slot"><div class="rp cur" id="m-cur"></div></div>
+          <div class="pads"><div class="pp"></div><div class="tt"></div><div class="bb"></div></div>
+        </div>
+      </div>
+      <div class="variant">
+        <div class="tag new"><b>Proposed</b><span class="dim" id="m-new-dim"></span></div>
+        <div class="phone">
+          <div class="video">video</div>
+          <div class="slot"><div class="rp new" id="m-new"></div></div>
+          <div class="pads"><div class="pp"></div><div class="tt"></div><div class="bb"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span class="B"><i class="ring"></i> Big Eye Boy</span>
+      <span class="B"><i class="dot"></i> Small Road</span>
+      <span class="B"><i class="slash"></i> Cockroach Pig</span>
+      <span style="color:var(--muted)">red = pattern repeats · blue = pattern broke · the three tiny marks beside P and B are the ask road</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Desktop · road column is 22% × 30% of the viewport, 317 × 270 px at 1440 × 900</h2>
+    <p class="sub">The desktop column is shorter than the phone slot. The three counter tiles fold into two compact lines, standings and Next, and the roads take every remaining pixel: the cell is solved from the height, and the column count follows from the width, the same way the phone already sizes its road.</p>
+    <div class="compare">
+      <div class="variant">
+        <div class="tag now"><b>Current</b><span class="dim">big road 22 cols · counters · next</span></div>
+        <div class="desk"><div class="dk" id="d-cur"></div></div>
+        <div class="desk-note">as shipped</div>
+      </div>
+      <div class="variant">
+        <div class="tag new"><b>Proposed</b><span class="dim" id="d-new-dim"></span></div>
+        <div class="desk"><div class="dk" id="d-new"></div></div>
+        <div class="desk-note">grows with the viewport, same as today</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What changes in code</h2>
+    <div class="notes">
+      <div>
+        <h3>Already done</h3>
+        <ul>
+          <li><code>src/lib/derived-roads.ts</code>: pure builders for the three roads and the ask road. Reuses the Big Road column builder for geometry and wrap.</li>
+          <li><code>src/lib/derived-roads.test.ts</code>: hand-worked cases, passing.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>On approval</h3>
+        <ul>
+          <li>Shared <code>DerivedRoadGrid</code> renderer (ring / dot / slash styles) next to <code>BigRoadGrid</code>.</li>
+          <li>RoadmapPanel: mobile strip + compact chrome; desktop derived row, counters folded into two lines; ask marks in the Next row.</li>
+          <li>Studio dashboard placeholders wired to the same library.</li>
+          <li>i18n keys for the three road names (en, zh-Hans).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ── Port of src/lib/big-road.ts (column builder + wrap) ───────────────── */
+const KEEP_TAIL = 3;
+function norm(o){ return o === "B" ? "B" : o === "P" ? "P" : "T"; }
+function buildBigRoad(outcomes, maxCols, rows){
+  const columns = []; let leadingTies = 0; let lastRow = -1;
+  for (const raw of outcomes){
+    const s = norm(raw);
+    if (s === "T"){ const lc = columns[columns.length-1]; if(!lc){ leadingTies++; continue; } const cell = lc.cells[lastRow]; if(cell) cell.ties++; continue; }
+    const lc = columns[columns.length-1];
+    if (!lc || lc.outcome !== s){
+      const cells = Array.from({length: rows}, () => ({has:false, ties:0}));
+      cells[0] = {has:true, ties:0};
+      columns.push({outcome: s, cells}); lastRow = 0; continue;
+    }
+    let nr = lastRow + 1; if (nr >= rows) nr = rows - 1;
+    const t = lc.cells[nr]; if (!t.has){ t.has = true; t.ties = 0; } lastRow = nr;
+  }
+  const n = columns.length; let vis;
+  if (n <= maxCols) vis = columns; else { const cyc = maxCols - KEEP_TAIL + 1; const vc = ((n - maxCols - 1) % cyc) + KEEP_TAIL; vis = columns.slice(n - vc, n); }
+  return { columns: vis, leadingTie: leadingTies > 0 ? {ties: leadingTies} : null };
+}
+/* ── Port of src/lib/derived-roads.ts ──────────────────────────────────── */
+const OFFSET = { bigEye: 1, smallRoad: 2, cockroach: 3 };
+const KINDS = ["bigEye", "smallRoad", "cockroach"];
+function derivedMarks(outcomes, kind){
+  const k = OFFSET[kind]; const marks = []; const depths = []; let last = null;
+  for (const raw of outcomes){
+    const s = norm(raw); if (s === "T") continue;
+    if (s === last){
+      depths[depths.length-1]++; const c = depths.length-1; const r = depths[c]-1; const ref = c-k; if (ref < 0) continue;
+      marks.push(depths[ref] === r ? "blue" : "red");
+    } else {
+      depths.push(1); last = s; const c = depths.length-1; const a = c-1, b = c-1-k; if (b < 0) continue;
+      marks.push(depths[a] === depths[b] ? "red" : "blue");
+    }
+  }
+  return marks;
+}
+function buildDerived(outcomes, kind, maxCols, rows){
+  return buildBigRoad(derivedMarks(outcomes, kind).map(m => m === "red" ? "B" : "P"), maxCols, rows);
+}
+function askRoad(outcomes, side){
+  const out = {};
+  for (const kind of KINDS){ const before = derivedMarks(outcomes, kind).length; const after = derivedMarks([...outcomes, side], kind); out[kind] = after.length > before ? after[after.length-1] : null; }
+  return out;
+}
+/* ── Renderers ─────────────────────────────────────────────────────────── */
+function gridEl(cols, rows, cell, gap, fill){
+  const g = document.createElement("div"); g.className = "g";
+  const track = cell ? `${cell}px` : "1fr";
+  g.style.gridTemplateColumns = `repeat(${cols}, ${track})`;
+  g.style.gridTemplateRows = `repeat(${rows}, ${track})`;
+  g.style.gap = `${gap}px`;
+  if (cell){ g.style.justifyContent = "center"; g.style.alignContent = "start"; } else { g.style.flex = "1"; }
+  for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++){
+    const d = document.createElement("div"); d.className = "cell"; d.style.gridColumn = c+1; d.style.gridRow = r+1;
+    const inner = fill(c, r); d.appendChild(inner || Object.assign(document.createElement("div"), {className: "empty"})); g.appendChild(d);
+  }
+  return g;
+}
+function roadFill(res, style){
+  return (c, r) => {
+    const col = res.columns[c]; const cell = col && col.cells[r];
+    if (c === 0 && r === 0 && !col && res.leadingTie){ const t = document.createElement("div"); t.className = "dot T"; t.style.width = "40%"; return t; }
+    if (!cell || !cell.has) return null;
+    const m = document.createElement("div");
+    if (style === "bigroad"){ m.className = "ring " + col.outcome; if (cell.ties){ const s = document.createElement("div"); s.className = "tieslash"; m.appendChild(s); if (cell.ties > 1){ const n = document.createElement("span"); n.className = "tien"; n.textContent = cell.ties; m.appendChild(n); } } }
+    else if (style === "bigEye") m.className = "ring thin " + col.outcome;
+    else if (style === "smallRoad") m.className = "dot " + col.outcome;
+    else m.className = "slash " + col.outcome;
+    return m;
+  };
+}
+function askMarks(outcomes, side){
+  const a = askRoad(outcomes, side); const w = document.createElement("span"); w.className = "ask";
+  const shape = { bigEye: "ring", smallRoad: "dot", cockroach: "slash" };
+  for (const k of KINDS){ const i = document.createElement("i"); const m = a[k]; i.className = m ? `${shape[k]} ${m === "red" ? "B" : "P"}` : "none"; w.appendChild(i); }
+  return w;
+}
+function nextRow(outcomes, stats, withAsk, sizes){
+  const total = stats.P + stats.B + stats.T; const pct = n => total ? Math.round(n/total*100) : 0;
+  const row = document.createElement("div"); row.className = "next";
+  const k = document.createElement("span"); k.className = "k"; k.textContent = "Next"; row.appendChild(k);
+  for (const [l, bg, edge, n] of [["P","var(--player)","var(--player-edge)",stats.P],["T","var(--tie)","var(--tie-edge)",stats.T],["B","var(--banker)","var(--banker-edge)",stats.B]]){
+    const c = document.createElement("div"); c.className = "c";
+    const ball = document.createElement("div"); ball.className = "ball"; ball.style.background = bg; ball.style.border = `1.2px solid ${edge}`; ball.textContent = l;
+    if (sizes){ ball.style.width = ball.style.height = sizes.ball + "px"; ball.style.fontSize = sizes.font + "px"; }
+    c.appendChild(ball);
+    if (withAsk && l !== "T") c.appendChild(askMarks(outcomes, l));
+    const p = document.createElement("span"); p.className = "pct"; p.textContent = pct(n) + "%"; c.appendChild(p); row.appendChild(c);
+  }
+  return row;
+}
+function pills(stats, small){
+  const w = document.createElement("div"); w.className = "pills";
+  for (const [l, bg, n] of [["P","var(--player)",stats.P],["T","var(--tie)",stats.T],["B","var(--banker)",stats.B]]){
+    const p = document.createElement("div"); p.className = "pill"; p.style.background = bg; p.innerHTML = `<span>${l}:</span><span>${n}</span>`; w.appendChild(p);
+  }
+  return w;
+}
+
+/* ── Panels ────────────────────────────────────────────────────────────── */
+function stats(outcomes){ const s = {P:0,B:0,T:0}; for (const o of outcomes) s[norm(o)]++; return s; }
+function colsFor(w, cell, gap, min, max){ return Math.min(max, Math.max(min, Math.floor((w + gap) / (cell + gap)))); }
+
+function renderMobileCurrent(host, outcomes){
+  host.innerHTML = "";
+  const t = document.createElement("div"); t.className = "title"; t.textContent = "Big Road"; host.appendChild(t);
+  const box = document.createElement("div"); box.className = "gridbox"; host.appendChild(box);
+  const line = document.createElement("div"); line.className = "line"; line.style.height = "18px"; host.appendChild(line);
+  const st = stats(outcomes); line.appendChild(nextRow(outcomes, st, false)); line.appendChild(pills(st));
+  const h = box.clientHeight, w = box.clientWidth; const cell = Math.max(6, (h - 5) / 6); const cols = colsFor(w, cell, 1, 14, 40);
+  box.appendChild(gridEl(cols, 6, cell, 1, roadFill(buildBigRoad(outcomes, cols, 6), "bigroad")));
+}
+function renderMobileNew(host, outcomes, dimEl){
+  host.innerHTML = "";
+  const box = document.createElement("div"); box.className = "gridbox"; host.appendChild(box);
+  const strip = document.createElement("div"); strip.className = "strip"; host.appendChild(strip);
+  const line = document.createElement("div"); line.className = "line"; host.appendChild(line);
+  const st = stats(outcomes); line.appendChild(nextRow(outcomes, st, true)); line.appendChild(pills(st, true));
+  // Width sets the Big Road cell: two more columns than the current panel
+  // shows at this width. Whatever height is left goes to the derived strip.
+  const innerH = host.clientHeight - 12; const lineH = 16, gaps = 8;
+  const w = host.clientWidth - 12;
+  const curCell = (innerH + 12 - 16 - 15 - 4 - 18 - 6 - 5) / 6;           // what the shipped panel gets
+  const curCols = colsFor(w, curCell, 1, 14, 40);
+  const cols = curCols + 2; const cell = (w + 1) / cols - 1;
+  box.style.flex = "0 0 auto"; box.style.height = (cell * 6 + 5) + "px";
+  box.appendChild(gridEl(cols, 6, cell, 1, roadFill(buildBigRoad(outcomes, cols, 6), "bigroad")));
+  const rest = innerH - lineH - gaps - (cell * 6 + 5);
+  const small = Math.min((rest - 2) / 3, cell * 0.62); strip.style.height = (small * 3 + 2) + "px";
+  const sw = (w - 8) / 3; const scols = colsFor(sw, small, 1, 6, 40);
+  for (const k of KINDS){ const d = document.createElement("div"); d.appendChild(gridEl(scols, 3, small, 1, roadFill(buildDerived(outcomes, k, scols, 3), k))); strip.appendChild(d); }
+  if (dimEl) dimEl.textContent = `6 rows · ${cols} cols · cell ${cell.toFixed(1)} · strip 3 rows · cell ${small.toFixed(1)} · ${scols} cols each`;
+}
+
+function renderDesktopCurrent(host, outcomes){
+  host.innerHTML = "";
+  const box = document.createElement("div"); box.className = "box"; box.style.flex = "3"; box.style.borderRadius = "9px";
+  box.innerHTML = `<div class="h">Big Road</div>`; host.appendChild(box);
+  box.appendChild(gridEl(22, 6, null, 1, roadFill(buildBigRoad(outcomes, 22, 6), "bigroad")));
+  const st = stats(outcomes);
+  const c = document.createElement("div"); c.className = "counters";
+  for (const [l, bg, n] of [["Player","#155dfc",st.P],["Tie","#00a63e",st.T],["Banker","#e7000b",st.B]]){ const d = document.createElement("div"); d.style.background = bg; d.innerHTML = `<b>${n}</b><span>${l}</span>`; c.appendChild(d); }
+  host.appendChild(c);
+  const nb = document.createElement("div"); nb.className = "box"; nb.innerHTML = `<div class="h">Next Prediction</div>`; host.appendChild(nb);
+  const nr = nextRow(outcomes, st, false, {ball: 20, font: 9}); nr.className = "next nextrow"; nb.appendChild(nr);
+}
+function renderDesktopNew(host, outcomes, dimEl){
+  host.innerHTML = "";
+  const top = document.createElement("div"); top.className = "box"; top.style.flex = "1 1 auto"; top.style.minHeight = "0"; top.style.padding = "5px 7px"; host.appendChild(top);
+  const roadrow = document.createElement("div"); roadrow.className = "roadrow"; top.appendChild(roadrow);
+  const strip = document.createElement("div"); strip.className = "strip"; strip.style.display = "flex"; strip.style.gap = "6px"; strip.style.marginTop = "4px"; top.appendChild(strip);
+  const st = stats(outcomes);
+  const line1 = document.createElement("div"); line1.className = "line"; line1.style.marginTop = "4px"; line1.style.justifyContent = "center"; top.appendChild(line1);
+  line1.appendChild(pills(st, true));
+  const line2 = document.createElement("div"); line2.className = "line"; line2.style.marginTop = "3px"; line2.style.justifyContent = "center"; top.appendChild(line2);
+  line2.appendChild(nextRow(outcomes, st, true));
+  // Height sets the cell; the column count follows from the width.
+  const w = top.clientWidth - 14;
+  const innerH = top.clientHeight - 10; const lines = 16 + 16; const gaps = 11; const SCALE = 0.6;
+  const cell = Math.max(6, (innerH - lines - gaps - 10) / (6 + 6 * SCALE));
+  const cols = colsFor(w, cell, 1, 8, 40);
+  roadrow.style.flex = "0 0 auto"; roadrow.style.height = (cell * 6 + 5) + "px";
+  const r = document.createElement("div"); r.style.flex = "1"; r.appendChild(gridEl(cols, 6, cell, 1, roadFill(buildBigRoad(outcomes, cols, 6), "bigroad"))); roadrow.appendChild(r);
+  const small = cell * SCALE; strip.style.height = (small * 6 + 5) + "px";
+  const sw = (w - 12) / 3; const scols = colsFor(sw, small, 1, 6, 40);
+  for (const k of KINDS){ const d = document.createElement("div"); d.style.flex = "1"; d.style.minWidth = "0"; d.appendChild(gridEl(scols, 6, small, 1, roadFill(buildDerived(outcomes, k, scols, 6), k))); strip.appendChild(d); }
+  if (dimEl) dimEl.textContent = `big road ${cols} cols · cell ${cell.toFixed(1)} · derived 6 rows · cell ${small.toFixed(1)} · ${scols} cols each`;
+}
+
+/* ── Shoe ──────────────────────────────────────────────────────────────── */
+let seed = 20260910;
+function rnd(){ seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+function sampleShoe(n){
+  const out = []; let side = rnd() < 0.5 ? "P" : "B";
+  while (out.length < n){
+    const len = rnd() < 0.55 ? 1 : rnd() < 0.6 ? 2 : 3 + Math.floor(rnd() * 4);
+    for (let i = 0; i < len && out.length < n; i++){ if (rnd() < 0.095) out.push("T"); out.push(side); }
+    side = side === "P" ? "B" : "P";
+  }
+  return out;
+}
+let shoe = sampleShoe(58);
+function render(){
+  renderMobileCurrent(document.getElementById("m-cur"), shoe);
+  renderMobileNew(document.getElementById("m-new"), shoe, document.getElementById("m-new-dim"));
+  renderDesktopCurrent(document.getElementById("d-cur"), shoe);
+  renderDesktopNew(document.getElementById("d-new"), shoe, document.getElementById("d-new-dim"));
+  const s = stats(shoe); document.getElementById("count").textContent = `round #${shoe.length} · P ${s.P} · B ${s.B} · T ${s.T}`;
+}
+document.querySelectorAll("[data-deal]").forEach(b => b.addEventListener("click", () => { shoe.push(b.dataset.deal); render(); }));
+document.getElementById("undo").addEventListener("click", () => { shoe.pop(); render(); });
+document.getElementById("reset").addEventListener("click", () => { shoe = sampleShoe(6 + Math.floor(rnd() * 60)); render(); });
+document.fonts ? document.fonts.ready.then(render) : render();
+render();
+</script>
+</body></html>

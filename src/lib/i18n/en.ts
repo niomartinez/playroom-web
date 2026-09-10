@@ -78,6 +78,10 @@ const en: Record<string, string> = {
   "roadmap.player": "Player",
   "roadmap.tie": "Tie",
   "roadmap.banker": "Banker",
+  "roadmap.bigEye": "Big Eye Boy",
+  "roadmap.smallRoad": "Small Road",
+  "roadmap.cockroach": "Cockroach Pig",
+  "roadmap.askRoad": "If the next hand is",
 
   /* Live chat */
   "chat.title": "Live Chat",

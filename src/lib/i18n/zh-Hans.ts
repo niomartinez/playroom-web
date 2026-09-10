@@ -77,6 +77,10 @@ const zhHans: Record<string, string> = {
   "roadmap.player": "闲",
   "roadmap.tie": "和",
   "roadmap.banker": "庄",
+  "roadmap.bigEye": "大眼仔",
+  "roadmap.smallRoad": "小路",
+  "roadmap.cockroach": "曱甴路",
+  "roadmap.askRoad": "下局若开",
 
   /* Live chat */
   "chat.title": "在线聊天",
