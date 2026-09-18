@@ -9,8 +9,9 @@ import FormDialog from "@/components/admin/ui/FormDialog";
 import { useToast } from "@/lib/toast-context";
 import { isApiOk, apiErrorMessage } from "@/lib/api-result";
 
-/** Gate names the backend accepts. Must match proxy.ts ipGateSurface() and the
- *  ip_allowlist_surfaces_valid CHECK constraint. The OCMS partner portal is
+/** Gate names the backend accepts. admin/studio must match proxy.ts
+ *  ipGateSurface(); all three must match the ip_allowlist_surfaces_valid CHECK
+ *  constraint. The OCMS partner portal is
  *  deliberately absent — its partner IPs rotate, so it is never IP-gated.
  *
  *  Ticking Studio also opens the back office (see proxy.ts: the studio team
@@ -19,6 +20,10 @@ import { isApiOk, apiErrorMessage } from "@/lib/api-result";
 const SURFACES = [
   { key: "admin", label: "Back office (/admin)" },
   { key: "studio", label: "Studio (/studio) — also opens /admin" },
+  // Enforced by the backend, not proxy.ts: opens the production API docs
+  // (api.playroomgaming.ph/docs) with no login. How a platform partner reads
+  // the integration reference. Opens nothing on this web app.
+  { key: "docs", label: "API docs (api…/docs) — partner, no login" },
 ] as const;
 
 interface IPEntry extends Record<string, unknown> {
@@ -334,8 +339,10 @@ export default function IPAllowlistPage() {
             Restricts who can reach the internal surfaces, enforced at the edge
             where the real browser IP is visible. Player traffic and the OCMS
             partner portal are never affected. A Studio entry also reaches the
-            back office; a back-office entry does not reach the studio. Changes
-            take up to a minute to propagate.
+            back office; a back-office entry does not reach the studio. An API
+            docs entry lets a partner read the production API docs without
+            signing in, and opens nothing else. Changes take up to a minute to
+            propagate.
           </p>
         </div>
         <button
