@@ -28,10 +28,10 @@ export interface BetLogResponse {
   page_size: number;
 }
 
-export const BET_FILTER_KEYS = ["bet_id", "player", "site", "game_id", "status", "date_from", "date_to"] as const;
+export const BET_FILTER_KEYS = ["bet_id", "player", "site", "game_id", "fight_id", "status", "date_from", "date_to"] as const;
 export type BetLogFilters = Record<(typeof BET_FILTER_KEYS)[number], string>;
 export const EMPTY_BET_FILTERS: BetLogFilters = {
-  bet_id: "", player: "", site: "", game_id: "", status: "", date_from: "", date_to: "",
+  bet_id: "", player: "", site: "", game_id: "", fight_id: "", status: "", date_from: "", date_to: "",
 };
 
 /** Listing and CSV share exactly these filters; pagination is list-only. */

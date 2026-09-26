@@ -19,7 +19,7 @@ const timestamp = (value: string) => new Date(value).toLocaleString("en-PH", { t
 
 const columns: Column<AdminBet>[] = [
   { key: "external_bet_id", label: "Bet ID", mobile: "title", render: (row) => <div className="min-w-36 max-w-72 break-all font-mono max-md:min-w-0 text-xs" title={`Internal ID: ${row.id}`}>{row.external_bet_id || row.id}</div> },
-  { key: "created_at", label: "Placed (Manila)", render: (row) => <span className="whitespace-nowrap">{timestamp(row.created_at)}</span> },
+  { key: "created_at", label: "Placed", render: (row) => <span className="whitespace-nowrap">{timestamp(row.created_at)}</span> },
   { key: "site_label", label: "Site", render: (row) => <span title={SITE_HINT}>{row.site_label}{row.site_code ? ` (${row.site_code})` : ""}</span> },
   { key: "player_username", label: "Player", render: (row) => <div className="min-w-28 max-w-56 break-words max-md:min-w-0"><div>{row.player_username || row.player_external_id || "—"}</div>{row.player_display_name ? <div className="text-xs text-[#99a1af]">{row.player_display_name}</div> : null}</div> },
   { key: "external_fight_id", label: "Table / Round", render: (row) => <div><div>{row.game_name || row.external_game_id || "—"}</div>{row.fight_id ? <Link className="inline-flex min-h-11 items-center break-all text-xs text-[#f0b100] underline" href={`/admin/rounds/${row.fight_id}`}>{row.external_fight_id || row.fight_id}</Link> : "—"}</div> },
@@ -43,6 +43,7 @@ function BetLogPageInner() {
   const { data: tables } = useAdminQuery<{ id: string; name: string }[]>("/api/admin/tables");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const roundLabel = data?.bets.find((bet) => bet.fight_id === filters.fight_id)?.external_fight_id || filters.fight_id;
 
   async function download(filtersToExport: BetLogFilters) {
     setExporting(true);
@@ -79,7 +80,12 @@ function BetLogPageInner() {
 
   return <div className="space-y-6">
     <div><h1 className="text-2xl font-bold text-white">Bet log</h1><p className="mt-1 text-sm text-[#99a1af]">Newest bets first. Dates and displayed times use Manila (UTC+8). Payout includes returned stake.</p></div>
+    {filters.fight_id ? <div className="flex flex-wrap items-center gap-x-2 rounded-lg border border-[#d0870033] bg-[#171717] px-4 py-2 text-sm text-[#99a1af]">
+      <span>Showing bets for round</span>
+      <Link href={`/admin/rounds/${encodeURIComponent(filters.fight_id)}`} className="inline-flex min-h-11 items-center break-all font-mono text-[#f0b100] underline">{roundLabel}</Link>
+    </div> : null}
     <form key={JSON.stringify(filters)} onSubmit={submit} className="rounded-xl border border-[#d0870033] bg-[#171717] p-4">
+      <input type="hidden" name="fight_id" value={filters.fight_id} />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <label className="text-xs text-[#99a1af]">Exact bet ID<input name="bet_id" defaultValue={values.bet_id} maxLength={200} placeholder="External ID or internal UUID" className={`${inputClass} mt-1`} /></label>
         <label className="text-xs text-[#99a1af]">Player search<input name="player" defaultValue={values.player} maxLength={100} placeholder="Username, screen name or player ID" className={`${inputClass} mt-1`} /></label>

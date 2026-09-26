@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import RefreshingHint from "@/components/admin/ui/RefreshingHint";
 import { useAdminQuery, invalidateAdminQuery } from "@/lib/admin-query";
 import { useParams, useRouter } from "next/navigation";
@@ -266,12 +267,20 @@ export default function RoundDetailPage() {
           className="flex items-center justify-between px-6 py-4 max-md:flex-col max-md:items-start max-md:gap-1 max-md:px-4"
           style={{ borderBottom: "1px solid rgba(208,135,0,0.1)" }}
         >
-          <h2
-            className="text-sm font-semibold uppercase tracking-wider"
-            style={{ color: "#d08700" }}
-          >
-            Bets ({round.bet_count})
-          </h2>
+          <div className="flex flex-wrap items-center gap-x-4">
+            <h2
+              className="text-sm font-semibold uppercase tracking-wider"
+              style={{ color: "#d08700" }}
+            >
+              Bets ({round.bet_count})
+            </h2>
+            <Link
+              href={`/admin/bets?fight_id=${encodeURIComponent(round.id)}`}
+              className="inline-flex min-h-11 items-center text-sm text-[#f0b100] underline"
+            >
+              View in bet log
+            </Link>
+          </div>
           <span className="text-sm font-mono" style={{ color: "#99a1af" }}>
             Total wagered: {round.total_wagered?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </span>
