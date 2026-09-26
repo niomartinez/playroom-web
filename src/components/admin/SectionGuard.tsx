@@ -24,6 +24,7 @@ const ROUTE_SECTIONS: [string, string][] = [
   ["/admin/tables", "tables"],
   ["/admin/players", "players"],
   ["/admin/rounds", "rounds"],
+  ["/admin/bets", "rounds"],
   ["/admin/reports", "reports"],
   ["/admin/monitoring", "monitoring"],
   ["/admin/audit", "audit"],
