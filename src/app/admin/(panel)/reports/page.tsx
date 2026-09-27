@@ -106,6 +106,14 @@ function monthStartISO(): string {
   return localISO(new Date(d.getFullYear(), d.getMonth(), 1));
 }
 
+function lastMonthRange(): { from: string; to: string } {
+  const d = new Date();
+  return {
+    from: localISO(new Date(d.getFullYear(), d.getMonth() - 1, 1)),
+    to: localISO(new Date(d.getFullYear(), d.getMonth(), 0)),
+  };
+}
+
 /* CSV export helpers */
 function csvEscape(v: string | number): string {
   const s = String(v);
@@ -506,15 +514,14 @@ function ReportsPageInner() {
 
           {/* Preset buttons.
 
-              The active preset is highlighted: with five of them and a pair of
-              date fields, "which range am I looking at" was otherwise only
-              answerable by reading the two dates and doing the arithmetic. */}
-          <div className="flex gap-2 max-md:grid max-md:w-full max-md:grid-cols-2">
+              Highlight the active preset so the selected range is easy to see. */}
+          <div className="flex flex-wrap gap-2 max-md:grid max-md:w-full max-md:grid-cols-2">
             {[
               { label: "Today", from: todayISO(), to: todayISO() },
               { label: "7 Days", from: daysAgoISO(7), to: todayISO() },
               { label: "30 Days", from: daysAgoISO(30), to: todayISO() },
               { label: "This Month", from: monthStartISO(), to: todayISO() },
+              { label: "Last Month", ...lastMonthRange() },
               /* Only offered once we know the first day that has data — a
                  preset that resolved to an empty range would be worse than no
                  preset. */
