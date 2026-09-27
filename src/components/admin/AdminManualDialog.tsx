@@ -280,7 +280,7 @@ export default function AdminManualDialog({ open, onClose }: AdminManualDialogPr
                 <tbody>
                   <tr><td><strong>Total Wagered</strong></td><td>Sum of all valid bets placed</td></tr>
                   <tr><td><strong>Total Payout</strong></td><td>Sum of all winnings paid out</td></tr>
-                  <tr><td><strong>GGR</strong></td><td>Wagered minus payout — green is house profit, red is house loss</td></tr>
+                  <tr><td><strong>GGR</strong></td><td>Individual rows show wagered minus payout — green is house profit, red is house loss. Combined totals add positive site results; losing sites contribute zero.</td></tr>
                   <tr><td><strong>Bets / Rounds</strong></td><td>Count of settled bets and rounds in the window</td></tr>
                 </tbody>
               </table>

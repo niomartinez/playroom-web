@@ -10,6 +10,7 @@ import UrlFilterBoundary from "@/components/admin/ui/UrlFilterBoundary";
 import { useAdminQuery } from "@/lib/admin-query";
 import { useUrlFilters } from "@/lib/use-url-filters";
 import SiteFilter, { SITE_HINT } from "@/components/admin/SiteFilter";
+import { combinedSiteGgr } from "@/lib/report-ggr";
 
 interface Summary {
   total_wagered: number;
@@ -20,8 +21,8 @@ interface Summary {
   unique_players: number;
   new_players: number;
   returning_players: number;
-  /* Revenue share over the window, summed from PER-SITE figures each floored
-     at zero. Not `rate * ggr` — see the reports API. */
+  /* The API's ggr stays the signed wager-minus-payout figure. Display totals
+     use combinedSiteGgr, from the same per-site period used for NGR. */
   ngr?: number;
   ngr_rate?: number;
 }
@@ -195,6 +196,12 @@ function ReportsPageInner() {
   const byOperator = operatorQ.data?.operators ?? [];
   const byTable = tableQ.data?.tables ?? [];
   const bySite = siteQ.data?.sites ?? [];
+  // Site is the revenue-share unit, including when viewing another grouping.
+  // Summary and By Table honor the site filter; the other tabs show all sites.
+  // A missing/failed site query must not present an invented zero total.
+  const ggrSites = siteQ.error ? undefined : siteQ.data?.sites;
+  const allSitesGgr = combinedSiteGgr(ggrSites);
+  const summaryGgr = combinedSiteGgr(ggrSites, values.site);
   const truncated =
     Boolean(operatorQ.data?.truncated) || Boolean(tableQ.data?.truncated);
   const loading =
@@ -213,14 +220,15 @@ function ReportsPageInner() {
     border: "1px solid rgba(208,135,0,0.15)" as const,
   };
 
-  function fmt(n: number): string {
-    return n.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  function fmt(n: number | null): string {
+    return n == null ? "\u2014" : n.toLocaleString(undefined, { minimumFractionDigits: 2 });
   }
 
   function exportCsv() {
     const rows: (string | number)[][] = [
       ["Playroom Gaming — GGR Report"],
       ["Period", `${dateFrom} to ${dateTo}`],
+      ["GGR totals add positive site GGR; losing sites contribute 0. Individual rows show actual profit or loss."],
       [],
       ["Summary"],
       [
@@ -229,7 +237,7 @@ function ReportsPageInner() {
       ],
       summary
         ? [
-            summary.total_wagered, summary.total_payout, summary.ggr,
+            summary.total_wagered, summary.total_payout, summaryGgr ?? "-",
             summary.ngr ?? 0,
             summary.bet_count, summary.round_count,
             summary.unique_players ?? 0, summary.new_players ?? 0,
@@ -297,12 +305,9 @@ function ReportsPageInner() {
 
   const totalWagered = breakdownData.reduce((s, r) => s + r.total_wagered, 0);
   const totalPayout = breakdownData.reduce((s, r) => s + r.total_payout, 0);
-  const totalGgr = breakdownData.reduce((s, r) => s + r.ggr, 0);
-  /* Sum of the per-row figures, each ALREADY floored at zero server-side.
-     Deliberately not `rate * totalGgr`: that nets a losing row off against a
-     winning one and understates the share actually earned. Because the floor
-     applies per row, this total is also tab-dependent — By Site is the
-     contractual grain, and the header tile follows that one. */
+  const totalGgr = activeTab === "table" ? summaryGgr : allSitesGgr;
+  /* Preserve the backend's existing NGR for each grouping. This total remains
+     tab-dependent; the headline NGR and all combined GGR totals use sites. */
   const totalNgr = breakdownData.reduce((s, r) => s + (r.ngr ?? 0), 0);
   const totalBets = breakdownData.reduce((s, r) => s + r.bet_count, 0);
 
@@ -310,7 +315,7 @@ function ReportsPageInner() {
      totals row as a final card. Four right-aligned money columns squashed into
      390px are unreadable, and side-scrolling a report you are reading top to
      bottom is worse. */
-  const money = (v: number, style?: React.CSSProperties) => (
+  const money = (v: number | null, style?: React.CSSProperties) => (
     <span className="font-mono" style={style}>
       {refreshing ? <Skeleton height={12} width={90} /> : fmt(v)}
     </span>
@@ -406,7 +411,7 @@ function ReportsPageInner() {
         {
           label: "GGR",
           value: money(totalGgr, {
-            color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36",
+            color: "#00bc7d",
             fontWeight: 700,
           }),
         },
@@ -547,7 +552,7 @@ function ReportsPageInner() {
 
           <button
             onClick={exportCsv}
-            disabled={loading || !summary}
+            disabled={loading || refreshing || !summary || allSitesGgr == null}
             className="ml-auto rounded-lg px-4 py-2 text-xs font-bold transition hover:brightness-110 disabled:opacity-40 max-md:ml-0 max-md:w-full max-md:min-h-[44px]"
             style={{ backgroundColor: "#f0b100", color: "#000" }}
           >
@@ -587,15 +592,12 @@ function ReportsPageInner() {
             <StatCard label="Total Payout" value={stat(fmt(summary.total_payout))} />
             <StatCard
               label="GGR"
-              value={stat(fmt(summary.ggr))}
-              color={summary.ggr >= 0 ? "#00bc7d" : "#fb2c36"}
+              value={stat(fmt(summaryGgr))}
+              color="#00bc7d"
+              hint="Losing sites count as 0"
             />
-            {/* Sits next to GGR because that is the comparison people want,
-                but it is NOT a percentage of the tile beside it: the share is
-                taken per site and floored at zero, so a period with a losing
-                site shows an NGR above `rate x GGR`. The hint says the rate
-                out loud so nobody divides the two and concludes the number is
-                wrong. */}
+            {/* Both headline figures use the same per-site period. NGR keeps
+                the backend's existing per-site rate and rounding. */}
             <StatCard
               label="NGR"
               value={stat(fmt(summary.ngr ?? 0))}
@@ -672,6 +674,10 @@ function ReportsPageInner() {
                 </button>
               ))}
             </div>
+
+            <p className="px-4 pt-3 text-xs" style={{ color: "#99a1af" }}>
+              GGR totals count losing sites as 0. Individual rows show actual profit or loss.
+            </p>
 
             {/* Breakdown table */}
             {breakdownData.length === 0 ? (
@@ -873,7 +879,7 @@ function ReportsPageInner() {
                       <td
                         className="px-4 py-3 text-right font-mono font-bold"
                         style={{
-                          color: totalGgr >= 0 ? "#00bc7d" : "#fb2c36",
+                          color: "#00bc7d",
                         }}
                       >
                         {cell(fmt(totalGgr))}
