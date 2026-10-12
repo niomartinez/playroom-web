@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminSession } from "@/lib/admin-auth";
 import { requireEnv } from "@/lib/server-env";
+import { infrastructureSuspended, developerIdentifier, INFRASTRUCTURE_ERROR_CODE, INFRASTRUCTURE_MESSAGE } from "@/lib/infrastructure-access";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -34,6 +35,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (infrastructureSuspended("admin") && !developerIdentifier(body.email)) {
+    return NextResponse.json(
+      { error_code: INFRASTRUCTURE_ERROR_CODE, error: INFRASTRUCTURE_MESSAGE },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   // Proxy to backend admin login endpoint

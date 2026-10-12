@@ -64,6 +64,14 @@ export function AdminProvider({ children }: AdminProviderProps) {
   useEffect(() => {
     fetch("/api/admin/me")
       .then((res) => {
+        if (res.status === 503) {
+          return res.json().then((data) => {
+            if (data.error_code === "infrastructure_unpaid") {
+              window.location.replace("/resource-unavailable?surface=admin");
+            }
+            throw new Error(data.message || "Resource unavailable");
+          });
+        }
         if (res.ok) return res.json();
         throw new Error("Not authenticated");
       })

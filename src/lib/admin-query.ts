@@ -54,6 +54,13 @@ function evict() {
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, { cache: "no-store" });
   const body = await res.json().catch(() => null);
+  if (res.status === 503 && body?.error_code === "infrastructure_unpaid") {
+    cache.clear();
+    // This query helper also serves the OCMS portal. Scope the notice redirect.
+    if (url.startsWith("/api/admin/")) {
+      window.location.replace("/resource-unavailable?surface=admin");
+    }
+  }
   if (!isApiOk(res, body as never)) {
     throw new Error(
       (body as { message?: string; error?: string } | null)?.message ||

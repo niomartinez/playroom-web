@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import { jwtVerify, type JWTPayload } from "jose";
 import { requireEnv } from "@/lib/server-env";
 import { PLAYER_SESSION_COOKIE } from "@/lib/player-session";
+import { infrastructureSuspended, infrastructureExempt, INFRASTRUCTURE_ERROR_CODE, INFRASTRUCTURE_MESSAGE } from "@/lib/infrastructure-access";
 
 /**
  * F-06: Lobby ticket proxy.
@@ -63,28 +64,25 @@ const BACKEND_SERVICE_KEY = process.env.API_SERVICE_KEY
   ? new TextEncoder().encode(process.env.API_SERVICE_KEY)
   : null;
 
-async function verifyStudioCookie(token: string): Promise<boolean> {
+async function verifyStudioCookie(token: string): Promise<JWTPayload | null> {
   try {
-    await jwtVerify(token, ADMIN_JWT_SECRET);
-    return true;
+    return (await jwtVerify(token, ADMIN_JWT_SECRET)).payload;
   } catch {
     // Fall through to legacy verifier.
   }
   try {
-    await jwtVerify(token, STUDIO_JWT_SECRET);
-    return true;
+    return (await jwtVerify(token, STUDIO_JWT_SECRET)).payload;
   } catch {
     // Fall through to the backend service-key fallback.
   }
   if (BACKEND_SERVICE_KEY) {
     try {
-      await jwtVerify(token, BACKEND_SERVICE_KEY);
-      return true;
+      return (await jwtVerify(token, BACKEND_SERVICE_KEY)).payload;
     } catch {
-      return false;
+      return null;
     }
   }
-  return false;
+  return null;
 }
 
 const STUDIO_COOKIE = "studio_session";
@@ -194,12 +192,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (backendPayload.role === "studio" && infrastructureSuspended("studio")) {
+    const claims = studioToken ? await verifyStudioCookie(studioToken) : null;
+    if (!claims || !infrastructureExempt(claims)) {
+      return NextResponse.json(
+        { error_code: INFRASTRUCTURE_ERROR_CODE, message: INFRASTRUCTURE_MESSAGE },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/internal/lobby/ticket`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Service-Key": SERVICE_KEY,
+        ...(backendPayload.role === "studio" && studioToken ? { "X-Studio-Token": studioToken } : {}),
       },
       body: JSON.stringify(backendPayload),
       cache: "no-store",

@@ -79,6 +79,13 @@ export async function fetchLobbyTicket(
   }
 
   if (!res.ok) {
+    if (res.status === 503) {
+      const data = await res.json().catch(() => ({}));
+      if (data.error_code === "infrastructure_unpaid" && window.location.pathname.startsWith("/studio")) {
+        window.location.replace("/resource-unavailable?surface=studio");
+        return { error: "unauthorized" };
+      }
+    }
     return { error: "network" };
   }
 

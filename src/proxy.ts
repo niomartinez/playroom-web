@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, type JWTPayload } from "jose";
 import { makeIpMatcher, type IpMatcher } from "@/lib/ip-match";
 import { BYPASS_COOKIE, verifyBypass } from "@/lib/break-glass";
+import {
+  infrastructureSuspended, infrastructureExempt, INFRASTRUCTURE_ERROR_CODE,
+  INFRASTRUCTURE_MESSAGE, type InfrastructureSurface,
+} from "@/lib/infrastructure-access";
 
 /** Break-glass paths — exempt from the IP gate, see ipGateSurface(). */
 const UNLOCK_PAGE = "/admin/unlock";
@@ -295,6 +299,52 @@ async function verifyStudioCookie(
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Show the payment notice even to studio IPs disabled by the lockdown.
+  // Developer exemptions use verified claims; IPs and roles alone cannot bypass it.
+  const suspendedSurface: InfrastructureSurface | null =
+    pathname === "/studio" || pathname.startsWith("/studio/") || pathname.startsWith("/api/studio/")
+      ? "studio"
+      : pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/")
+        ? "admin" : null;
+  if (suspendedSurface && infrastructureSuspended(suspendedSurface)) {
+    const entryPaths = [
+      `/${suspendedSurface}/login`, `/api/${suspendedSurface}/login`,
+      `/api/${suspendedSurface}/logout`, UNLOCK_PAGE, UNLOCK_API,
+    ];
+    if (!entryPaths.includes(pathname)) {
+      let exempt = false;
+      const adminToken = req.cookies.get("admin_session")?.value;
+      if (adminToken) {
+        try {
+          const { payload } = await jwtVerify(adminToken, ADMIN_JWT_SECRET);
+          exempt = infrastructureExempt(payload);
+        } catch { /* Invalid sessions do not grant developer access. */ }
+      }
+      if (!exempt && suspendedSurface === "studio") {
+        const studioToken = req.cookies.get("studio_session")?.value;
+        const verified = studioToken ? await verifyStudioCookie(studioToken) : null;
+        exempt = verified !== null && infrastructureExempt(verified.payload);
+      }
+      if (!exempt) {
+        const headers = { "Cache-Control": "no-store" };
+        if (pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error_code: INFRASTRUCTURE_ERROR_CODE, error: INFRASTRUCTURE_MESSAGE, message: INFRASTRUCTURE_MESSAGE },
+            { status: 503, headers },
+          );
+        }
+        const noticeUrl = new URL("/resource-unavailable", req.url);
+        noticeUrl.searchParams.set("surface", suspendedSurface);
+        return NextResponse.rewrite(noticeUrl, { status: 503, headers });
+      }
+    }
+    // Login pages show the notice before authentication, including from revoked
+    // IPs. Actual developer login attempts still pass the existing IP gate.
+    if (pathname === `/${suspendedSurface}/login` && req.nextUrl.searchParams.get("developer") !== "1") {
+      return NextResponse.next();
+    }
+  }
 
   // Option A IP allowlist — edge-enforced, per-surface, OCMS + players excluded.
   // Each surface is inert until its OWN env var is set in Vercel:

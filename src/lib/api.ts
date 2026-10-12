@@ -17,5 +17,9 @@ export async function clientFetch(path: string, init?: RequestInit) {
       ...init?.headers,
     },
   });
-  return res.json();
+  const body = await res.json();
+  if (res.status === 503 && body?.error_code === "infrastructure_unpaid" && path.startsWith("/api/studio/")) {
+    window.location.replace("/resource-unavailable?surface=studio");
+  }
+  return body;
 }

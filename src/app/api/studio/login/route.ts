@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { decodeJwt } from "jose";
 import { validateCredentials, createSession } from "@/lib/auth";
 import { requireEnv } from "@/lib/server-env";
+import { infrastructureSuspended, developerIdentifier, INFRASTRUCTURE_ERROR_CODE, INFRASTRUCTURE_MESSAGE } from "@/lib/infrastructure-access";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -35,6 +36,13 @@ export async function POST(req: NextRequest) {
   // blind copy of the same policy 403'd him anyway, with a bare "Forbidden".
   // One policy, one place. If you need to gate this route, change ipGateSurface().
   const { username, password } = await req.json();
+
+  if (infrastructureSuspended("studio") && !developerIdentifier(username)) {
+    return NextResponse.json(
+      { error_code: INFRASTRUCTURE_ERROR_CODE, error: INFRASTRUCTURE_MESSAGE },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   // ── Step 1: backend per-dealer login ────────────────────────────────
   let backendToken: string | null = null;
@@ -121,7 +129,7 @@ export async function POST(req: NextRequest) {
     backendStatus === 403 ||
     backendStatus >= 500;
 
-  if (legacyAllowed && validateCredentials(username, password)) {
+  if (!infrastructureSuspended("studio") && legacyAllowed && validateCredentials(username, password)) {
     if (backendStatus === 0 || backendStatus >= 500) {
       console.warn(
         `[studio-login] backend unavailable (status=${backendStatus}); falling back to legacy shared-credential path. Round actions will be stamped dealer_id="legacy" and cannot be attributed.`,
