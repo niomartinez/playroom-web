@@ -1,4 +1,5 @@
 import { test, expect, webkit, chromium, type Browser } from "@playwright/test";
+import { launchSilently, newSilentContext } from "../support/silent";
 
 /**
  * Operator iframe launch — the token must survive a cross-site embed.
@@ -33,7 +34,7 @@ const FAKE_TOKEN = "e2e-iframe-launch-probe-token";
 
 /** Stand up a fake operator page whose only content is our game iframe. */
 async function launchInOperatorIframe(browser: Browser) {
-  const context = await browser.newContext();
+  const context = await newSilentContext(browser);
   const page = await context.newPage();
 
   const src = `${BASE}/play?token=${FAKE_TOKEN}&game=1&lang=en&lobbyUrl=${encodeURIComponent(
@@ -61,7 +62,7 @@ for (const [engineName, engine] of [
 ] as const) {
   test(`operator iframe launch keeps the session — ${engineName}`, async () => {
     test.setTimeout(90_000);
-    const browser = await engine.launch();
+    const browser = await launchSilently(engine);
     try {
       const { context, frame } = await launchInOperatorIframe(browser);
       await expect(

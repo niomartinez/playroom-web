@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { silentChromiumArgs } from "./e2e/support/silent";
 
 /**
  * Admin-panel e2e. Requires a running target (local dev or staging) plus
@@ -9,6 +10,9 @@ import { defineConfig } from "@playwright/test";
  * Example:
  *   BASE_URL=https://staging-app.playroomgaming.ph \
  *   ADMIN_E2E_USER=SuperAdmin ADMIN_E2E_PASS=... npx playwright test
+ *
+ * Silent QA: audio is off in every run, headed or not (see e2e/support/silent.ts).
+ * A spec that starts its own browser must use launchSilently() from that file.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -17,5 +21,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:3100",
     screenshot: "only-on-failure",
+    // Chromium only. Playwright adds --mute-audio by itself just when headless.
+    launchOptions: { args: silentChromiumArgs() },
   },
 });

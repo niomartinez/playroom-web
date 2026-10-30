@@ -47,6 +47,16 @@ npm run dev    # starts on localhost:3000
 npm run build  # production build
 ```
 
+## Silent QA
+
+The owner must never hear a test run, on any platform. Sound stays testable through its traces, never through the Mac's speakers.
+
+- Web QA runs with browser audio off (`--mute-audio`). `playwright.config.ts` sets it for every run, `--headed`, `--ui` and debug included (Playwright only mutes headless Chromium by itself). The decision is `qaMuted()` in `e2e/support/silent.ts`, tested without a browser by `e2e/silent-qa.spec.ts`.
+- A spec that starts its own browser must use `launchSilently()` and `newSilentContext()` from that file: `chromium.launch()` skips the config, and WebKit has no mute switch, so its pages are muted by an init script. A new Firefox project needs `firefoxUserPrefs: { "media.volume_scale": "0.0" }`.
+- What can make sound: button presses on `/play` (`src/lib/audio/button-sfx.ts`), the dealer stream (`VideoPlayer.tsx`, starts muted) and the `/pitch` demo video. `npx playwright codegen` and `open` ignore the config, so leave them to a person, and do not click through `/play` or `/pitch` in a browser an agent opened by hand.
+- Item #9 (Sound & Video) in `docs/PLAYER_UI_MANUAL_QA.md` is a human listening check; agents do not run it.
+- Silence belongs to the build, not to each launch remembering a flag. Never set `PLAYROOM_QA_AUDIBLE=1` unless the owner asks to hear it in that moment. Quiet only the owned test surfaces; never mute the Mac itself.
+
 ## Auth
 - Studio: shared credentials (STUDIO_USERNAME/STUDIO_PASSWORD env vars)
 - JWT session cookie (12h expiry)
