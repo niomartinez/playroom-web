@@ -3,7 +3,7 @@ import { jwtVerify, type JWTPayload } from "jose";
 import { makeIpMatcher, type IpMatcher } from "@/lib/ip-match";
 import { BYPASS_COOKIE, verifyBypass } from "@/lib/break-glass";
 import {
-  infrastructureSuspended, infrastructureExempt, INFRASTRUCTURE_ERROR_CODE,
+  infrastructureSuspended, infrastructureExempt, siteSuspended, INFRASTRUCTURE_ERROR_CODE,
   INFRASTRUCTURE_MESSAGE, type InfrastructureSurface,
 } from "@/lib/infrastructure-access";
 
@@ -299,6 +299,26 @@ async function verifyStudioCookie(
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Whole-site suspension: the backend is down, so every route shows the notice.
+  if (siteSuspended()) {
+    if (pathname === "/resource-unavailable") return NextResponse.next();
+    const headers = { "Cache-Control": "no-store" };
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error_code: INFRASTRUCTURE_ERROR_CODE, error: INFRASTRUCTURE_MESSAGE, message: INFRASTRUCTURE_MESSAGE },
+        { status: 503, headers },
+      );
+    }
+    const noticeUrl = new URL("/resource-unavailable", req.url);
+    noticeUrl.searchParams.set("surface", "site");
+    return NextResponse.rewrite(noticeUrl, { status: 503, headers });
+  }
+  // The matcher is site-wide so the switch above can cover every route; the
+  // rest of this proxy keeps its original, narrower scope.
+  if (!LEGACY_SCOPES.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+    return NextResponse.next();
+  }
 
   // Show the payment notice even to studio IPs disabled by the lockdown.
   // Developer exemptions use verified claims; IPs and roles alone cannot bypass it.
@@ -596,14 +616,13 @@ export async function proxy(req: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
+/** The routes this proxy handled before the whole-site switch existed. */
+const LEGACY_SCOPES = [
+  "/studio", "/emulator", "/admin", "/api/admin", "/api/studio", "/admin-ocms", "/api/admin-ocms",
+];
+
 export const config = {
-  matcher: [
-    "/studio/:path*",
-    "/emulator/:path*",
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/api/studio/:path*",
-    "/admin-ocms/:path*",
-    "/api/admin-ocms/:path*",
-  ],
+  // Everything except build assets and static files, so the whole-site switch
+  // reaches every page. Other routes pass straight through (see LEGACY_SCOPES).
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|mp3|mp4|webm|woff2?|ttf|css|js|map|txt|xml)$).*)"],
 };

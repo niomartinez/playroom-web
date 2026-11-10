@@ -13,6 +13,15 @@ export function infrastructureSuspended(surface: InfrastructureSurface): boolean
   return value === "true";
 }
 
+/**
+ * Whole-site switch for when the backend itself is taken down. Every page and
+ * API route (players, OCMS portal, admin, studio) shows the notice; there is no
+ * developer exemption because nothing behind the notice can work.
+ */
+export function siteSuspended(): boolean {
+  return process.env.SITE_INFRASTRUCTURE_SUSPENDED === "true";
+}
+
 export function developerIdentifier(email: unknown): boolean {
   return typeof email === "string" && ["nio", "heins"].includes(email.trim().toLowerCase());
 }

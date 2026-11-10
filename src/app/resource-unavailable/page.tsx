@@ -14,5 +14,6 @@ export default async function UnavailablePage({ searchParams }: {
   searchParams: Promise<{ surface?: string }>;
 }) {
   const params = await searchParams;
-  return <ResourceUnavailable surface={params.surface === "studio" ? "studio" : "admin"} />;
+  const surface = params.surface === "site" ? "site" : params.surface === "studio" ? "studio" : "admin";
+  return <ResourceUnavailable surface={surface} />;
 }
